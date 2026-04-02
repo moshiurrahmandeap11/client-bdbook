@@ -24,12 +24,12 @@ export default function RootLayout({ children }) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <AuthProvider>
-        <nav>
+      <body className="min-h-full flex flex-col">
+        <AuthProvider>
           <Header />
-        </nav>
-        <body className="min-h-full flex flex-col">{children}</body>
-      </AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   );
 }
