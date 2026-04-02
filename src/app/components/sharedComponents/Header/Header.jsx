@@ -6,13 +6,13 @@ import {
   Bars3Icon,
   Cog6ToothIcon,
   HomeIcon,
-  MapIcon,
   NewspaperIcon,
   UserCircleIcon,
   UserGroupIcon,
   VideoCameraIcon,
   XMarkIcon
 } from "@heroicons/react/24/outline";
+import { MessageCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -33,8 +33,8 @@ const Header = () => {
     { name: "Home", href: "/", icon: HomeIcon },
     { name: "Posts", href: "/posts", icon: NewspaperIcon },
     { name: "Videos", href: "/videos", icon: VideoCameraIcon },
+    { name: "Message", href: "/message", icon: MessageCircle },
     { name: "Community", href: "/community", icon: UserGroupIcon },
-    { name: "Area", href: "/area", icon: MapIcon },
   ];
 
   // Handle scroll effect

@@ -1,11 +1,11 @@
 "use client";
 
-
 import { useAuth } from "@/app/hooks/useAuth";
 import axiosInstance from "@/app/lib/axiosInstance";
 import {
   CalendarIcon,
   CameraIcon,
+  ClockIcon,
   DocumentTextIcon,
   LinkIcon,
   MapPinIcon,
@@ -13,8 +13,10 @@ import {
   PhotoIcon,
   PlusIcon,
   UserIcon,
+  UserPlusIcon,
   VideoCameraIcon
 } from "@heroicons/react/24/outline";
+import { UserCheckIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -38,8 +40,47 @@ const ProfilePage = () => {
   });
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLoadingFollow, setIsLoadingFollow] = useState(false);
+  
+  // Friend request states
+  const [friendStatus, setFriendStatus] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const isOwnProfile = currentUser?._id === id || currentUser?.id === id;
+
+  // Check friend status
+  const checkFriendStatus = async () => {
+    if (!isAuthenticated || isOwnProfile) return;
+    
+    try {
+      const response = await axiosInstance.get(`/users/friend-status/${id}`);
+      if (response.data.success) {
+        setFriendStatus(response.data.status);
+      }
+    } catch (error) {
+      console.error("Failed to check friend status:", error);
+    }
+  };
+
+  // Send friend request
+  const handleSendFriendRequest = async () => {
+    if (!isAuthenticated) {
+      router.push("/auth/login");
+      return;
+    }
+    
+    setIsProcessing(true);
+    try {
+      const response = await axiosInstance.post(`/users/friend-request/${id}`);
+      if (response.data.success) {
+        setFriendStatus("request_sent");
+        toast.success("Friend request sent!");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to send request");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const fetchProfileData = async () => {
     if (!id) return;
@@ -104,6 +145,9 @@ const ProfilePage = () => {
 
   useEffect(() => {
     fetchProfileData();
+    if (isAuthenticated && !isOwnProfile) {
+      checkFriendStatus();
+    }
   }, [id, isAuthenticated, currentUser]);
 
   const handleFollow = async () => {
@@ -268,18 +312,52 @@ const ProfilePage = () => {
               </div>
             </div>
             
+            {/* Action Buttons - Follow & Friend */}
             {!isOwnProfile && (
-              <button
-                onClick={handleFollow}
-                disabled={isLoadingFollow}
-                className={`px-6 py-2 rounded-xl font-semibold transition-all duration-300 ${
-                  isFollowing
-                    ? "bg-white/10 border border-white/20 text-white hover:bg-white/20"
-                    : "bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:scale-105"
-                } disabled:opacity-50`}
-              >
-                {isLoadingFollow ? "Processing..." : isFollowing ? "Following" : "Follow"}
-              </button>
+              <div className="flex gap-2">
+                {/* Follow Button */}
+                <button
+                  onClick={handleFollow}
+                  disabled={isLoadingFollow}
+                  className={`px-6 py-2 rounded-xl font-semibold transition-all duration-300 ${
+                    isFollowing
+                      ? "bg-white/10 border border-white/20 text-white hover:bg-white/20"
+                      : "bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:scale-105"
+                  } disabled:opacity-50`}
+                >
+                  {isLoadingFollow ? "Processing..." : isFollowing ? "Following" : "Follow"}
+                </button>
+                
+                {/* Friend Request Button */}
+                {friendStatus === "friends" ? (
+                  <div className="px-6 py-2 rounded-xl bg-green-500/20 border border-green-500/50 text-green-400 font-semibold flex items-center gap-2">
+                    <UserCheckIcon className="h-5 w-5" />
+                    Friends
+                  </div>
+                ) : friendStatus === "request_sent" ? (
+                  <div className="px-6 py-2 rounded-xl bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 font-semibold flex items-center gap-2">
+                    <ClockIcon className="h-5 w-5" />
+                    Request Sent
+                  </div>
+                ) : friendStatus === "request_received" ? (
+                  <Link
+                    href="/community"
+                    className="px-6 py-2 rounded-xl bg-blue-500/20 border border-blue-500/50 text-blue-400 font-semibold hover:bg-blue-500/30 transition flex items-center gap-2"
+                  >
+                    <UserPlusIcon className="h-5 w-5" />
+                    Respond
+                  </Link>
+                ) : (
+                  <button
+                    onClick={handleSendFriendRequest}
+                    disabled={isProcessing}
+                    className="px-6 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:scale-105 transition-all duration-300 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    <UserPlusIcon className="h-5 w-5" />
+                    {isProcessing ? "Sending..." : "Add Friend"}
+                  </button>
+                )}
+              </div>
             )}
           </div>
           
@@ -337,7 +415,7 @@ const ProfilePage = () => {
                     <p className="text-white/60">No posts yet</p>
                     {isOwnProfile && (
                       <Link
-                        href="/create-post"
+                        href="/posts"
                         className="inline-block mt-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-sm hover:scale-105 transition-transform"
                       >
                         Create Your First Post
@@ -364,7 +442,7 @@ const ProfilePage = () => {
                 <p className="text-white/60">No videos yet</p>
                 {isOwnProfile && (
                   <Link
-                    href="/create-post"
+                    href="/posts"
                     className="inline-block mt-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-sm hover:scale-105 transition-transform"
                   >
                     Create a Video Post
@@ -394,7 +472,7 @@ const ProfilePage = () => {
       {/* Floating Create Post Button - FAB (only for own profile) */}
       {isOwnProfile && (
         <Link
-          href="/create-post"
+          href="/posts"
           className="fixed bottom-20 right-4 sm:bottom-24 sm:right-8 z-40 p-3 sm:p-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full shadow-2xl hover:scale-110 transition-all duration-300 group"
         >
           <PlusIcon className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
