@@ -1,28 +1,26 @@
 "use client";
 
+
 import { useAuth } from "@/app/hooks/useAuth";
 import axiosInstance from "@/app/lib/axiosInstance";
 import {
   CalendarIcon,
   CameraIcon,
-  ChatBubbleLeftIcon,
   DocumentTextIcon,
-  HeartIcon,
   LinkIcon,
   MapPinIcon,
   PencilIcon,
   PhotoIcon,
   PlusIcon,
-  ShareIcon,
   UserIcon,
   VideoCameraIcon
 } from "@heroicons/react/24/outline";
-import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import PostCard from "../sharedComponents/PostCard/PostCard";
 
 const ProfilePage = () => {
   const { id } = useParams();
@@ -40,72 +38,71 @@ const ProfilePage = () => {
   });
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLoadingFollow, setIsLoadingFollow] = useState(false);
-  const [likingPosts, setLikingPosts] = useState({});
 
   const isOwnProfile = currentUser?._id === id || currentUser?.id === id;
 
-  useEffect(() => {
-    const fetchProfileData = async () => {
-      if (!id) return;
-      
-      setLoading(true);
-      try {
-        // Fetch user profile
-        const userResponse = await axiosInstance.get(`/users/id/${id}`);
-        if (userResponse.data.success) {
-          setProfileUser(userResponse.data.data);
-          
-          // Try to fetch user posts
-          try {
-            const postsResponse = await axiosInstance.get(`/posts/user/${id}`);
-            if (postsResponse.data.success) {
-              setPosts(postsResponse.data.data);
-              setStats(prev => ({ ...prev, posts: postsResponse.data.data.length }));
-            }
-          } catch (postsError) {
-            console.log("Posts endpoint not available yet:", postsError.message);
-            setPosts([]);
-            setStats(prev => ({ ...prev, posts: 0 }));
+  const fetchProfileData = async () => {
+    if (!id) return;
+    
+    setLoading(true);
+    try {
+      // Fetch user profile
+      const userResponse = await axiosInstance.get(`/users/id/${id}`);
+      if (userResponse.data.success) {
+        setProfileUser(userResponse.data.data);
+        
+        // Try to fetch user posts
+        try {
+          const postsResponse = await axiosInstance.get(`/posts/user/${id}`);
+          if (postsResponse.data.success) {
+            setPosts(postsResponse.data.data);
+            setStats(prev => ({ ...prev, posts: postsResponse.data.data.length }));
           }
-          
-          // Fetch followers/following stats
-          try {
-            const statsResponse = await axiosInstance.get(`/users/stats/${id}`);
-            if (statsResponse.data.success) {
-              setStats(prev => ({
-                ...prev,
-                followers: statsResponse.data.data.followers,
-                following: statsResponse.data.data.following,
-              }));
-            }
-          } catch (statsError) {
-            console.log("Stats endpoint not available yet:", statsError.message);
+        } catch (postsError) {
+          console.log("Posts endpoint not available yet:", postsError.message);
+          setPosts([]);
+          setStats(prev => ({ ...prev, posts: 0 }));
+        }
+        
+        // Fetch followers/following stats
+        try {
+          const statsResponse = await axiosInstance.get(`/users/stats/${id}`);
+          if (statsResponse.data.success) {
             setStats(prev => ({
               ...prev,
-              followers: 0,
-              following: 0,
+              followers: statsResponse.data.data.followers,
+              following: statsResponse.data.data.following,
             }));
           }
-          
-          // Check if current user is following this profile
-          if (isAuthenticated && currentUser) {
-            try {
-              const followResponse = await axiosInstance.get(`/users/following/check/${id}`);
-              setIsFollowing(followResponse.data.data.isFollowing);
-            } catch (followError) {
-              console.log("Follow check endpoint not available yet:", followError.message);
-              setIsFollowing(false);
-            }
+        } catch (statsError) {
+          console.log("Stats endpoint not available yet:", statsError.message);
+          setStats(prev => ({
+            ...prev,
+            followers: 0,
+            following: 0,
+          }));
+        }
+        
+        // Check if current user is following this profile
+        if (isAuthenticated && currentUser) {
+          try {
+            const followResponse = await axiosInstance.get(`/users/following/check/${id}`);
+            setIsFollowing(followResponse.data.data.isFollowing);
+          } catch (followError) {
+            console.log("Follow check endpoint not available yet:", followError.message);
+            setIsFollowing(false);
           }
         }
-      } catch (error) {
-        console.error("Failed to fetch profile:", error);
-        toast.error("Failed to load profile");
-      } finally {
-        setLoading(false);
       }
-    };
-    
+    } catch (error) {
+      console.error("Failed to fetch profile:", error);
+      toast.error("Failed to load profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchProfileData();
   }, [id, isAuthenticated, currentUser]);
 
@@ -134,66 +131,6 @@ const ProfilePage = () => {
     }
   };
 
-  // Handle like/unlike
-  const handleLike = async (postId, currentLikeCount, isCurrentlyLiked) => {
-    if (!isAuthenticated) {
-      toast.error("Please login to like posts");
-      router.push("/auth/login");
-      return;
-    }
-
-    if (likingPosts[postId]) return;
-    
-    setLikingPosts(prev => ({ ...prev, [postId]: true }));
-    
-    // Optimistic update
-    setPosts(prevPosts =>
-      prevPosts.map(post => {
-        if (post._id === postId) {
-          return {
-            ...post,
-            likesCount: isCurrentlyLiked ? currentLikeCount - 1 : currentLikeCount + 1,
-            isLikedByCurrentUser: !isCurrentlyLiked
-          };
-        }
-        return post;
-      })
-    );
-    
-    try {
-      const response = await axiosInstance.post(`/posts/${postId}/like`);
-      if (response.data.success) {
-        // Refresh the specific post to ensure consistency
-        const freshResponse = await axiosInstance.get(`/posts/${postId}`);
-        if (freshResponse.data.success) {
-          setPosts(prevPosts =>
-            prevPosts.map(post => 
-              post._id === postId ? freshResponse.data.data : post
-            )
-          );
-        }
-      }
-    } catch (error) {
-      console.error("Like error:", error);
-      // Revert on error
-      setPosts(prevPosts =>
-        prevPosts.map(post => {
-          if (post._id === postId) {
-            return {
-              ...post,
-              likesCount: currentLikeCount,
-              isLikedByCurrentUser: isCurrentlyLiked
-            };
-          }
-          return post;
-        })
-      );
-      toast.error("Failed to process like");
-    } finally {
-      setLikingPosts(prev => ({ ...prev, [postId]: false }));
-    }
-  };
-
   const formatDate = (date) => {
     if (!date) return "Unknown";
     return new Date(date).toLocaleDateString("en-US", {
@@ -201,32 +138,6 @@ const ProfilePage = () => {
       month: "long",
       day: "numeric",
     });
-  };
-
-  const getTimeAgo = (date) => {
-    if (!date) return "recently";
-    const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-    const intervals = {
-      year: 31536000,
-      month: 2592000,
-      week: 604800,
-      day: 86400,
-      hour: 3600,
-      minute: 60,
-    };
-    
-    for (const [unit, secondsInUnit] of Object.entries(intervals)) {
-      const interval = Math.floor(seconds / secondsInUnit);
-      if (interval >= 1) {
-        return `${interval} ${unit}${interval === 1 ? "" : "s"} ago`;
-      }
-    }
-    return "just now";
-  };
-
-  // Navigate to post details
-  const goToPostDetails = (postId) => {
-    router.push(`/post/details/${postId}`);
   };
 
   if (loading) {
@@ -426,7 +337,7 @@ const ProfilePage = () => {
                     <p className="text-white/60">No posts yet</p>
                     {isOwnProfile && (
                       <Link
-                        href="/posts"
+                        href="/create-post"
                         className="inline-block mt-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-sm hover:scale-105 transition-transform"
                       >
                         Create Your First Post
@@ -435,105 +346,13 @@ const ProfilePage = () => {
                   </div>
                 ) : (
                   <div className="grid gap-4">
-                    {posts.map((post) => {
-                      const isLiked = post.likes?.includes(currentUser?._id) || post.isLikedByCurrentUser;
-                      const likeCount = post.likesCount || 0;
-                      const commentCount = post.commentsCount || 0;
-                      const shareCount = post.sharesCount || 0;
-                      
-                      return (
-                        <div
-                          key={post._id}
-                          className="backdrop-blur-xl bg-white/5 rounded-xl border border-white/10 p-4 hover:bg-white/10 transition-all duration-300"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                              {profileUser.profilePicture?.url ? (
-                                <Image
-                                  src={profileUser.profilePicture.url}
-                                  alt={profileUser.fullName}
-                                  width={40}
-                                  height={40}
-                                  className="object-cover"
-                                />
-                              ) : (
-                                <UserIcon className="h-5 w-5 text-white" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <span className="font-semibold text-white text-sm sm:text-base">
-                                  {profileUser.fullName}
-                                </span>
-                                <span className="text-white/40 text-xs">{getTimeAgo(post.createdAt)}</span>
-                              </div>
-                              
-                              {/* Post Content - Click to go to details */}
-                              <div 
-                                onClick={() => goToPostDetails(post._id)}
-                                className="cursor-pointer"
-                              >
-                                <p className="text-white/80 mb-3 text-sm sm:text-base break-words">
-                                  {post.description || post.content}
-                                </p>
-                                {post.media && (
-                                  <div className="rounded-lg overflow-hidden mb-3">
-                                    {post.media.resourceType === "video" ? (
-                                      <video
-                                        src={post.media.url}
-                                        controls
-                                        className="w-full max-h-96 object-contain"
-                                        onClick={(e) => e.stopPropagation()}
-                                      />
-                                    ) : (
-                                      <Image
-                                        src={post.media.url}
-                                        alt="Post media"
-                                        width={500}
-                                        height={300}
-                                        className="w-full object-cover max-h-96"
-                                      />
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                              
-                              {/* Action Buttons */}
-                              <div className="flex gap-4 mt-2 pt-2 border-t border-white/10">
-                                <button
-                                  onClick={() => handleLike(post._id, likeCount, isLiked)}
-                                  disabled={likingPosts[post._id]}
-                                  className="flex items-center gap-1 text-white/60 hover:text-red-400 transition-colors disabled:opacity-50"
-                                >
-                                  {isLiked ? (
-                                    <HeartSolidIcon className="h-5 w-5 text-red-500" />
-                                  ) : (
-                                    <HeartIcon className="h-5 w-5" />
-                                  )}
-                                  <span className="text-sm">{likeCount}</span>
-                                </button>
-                                
-                                <button
-                                  onClick={() => goToPostDetails(post._id)}
-                                  className="flex items-center gap-1 text-white/60 hover:text-purple-400 transition-colors"
-                                >
-                                  <ChatBubbleLeftIcon className="h-5 w-5" />
-                                  <span className="text-sm">{commentCount}</span>
-                                </button>
-                                
-                                <button
-                                  onClick={() => goToPostDetails(post._id)}
-                                  className="flex items-center gap-1 text-white/60 hover:text-green-400 transition-colors"
-                                >
-                                  <ShareIcon className="h-5 w-5" />
-                                  <span className="text-sm">{shareCount}</span>
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {posts.map((post) => (
+                      <PostCard 
+                        key={post._id} 
+                        post={post} 
+                        onPostUpdate={fetchProfileData}
+                      />
+                    ))}
                   </div>
                 )}
               </>
@@ -545,7 +364,7 @@ const ProfilePage = () => {
                 <p className="text-white/60">No videos yet</p>
                 {isOwnProfile && (
                   <Link
-                    href="/posts"
+                    href="/create-post"
                     className="inline-block mt-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-sm hover:scale-105 transition-transform"
                   >
                     Create a Video Post
