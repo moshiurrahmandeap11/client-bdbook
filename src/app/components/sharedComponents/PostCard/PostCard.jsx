@@ -67,13 +67,18 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
     return "just now";
   };
 
-  const handleLike = async () => {
+  // Check authentication helper
+  const checkAuth = () => {
     if (!isAuthenticated) {
-      toast.error("Please login to like posts");
+      toast.error("Please login to continue");
       router.push("/auth/login");
-      return;
+      return false;
     }
+    return true;
+  };
 
+  const handleLike = async () => {
+    if (!checkAuth()) return;
     if (isLiking) return;
     
     setIsLiking(true);
@@ -103,6 +108,16 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
     } finally {
       setIsLiking(false);
     }
+  };
+
+  const handleComment = () => {
+    if (!checkAuth()) return;
+    goToPostDetails();
+  };
+
+  const handleShare = () => {
+    if (!checkAuth()) return;
+    goToPostDetails();
   };
 
   const handleEditPost = async () => {
@@ -143,11 +158,7 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
   };
 
   const handleSharePost = async () => {
-    if (!isAuthenticated) {
-      toast.error("Please login to share posts");
-      router.push("/auth/login");
-      return;
-    }
+    if (!checkAuth()) return;
 
     setIsSharing(true);
     try {
@@ -171,32 +182,32 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
 
   return (
     <>
-      <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/20 p-4 hover:bg-white/10 transition-all duration-300">
+      <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/20 p-5 hover:bg-white/10 transition-all duration-300">
         {/* Post Header */}
         <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3 flex-1">
+          <div className="flex items-start gap-4 flex-1">
             <Link href={`/profile/${post.userId}`}>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center overflow-hidden cursor-pointer">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center overflow-hidden cursor-pointer">
                 {post.userProfilePicture ? (
                   <Image
                     src={post.userProfilePicture}
                     alt={post.userName}
-                    width={48}
-                    height={48}
+                    width={56}
+                    height={56}
                     className="object-cover"
                   />
                 ) : (
-                  <UserIcon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                  <UserIcon className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
                 )}
               </div>
             </Link>
             <div className="flex-1">
               <Link href={`/profile/${post.userId}`}>
-                <h3 className="font-semibold text-white hover:text-purple-400 transition text-sm sm:text-base">
+                <h3 className="font-semibold text-white hover:text-purple-400 transition text-base sm:text-lg">
                   {post.userName}
                 </h3>
               </Link>
-              <p className="text-white/40 text-xs">{getTimeAgo(post.createdAt)}</p>
+              <p className="text-white/40 text-xs sm:text-sm">{getTimeAgo(post.createdAt)}</p>
             </div>
           </div>
           
@@ -246,29 +257,29 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
         {/* Post Content */}
         <div 
           onClick={goToPostDetails}
-          className="mt-3 cursor-pointer"
+          className="mt-4 cursor-pointer"
         >
           {post.description && (
-            <p className="text-white/80 mb-3 text-sm sm:text-base break-words">
+            <p className="text-white/80 mb-4 text-base sm:text-lg break-words leading-relaxed">
               {post.description}
             </p>
           )}
           {post.media && (
-            <div className="rounded-xl overflow-hidden bg-black/20">
+            <div className="rounded-xl overflow-hidden bg-black/20 -mx-5">
               {post.media.resourceType === "video" ? (
                 <video
                   src={post.media.url}
                   controls
-                  className="w-full max-h-96 object-contain"
+                  className="w-full max-h-[600px] object-contain"
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
                 <Image
                   src={post.media.url}
                   alt="Post media"
-                  width={600}
-                  height={400}
-                  className="w-full object-cover max-h-96"
+                  width={800}
+                  height={600}
+                  className="w-full object-cover max-h-[600px]"
                 />
               )}
             </div>
@@ -276,34 +287,34 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/10">
+        <div className="flex items-center justify-around gap-4 mt-4 pt-4 border-t border-white/10">
           <button
             onClick={handleLike}
             disabled={isLiking}
-            className="flex items-center gap-1 text-white/60 hover:text-red-400 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 text-white/60 hover:text-red-400 transition-colors disabled:opacity-50 py-1 px-4 rounded-lg hover:bg-white/5"
           >
             {isLiked ? (
-              <HeartSolidIcon className="h-5 w-5 text-red-500" />
+              <HeartSolidIcon className="h-6 w-6 text-red-500" />
             ) : (
-              <HeartIcon className="h-5 w-5" />
+              <HeartIcon className="h-6 w-6" />
             )}
-            <span className="text-sm">{likeCount}</span>
+            <span className="text-sm font-medium">{likeCount}</span>
           </button>
           
           <button
-            onClick={goToPostDetails}
-            className="flex items-center gap-1 text-white/60 hover:text-purple-400 transition-colors"
+            onClick={handleComment}
+            className="flex items-center gap-2 text-white/60 hover:text-purple-400 transition-colors py-1 px-4 rounded-lg hover:bg-white/5"
           >
-            <ChatBubbleLeftIcon className="h-5 w-5" />
-            <span className="text-sm">{commentCount}</span>
+            <ChatBubbleLeftIcon className="h-6 w-6" />
+            <span className="text-sm font-medium">{commentCount}</span>
           </button>
           
           <button
-            onClick={goToPostDetails}
-            className="flex items-center gap-1 text-white/60 hover:text-green-400 transition-colors"
+            onClick={handleShare}
+            className="flex items-center gap-2 text-white/60 hover:text-green-400 transition-colors py-1 px-4 rounded-lg hover:bg-white/5"
           >
-            <ShareIcon className="h-5 w-5" />
-            <span className="text-sm">{shareCount}</span>
+            <ShareIcon className="h-6 w-6" />
+            <span className="text-sm font-medium">{shareCount}</span>
           </button>
         </div>
       </div>
