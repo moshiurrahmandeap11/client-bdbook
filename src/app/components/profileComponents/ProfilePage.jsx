@@ -415,7 +415,7 @@ const ProfilePage = () => {
                     <p className="text-white/60">No posts yet</p>
                     {isOwnProfile && (
                       <Link
-                        href="/posts"
+                        href="/create-post"
                         className="inline-block mt-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-sm hover:scale-105 transition-transform"
                       >
                         Create Your First Post
@@ -442,7 +442,7 @@ const ProfilePage = () => {
                 <p className="text-white/60">No videos yet</p>
                 {isOwnProfile && (
                   <Link
-                    href="/posts"
+                    href="/create-post"
                     className="inline-block mt-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-sm hover:scale-105 transition-transform"
                   >
                     Create a Video Post
@@ -472,7 +472,7 @@ const ProfilePage = () => {
       {/* Floating Create Post Button - FAB (only for own profile) */}
       {isOwnProfile && (
         <Link
-          href="/posts"
+          href="/create-post"
           className="fixed bottom-20 right-4 sm:bottom-24 sm:right-8 z-40 p-3 sm:p-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full shadow-2xl hover:scale-110 transition-all duration-300 group"
         >
           <PlusIcon className="h-6 w-6 sm:h-8 sm:w-8 text-white" />

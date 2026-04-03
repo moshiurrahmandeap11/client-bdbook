@@ -28,14 +28,23 @@ const Header = () => {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Navigation items
-  const navItems = [
+  // Navigation items - Public items (always visible)
+  const publicNavItems = [
     { name: "Home", href: "/", icon: HomeIcon },
     { name: "Posts", href: "/posts", icon: NewspaperIcon },
     { name: "Videos", href: "/videos", icon: VideoCameraIcon },
+  ];
+
+  // Private items (only visible when logged in)
+  const privateNavItems = [
     { name: "Message", href: "/message", icon: MessageCircle },
     { name: "Community", href: "/community", icon: UserGroupIcon },
   ];
+
+  // Combine items based on auth status
+  const navItems = isAuthenticated 
+    ? [...publicNavItems, ...privateNavItems]
+    : publicNavItems;
 
   // Handle scroll effect
   useEffect(() => {
@@ -93,11 +102,11 @@ const Header = () => {
             <div className="flex items-center shrink-0">
               <Link href="/" className="group">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-linear-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
                     <span className="text-white font-bold text-lg sm:text-xl">BD</span>
                   </div>
                   <div>
-                    <h1 className="text-xl sm:text-2xl font-bold bg-linear-to-r from-white via-purple-200 to-blue-200 bg-clip-text text-transparent">
+                    <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-white via-purple-200 to-blue-200 bg-clip-text text-transparent">
                       BD BOOK
                     </h1>
                   </div>
@@ -125,11 +134,11 @@ const Header = () => {
             <div className="flex items-center shrink-0">
               <Link href="/" className="group">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-linear-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center transform group-hover:scale-105 transition-all duration-300 shadow-lg">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center transform group-hover:scale-105 transition-all duration-300 shadow-lg">
                     <span className="text-white font-bold text-lg sm:text-xl">BD</span>
                   </div>
                   <div>
-                    <h1 className="text-xl sm:text-2xl font-bold bg-linear-to-r from-white via-purple-200 to-blue-200 bg-clip-text text-transparent">
+                    <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-white via-purple-200 to-blue-200 bg-clip-text text-transparent">
                       BD BOOK
                     </h1>
                     <p className="text-[10px] sm:text-xs text-white/50 hidden sm:block">Connect & Share</p>
@@ -160,7 +169,7 @@ const Header = () => {
                       <span>{item.name}</span>
                     </div>
                     {isActive && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-linear-to-r from-purple-500 to-blue-500 rounded-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
+                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
                     )}
                   </Link>
                 );
@@ -185,7 +194,7 @@ const Header = () => {
                         />
                       </div>
                     ) : (
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-linear-to-r from-purple-600 to-blue-600 flex items-center justify-center">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
                         <UserCircleIcon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                       </div>
                     )}
@@ -240,7 +249,7 @@ const Header = () => {
               ) : (
                 <button
                   onClick={handleGetStarted}
-                  className="px-4 sm:px-6 py-1.5 sm:py-2 bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-sm sm:text-base"
+                  className="px-4 sm:px-6 py-1.5 sm:py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-sm sm:text-base"
                 >
                   Get Started
                 </button>
@@ -349,6 +358,36 @@ const Header = () => {
           body {
             padding-bottom: 64px;
           }
+        }
+        
+        @keyframes fadeInDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-fadeInDown {
+          animation: fadeInDown 0.2s ease-out;
+        }
+        
+        .animate-slideDown {
+          animation: slideDown 0.3s ease-out;
         }
       `}</style>
     </>

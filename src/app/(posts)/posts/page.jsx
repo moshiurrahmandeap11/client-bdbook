@@ -1,4 +1,5 @@
-import Posts from "../create-post/page";
+import Posts from "@/app/components/postsComponents/Posts";
+
 
 const PostsPage = () => {
     return (

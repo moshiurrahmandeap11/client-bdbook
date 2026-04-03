@@ -1,20 +1,21 @@
 "use client";
 
-import PostCard from "@/app/components/PostCard";
+
 import { useAuth } from "@/app/hooks/useAuth";
 import axiosInstance from "@/app/lib/axiosInstance";
 import {
-    FaceSmileIcon,
-    PhotoIcon,
-    PlusIcon,
-    UserIcon,
-    VideoCameraIcon,
-    XMarkIcon
+  FaceSmileIcon,
+  PhotoIcon,
+  PlusIcon,
+  UserIcon,
+  VideoCameraIcon,
+  XMarkIcon
 } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import PostCard from "../sharedComponents/PostCard/PostCard";
 
 const Posts = () => {
   const { user, isAuthenticated } = useAuth();

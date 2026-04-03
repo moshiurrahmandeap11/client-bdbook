@@ -3,13 +3,13 @@
 import { useAuth } from "@/app/hooks/useAuth";
 import axiosInstance from "@/app/lib/axiosInstance";
 import {
-    ChatBubbleLeftIcon,
-    HeartIcon,
-    PauseIcon,
-    PlayIcon,
-    ShareIcon,
-    UserIcon,
-    VideoCameraIcon
+  ChatBubbleLeftIcon,
+  HeartIcon,
+  PauseIcon,
+  PlayIcon,
+  ShareIcon,
+  UserIcon,
+  VideoCameraIcon
 } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
