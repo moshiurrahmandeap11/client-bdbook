@@ -4,6 +4,8 @@ import Cookies from "js-cookie";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://server-bdbook.onrender.com/v1/api";
 
+// "https://server-bdbook.onrender.com/v1/api" ||
+
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 30000,
