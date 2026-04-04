@@ -8,10 +8,10 @@ import {
   BellIcon,
   Cog6ToothIcon,
   HomeIcon,
-  NewspaperIcon,
   UserCircleIcon,
   UserGroupIcon,
   VideoCameraIcon,
+  VideoCameraSlashIcon,
   XMarkIcon
 } from "@heroicons/react/24/outline";
 import { MessageCircle } from "lucide-react";
@@ -49,8 +49,8 @@ const Header = () => {
   const navItems = useMemo(() => {
     const publicNavItems = [
       { name: "Home", href: "/", icon: HomeIcon },
-      { name: "Posts", href: "/posts", icon: NewspaperIcon },
       { name: "Videos", href: "/videos", icon: VideoCameraIcon },
+      { name: "Room", href: "/room", icon: VideoCameraSlashIcon },
     ];
     const privateNavItems = [
       { name: "Messages", href: "/message", icon: MessageCircle },

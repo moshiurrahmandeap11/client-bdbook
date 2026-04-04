@@ -11,8 +11,12 @@ import {
   MicrophoneIcon,
   PaperAirplaneIcon,
   PaperClipIcon,
+  PauseIcon,
   PhoneIcon,
   PhoneXMarkIcon,
+  PlayIcon,
+  StopIcon,
+  TrashIcon,
   UserIcon,
   VideoCameraIcon,
   VideoCameraSlashIcon
@@ -67,6 +71,23 @@ const playMessageReceiveSound = () => {
 };
 // ────────────────────────────────────────────────────────────────────
 
+// ── Voice Message Helper Functions ─────────────────────────────────
+const formatVoiceDuration = (seconds) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+const blobToBase64 = (blob) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+// ───────────────────────────────────────────────────────────────────
+
 const MessagePage = () => {
   const { user, isAuthenticated } = useAuth();
   const { socket, onlineUsers } = useSocket();
@@ -81,6 +102,16 @@ const MessagePage = () => {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Voice Message States
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [recordedBlob, setRecordedBlob] = useState(null);
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState(null);
+  
+  // Playing voice message states
+  const [playingMessageId, setPlayingMessageId] = useState(null);
+  const audioRef = useRef(null);
+
   // Call states
   const [isCalling, setIsCalling] = useState(false);
   const [isInCall, setIsInCall] = useState(false);
@@ -91,7 +122,7 @@ const MessagePage = () => {
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [incomingCall, setIncomingCall] = useState(null);
   const [callDuration, setCallDuration] = useState(0);
-  const [isCallConnected, setIsCallConnected] = useState(false); // Fix 1: Track call connection
+  const [isCallConnected, setIsCallConnected] = useState(false);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -104,6 +135,11 @@ const MessagePage = () => {
   const callTimerRef = useRef(null);
   const ringtoneRef = useRef(null);
   const selectedChatRef = useRef(null);
+  
+  // Voice recording refs
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
 
   // selectedChat কে ref এ রাখি যাতে socket callback এ সবসময় latest value পাই
   useEffect(() => {
@@ -248,7 +284,6 @@ const MessagePage = () => {
   const startCall = async (type) => {
     if (!selectedChatRef.current) return;
     
-    // Fix 1: Check if already in a call
     if (isCalling || isInCall || isCallConnected) {
       toast.error("Already in a call");
       return;
@@ -299,7 +334,6 @@ const MessagePage = () => {
   const answerCall = async (callData) => {
     if (!callData) return;
     
-    // Fix 1: Check if already in a call
     if (isCalling || isInCall || isCallConnected) {
       socket.emit("call_busy", { to: callData.from });
       return;
@@ -433,7 +467,6 @@ const MessagePage = () => {
       if (chat && userId === chat.friendId) fetchConversations();
     };
 
-    // ── Incoming call ──────────────────────────────────────────────
     const onIncomingCall = (data) => {
       if (isInCall || isCalling || isCallConnected) {
         socket.emit("call_busy", { to: data.from });
@@ -511,6 +544,15 @@ const MessagePage = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Cleanup audio preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (audioPreviewUrl) {
+        URL.revokeObjectURL(audioPreviewUrl);
+      }
+    };
+  }, [audioPreviewUrl]);
+
   const scrollToBottom = () => {
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 80);
   };
@@ -564,6 +606,128 @@ const MessagePage = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // ── Voice Message Functions ──────────────────────────────────────
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+      });
+      
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType });
+        setRecordedBlob(audioBlob);
+        
+        // Create preview URL for playback
+        const previewUrl = URL.createObjectURL(audioBlob);
+        setAudioPreviewUrl(previewUrl);
+        
+        // Stop all audio tracks
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      
+      // Start recording timer
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+      
+      toast.success("Recording started...");
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      toast.error("Microphone access denied. Please allow permissions.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+      
+      toast.success("Recording stopped");
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+      
+      // Stop all audio tracks
+      if (mediaRecorderRef.current.stream) {
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      }
+      
+      setRecordedBlob(null);
+      if (audioPreviewUrl) {
+        URL.revokeObjectURL(audioPreviewUrl);
+        setAudioPreviewUrl(null);
+      }
+      setRecordingTime(0);
+      toast.info("Recording cancelled");
+    }
+  };
+
+  const sendVoiceMessage = async () => {
+    if (!recordedBlob || !selectedChat) return;
+    
+    setUploadingFile(true);
+    try {
+      // Convert blob to base64 for sending via socket
+      const base64Audio = await blobToBase64(recordedBlob);
+      
+      if (socket) {
+        socket.emit("send_message", {
+          receiverId: selectedChat.friendId,
+          message: "",
+          messageType: "voice",
+          mediaUrl: base64Audio,
+          fileName: `voice_${Date.now()}.webm`,
+          fileSize: recordedBlob.size,
+          duration: recordingTime
+        });
+      }
+      
+      playMessageSendSound();
+      
+      // Cleanup
+      setRecordedBlob(null);
+      if (audioPreviewUrl) {
+        URL.revokeObjectURL(audioPreviewUrl);
+        setAudioPreviewUrl(null);
+      }
+      setRecordingTime(0);
+      
+    } catch (error) {
+      console.error("Error sending voice message:", error);
+      toast.error("Failed to send voice message");
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
   const handleTyping = () => {
     if (!selectedChat) return;
     socket?.emit("typing", { receiverId: selectedChat.friendId, isTyping: true });
@@ -588,6 +752,141 @@ const MessagePage = () => {
     return d.toLocaleDateString();
   };
 
+  // ── Voice Message Player Component ───────────────────────────────
+  const VoiceMessagePlayer = ({ audioUrl, duration, messageId, isOwn }) => {
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [currentTime, setCurrentTime] = useState(0);
+    const localAudioRef = useRef(null);
+
+    useEffect(() => {
+      return () => {
+        if (localAudioRef.current) {
+          localAudioRef.current.pause();
+          localAudioRef.current.src = "";
+        }
+      };
+    }, []);
+
+    const togglePlay = () => {
+      if (!localAudioRef.current) return;
+      
+      // Pause other playing messages
+      if (playingMessageId && playingMessageId !== messageId) {
+        const otherAudio = document.querySelector(`audio[data-message-id="${playingMessageId}"]`);
+        if (otherAudio) {
+          otherAudio.pause();
+          otherAudio.currentTime = 0;
+        }
+      }
+      
+      if (isPlaying) {
+        localAudioRef.current.pause();
+        setPlayingMessageId(null);
+      } else {
+        localAudioRef.current.play().catch(err => {
+          console.error("Error playing audio:", err);
+          toast.error("Failed to play voice message");
+        });
+        setPlayingMessageId(messageId);
+      }
+      setIsPlaying(!isPlaying);
+    };
+
+    const handleTimeUpdate = () => {
+      if (localAudioRef.current) {
+        setCurrentTime(localAudioRef.current.currentTime);
+      }
+    };
+
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+      if (playingMessageId === messageId) {
+        setPlayingMessageId(null);
+      }
+    };
+
+    const handleSeek = (e) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const percent = x / rect.width;
+      if (localAudioRef.current && duration) {
+        localAudioRef.current.currentTime = percent * duration;
+      }
+    };
+
+    const progress = duration ? (currentTime / duration) * 100 : 0;
+
+    return (
+      <div className="flex items-center gap-2 min-w-[200px] max-w-[240px]">
+        <audio
+          ref={localAudioRef}
+          src={audioUrl}
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={handleEnded}
+          data-message-id={messageId}
+          className="hidden"
+        />
+        
+        {/* Play/Pause Button */}
+        <button
+          onClick={togglePlay}
+          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition ${
+            isOwn ? 'bg-white/20 hover:bg-white/30' : 'bg-blue-500/20 hover:bg-blue-500/30'
+          }`}
+        >
+          {isPlaying ? (
+            <PauseIcon className="h-4 w-4 text-white" />
+          ) : (
+            <PlayIcon className="h-4 w-4 text-white ml-0.5" />
+          )}
+        </button>
+        
+        {/* Waveform/Progress Bar */}
+        <div className="flex-1 min-w-0">
+          <div 
+            className={`h-8 rounded-full cursor-pointer relative overflow-hidden ${
+              isOwn ? 'bg-white/20' : 'bg-blue-500/20'
+            }`}
+            onClick={handleSeek}
+          >
+            {/* Progress fill */}
+            <div 
+              className={`absolute left-0 top-0 h-full rounded-full transition-all ${
+                isOwn ? 'bg-white/40' : 'bg-blue-500/40'
+              }`}
+              style={{ width: `${progress}%` }}
+            />
+            
+            {/* Waveform visualization (static) */}
+            <div className="absolute inset-0 flex items-center justify-center gap-0.5 px-2">
+              {[...Array(20)].map((_, i) => (
+                <div
+                  key={i}
+                  className={`w-0.5 rounded-full ${isOwn ? 'bg-white/60' : 'bg-blue-400/60'}`}
+                  style={{ 
+                    height: `${Math.random() * 16 + 4}px`,
+                    opacity: i / 20 < progress / 100 ? 1 : 0.4
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+          
+          {/* Duration */}
+          <div className="flex justify-between mt-1">
+            <span className={`text-[10px] ${isOwn ? 'text-white/70' : 'text-white/50'}`}>
+              {formatVoiceDuration(currentTime)}
+            </span>
+            <span className={`text-[10px] ${isOwn ? 'text-white/70' : 'text-white/50'}`}>
+              {formatVoiceDuration(duration || 0)}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderMessageContent = (msg) => {
     if (msg.messageType === "image") {
       return (
@@ -608,6 +907,19 @@ const MessagePage = () => {
         </a>
       );
     }
+    // ── Voice Message Rendering ─────────────────────────────────────
+    if (msg.messageType === "voice") {
+      return (
+        <VoiceMessagePlayer 
+          audioUrl={msg.mediaUrl} 
+          duration={msg.duration} 
+          messageId={msg._id}
+          isOwn={msg.senderId === user?._id}
+        />
+      );
+    }
+    // ───────────────────────────────────────────────────────────────
+    
     const text = typeof msg.message === "string" ? msg.message : String(msg.message || "");
     return <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{text}</p>;
   };
@@ -957,7 +1269,75 @@ const MessagePage = () => {
                 )}
               </div>
 
-              {/* Input bar - Fix 2: Fixed responsive issue for Android */}
+              {/* ── Recording Preview Bar ─────────────────────────── */}
+              {isRecording && (
+                <div className="px-4 py-2 bg-red-500/20 border-t border-red-500/30 flex items-center justify-between flex-shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                    <span className="text-white text-sm font-medium">{formatVoiceDuration(recordingTime)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={cancelRecording}
+                      className="p-2 rounded-full hover:bg-white/10 transition text-white/70 hover:text-white"
+                      title="Cancel"
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                    <button 
+                      onClick={stopRecording}
+                      className="w-10 h-10 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition shadow-lg"
+                      title="Stop Recording"
+                    >
+                      <StopIcon className="h-5 w-5 text-white" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Voice Preview Before Send ─────────────────────── */}
+              {recordedBlob && !isRecording && (
+                <div className="px-4 py-2 bg-[#242526] border-t border-[#3a3b3c] flex items-center justify-between flex-shrink-0">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <VoiceMessagePlayer 
+                      audioUrl={audioPreviewUrl} 
+                      duration={recordingTime} 
+                      messageId="preview"
+                      isOwn={true}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 ml-3">
+                    <button 
+                      onClick={() => {
+                        setRecordedBlob(null);
+                        if (audioPreviewUrl) {
+                          URL.revokeObjectURL(audioPreviewUrl);
+                          setAudioPreviewUrl(null);
+                        }
+                        setRecordingTime(0);
+                      }}
+                      className="p-2 rounded-full hover:bg-white/10 transition text-white/70 hover:text-white"
+                      title="Cancel"
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                    <button 
+                      onClick={sendVoiceMessage}
+                      disabled={uploadingFile}
+                      className="w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-600 disabled:opacity-40 flex items-center justify-center transition shadow-lg"
+                      title="Send Voice Message"
+                    >
+                      {uploadingFile ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white" />
+                      ) : (
+                        <PaperAirplaneIcon className="h-4 w-4 text-white" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Input bar */}
               <div className="px-4 mb-18 md:mb-0 py-3 bg-[#242526] border-t border-[#3a3b3c] flex-shrink-0">
                 <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                   {/* Emoji */}
@@ -980,7 +1360,20 @@ const MessagePage = () => {
                   </button>
                   <input ref={fileInputRef} type="file" accept="image/*,video/*,application/pdf" onChange={handleFileUpload} className="hidden" />
 
-                  {/* Text input - Fixed for mobile */}
+                  {/* ── Voice Record Button ───────────────────────── */}
+                  {!isRecording && !recordedBlob && (
+                    <button 
+                      type="button" 
+                      onClick={startRecording}
+                      className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-blue-400 hover:bg-[#3a3b3c] transition"
+                      title="Record voice message"
+                    >
+                      <MicrophoneIcon className="h-5 w-5" />
+                    </button>
+                  )}
+                  {/* ─────────────────────────────────────────────── */}
+
+                  {/* Text input */}
                   <input
                     ref={inputRef}
                     type="text"
@@ -1025,7 +1418,7 @@ const MessagePage = () => {
         }
         .animate-bounce { animation: bounce 1s infinite; }
         
-        /* Fix 3: Audio/Video call audio fix */
+        /* Fix: Audio/Video call audio fix */
         video, audio {
           pointer-events: auto;
         }
@@ -1033,6 +1426,28 @@ const MessagePage = () => {
         /* Ensure remote video stream audio works */
         video:not([muted]) {
           audio: auto;
+        }
+        
+        /* Custom scrollbar for voice message waveform */
+        input[type="range"] {
+          -webkit-appearance: none;
+          background: transparent;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: #fff;
+          cursor: pointer;
+          margin-top: -4px;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+          width: 100%;
+          height: 4px;
+          cursor: pointer;
+          background: rgba(255,255,255,0.2);
+          border-radius: 2px;
         }
       `}</style>
     </>
