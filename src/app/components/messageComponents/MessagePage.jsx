@@ -13,6 +13,8 @@ import {
   PaperClipIcon,
   PhoneIcon,
   PhoneXMarkIcon,
+  SpeakerWaveIcon,
+  SpeakerXMarkIcon,
   UserIcon,
   VideoCameraIcon,
   VideoCameraSlashIcon
@@ -87,14 +89,17 @@ const MessagePage = () => {
   const [callType, setCallType] = useState(null);
   const [callStatus, setCallStatus] = useState(null);
   const [localStream, setLocalStream] = useState(null);
+  const [remoteStream, setRemoteStream] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [incomingCall, setIncomingCall] = useState(null);
   const [callDuration, setCallDuration] = useState(0);
-  const [isCallConnected, setIsCallConnected] = useState(false); // Fix 1: Track call connection
+  const [isCallConnected, setIsCallConnected] = useState(false);
+  const [isSpeakerOn, setIsSpeakerOn] = useState(false); // Fix 2: Speaker state
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const remoteAudioRef = useRef(null); // Fix 3: Separate audio element for audio calls
   const peerConnectionRef = useRef(null);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -208,13 +213,72 @@ const MessagePage = () => {
     }
   };
 
+  // Fix 2 & 3: Handle speaker toggle for audio calls
+  const toggleSpeaker = () => {
+    if (callType === "audio" && remoteAudioRef.current) {
+      if (isSpeakerOn) {
+        // Switch to earpiece/receiver
+        // @ts-ignore
+        if (remoteAudioRef.current.sinkId) {
+          // Use default output (earpiece)
+          // @ts-ignore
+          remoteAudioRef.current.setSinkId("default").catch(console.error);
+        }
+      } else {
+        // Switch to speaker
+        // @ts-ignore
+        if (remoteAudioRef.current.sinkId) {
+          // Try to get speaker device
+          // @ts-ignore
+          navigator.mediaDevices.enumerateDevices().then(devices => {
+            const speakerDevice = devices.find(d => d.kind === "audiooutput" && d.label.toLowerCase().includes("speaker"));
+            if (speakerDevice && remoteAudioRef.current.setSinkId) {
+              // @ts-ignore
+              remoteAudioRef.current.setSinkId(speakerDevice.deviceId).catch(console.error);
+            }
+          });
+        }
+      }
+      setIsSpeakerOn(!isSpeakerOn);
+    } else if (callType === "video" && remoteVideoRef.current) {
+      // For video calls, toggle between speaker and earpiece
+      if (isSpeakerOn) {
+        // @ts-ignore
+        if (remoteVideoRef.current.sinkId) {
+          // @ts-ignore
+          remoteVideoRef.current.setSinkId("default").catch(console.error);
+        }
+      } else {
+        // @ts-ignore
+        if (remoteVideoRef.current.sinkId) {
+          // @ts-ignore
+          navigator.mediaDevices.enumerateDevices().then(devices => {
+            const speakerDevice = devices.find(d => d.kind === "audiooutput" && d.label.toLowerCase().includes("speaker"));
+            if (speakerDevice && remoteVideoRef.current.setSinkId) {
+              // @ts-ignore
+              remoteVideoRef.current.setSinkId(speakerDevice.deviceId).catch(console.error);
+            }
+          });
+        }
+      }
+      setIsSpeakerOn(!isSpeakerOn);
+    }
+  };
+
   const createPeerConnection = (stream) => {
     const pc = new RTCPeerConnection(configuration);
     stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
     pc.ontrack = (event) => {
-      if (remoteVideoRef.current) {
+      setRemoteStream(event.streams[0]);
+      if (callType === "video" && remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = event.streams[0];
+        // Fix 3: Ensure audio is enabled for video call
+        remoteVideoRef.current.muted = false;
+      } else if (callType === "audio" && remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = event.streams[0];
+        // Fix 3: Ensure audio is enabled for audio call
+        remoteAudioRef.current.muted = false;
       }
     };
 
@@ -248,7 +312,6 @@ const MessagePage = () => {
   const startCall = async (type) => {
     if (!selectedChatRef.current) return;
     
-    // Fix 1: Check if already in a call
     if (isCalling || isInCall || isCallConnected) {
       toast.error("Already in a call");
       return;
@@ -264,6 +327,7 @@ const MessagePage = () => {
     setCallStatus("ringing");
     setCallDuration(0);
     setIsCallConnected(false);
+    setIsSpeakerOn(false);
     playRingtone();
 
     const stream = await initMediaStream(type);
@@ -299,7 +363,6 @@ const MessagePage = () => {
   const answerCall = async (callData) => {
     if (!callData) return;
     
-    // Fix 1: Check if already in a call
     if (isCalling || isInCall || isCallConnected) {
       socket.emit("call_busy", { to: callData.from });
       return;
@@ -312,6 +375,7 @@ const MessagePage = () => {
     setIncomingCall(null);
     setCallDuration(0);
     setIsCallConnected(false);
+    setIsSpeakerOn(false);
 
     const stream = await initMediaStream(callData.type);
     if (!stream) {
@@ -364,8 +428,10 @@ const MessagePage = () => {
     setCallType(null);
     setCallStatus(null);
     setLocalStream(null);
+    setRemoteStream(null);
     setIsMuted(false);
     setIsVideoOff(false);
+    setIsSpeakerOn(false);
     setCallDuration(0);
     setIncomingCall(null);
   }, [localStream, socket]);
@@ -433,7 +499,6 @@ const MessagePage = () => {
       if (chat && userId === chat.friendId) fetchConversations();
     };
 
-    // ── Incoming call ──────────────────────────────────────────────
     const onIncomingCall = (data) => {
       if (isInCall || isCalling || isCallConnected) {
         socket.emit("call_busy", { to: data.from });
@@ -710,20 +775,24 @@ const MessagePage = () => {
                   className="absolute bottom-4 right-4 w-28 h-40 rounded-xl object-cover border border-white/20 shadow-xl" />
               </>
             ) : (
-              <div className="text-center">
-                <div className={`w-36 h-36 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-6 overflow-hidden ${callStatus === "ringing" ? "ring-4 ring-green-500 animate-pulse" : ""}`}>
-                  {selectedChat?.friendProfilePicture ? (
-                    <Image src={selectedChat.friendProfilePicture} alt="" width={144} height={144} className="object-cover" />
-                  ) : (
-                    <UserIcon className="h-16 w-16 text-white" />
-                  )}
+              <>
+                {/* Fix 3: Hidden audio element for audio calls */}
+                <audio ref={remoteAudioRef} autoPlay playsInline style={{ display: 'none' }} />
+                <div className="text-center">
+                  <div className={`w-36 h-36 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-6 overflow-hidden ${callStatus === "ringing" ? "ring-4 ring-green-500 animate-pulse" : ""}`}>
+                    {selectedChat?.friendProfilePicture ? (
+                      <Image src={selectedChat.friendProfilePicture} alt="" width={144} height={144} className="object-cover" />
+                    ) : (
+                      <UserIcon className="h-16 w-16 text-white" />
+                    )}
+                  </div>
+                  <h3 className="text-white text-2xl font-bold mb-2">{selectedChat?.friendName}</h3>
+                  <p className="text-white/50">
+                    {callStatus === "connected" ? formatCallDuration(callDuration) :
+                     callStatus === "ringing" ? "Ringing..." : "Connecting..."}
+                  </p>
                 </div>
-                <h3 className="text-white text-2xl font-bold mb-2">{selectedChat?.friendName}</h3>
-                <p className="text-white/50">
-                  {callStatus === "connected" ? formatCallDuration(callDuration) :
-                   callStatus === "ringing" ? "Ringing..." : "Connecting..."}
-                </p>
-              </div>
+              </>
             )}
           </div>
 
@@ -733,6 +802,13 @@ const MessagePage = () => {
               className={`w-14 h-14 rounded-full flex items-center justify-center transition ${isMuted ? "bg-red-500 hover:bg-red-600" : "bg-[#3a3b3c] hover:bg-[#4e4f50]"}`}>
               <MicrophoneIcon className="h-6 w-6 text-white" />
             </button>
+            
+            {/* Fix 2: Speaker button for both audio and video calls */}
+            <button onClick={toggleSpeaker}
+              className={`w-14 h-14 rounded-full flex items-center justify-center transition ${isSpeakerOn ? "bg-blue-500 hover:bg-blue-600" : "bg-[#3a3b3c] hover:bg-[#4e4f50]"}`}>
+              {isSpeakerOn ? <SpeakerWaveIcon className="h-6 w-6 text-white" /> : <SpeakerXMarkIcon className="h-6 w-6 text-white" />}
+            </button>
+            
             {callType === "video" && (
               <button onClick={toggleVideo}
                 className={`w-14 h-14 rounded-full flex items-center justify-center transition ${isVideoOff ? "bg-red-500 hover:bg-red-600" : "bg-[#3a3b3c] hover:bg-[#4e4f50]"}`}>
@@ -957,8 +1033,8 @@ const MessagePage = () => {
                 )}
               </div>
 
-              {/* Input bar - Fix 2: Fixed responsive issue for Android */}
-              <div className="px-4 py-3 bg-[#242526] border-t border-[#3a3b3c] flex-shrink-0">
+              {/* Input bar - Fix 1: Fixed responsive issue for Android */}
+              <div className="px-4 mb-18 md:mb-0 py-3 bg-[#242526] border-t border-[#3a3b3c] flex-shrink-0">
                 <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                   {/* Emoji */}
                   <div className="relative flex-shrink-0" ref={emojiPickerRef}>
@@ -1033,6 +1109,13 @@ const MessagePage = () => {
         /* Ensure remote video stream audio works */
         video:not([muted]) {
           audio: auto;
+        }
+        
+        /* Fix for mobile input visibility */
+        @media (max-width: 768px) {
+          input, textarea, button {
+            font-size: 16px !important;
+          }
         }
       `}</style>
     </>
