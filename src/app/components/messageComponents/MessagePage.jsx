@@ -958,7 +958,7 @@ const MessagePage = () => {
               </div>
 
               {/* Input bar - Fix 2: Fixed responsive issue for Android */}
-              <div className="px-4 py-3 bg-[#242526] border-t border-[#3a3b3c] flex-shrink-0">
+              <div className="px-4 mb-18 md:mb-0 py-3 bg-[#242526] border-t border-[#3a3b3c] flex-shrink-0">
                 <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                   {/* Emoji */}
                   <div className="relative flex-shrink-0" ref={emojiPickerRef}>
