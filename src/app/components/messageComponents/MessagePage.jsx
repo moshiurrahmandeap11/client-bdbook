@@ -13,6 +13,8 @@ import {
   PaperClipIcon,
   PhoneIcon,
   PhoneXMarkIcon,
+  SpeakerWaveIcon,
+  SpeakerXMarkIcon,
   UserIcon,
   VideoCameraIcon,
   VideoCameraSlashIcon
@@ -87,14 +89,16 @@ const MessagePage = () => {
   const [callType, setCallType] = useState(null);
   const [callStatus, setCallStatus] = useState(null);
   const [localStream, setLocalStream] = useState(null);
+  const [remoteStream, setRemoteStream] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [incomingCall, setIncomingCall] = useState(null);
   const [callDuration, setCallDuration] = useState(0);
-  const [isCallConnected, setIsCallConnected] = useState(false); // Fix 1: Track call connection
+  const [isSpeakerOn, setIsSpeakerOn] = useState(false);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const remoteAudioRef = useRef(null);
   const peerConnectionRef = useRef(null);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -193,28 +197,97 @@ const MessagePage = () => {
 
   const initMediaStream = async (type) => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
+      const constraints = {
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        },
         video: type === "video"
-      });
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       setLocalStream(stream);
       if (localVideoRef.current && type === "video") {
         localVideoRef.current.srcObject = stream;
       }
       return stream;
     } catch (error) {
+      console.error("Media access error:", error);
       toast.error("Camera/Microphone access denied. Please allow permissions.");
       return null;
     }
   };
 
+  // Fix 2: Speaker toggle function
+  const toggleSpeaker = async () => {
+    try {
+      if (callType === "audio" && remoteAudioRef.current) {
+        // @ts-ignore
+        if (remoteAudioRef.current.setSinkId) {
+          if (!isSpeakerOn) {
+            // Switch to speaker
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const speakerDevice = devices.find(d => d.kind === "audiooutput" && d.label.toLowerCase().includes("speaker"));
+            if (speakerDevice) {
+              // @ts-ignore
+              await remoteAudioRef.current.setSinkId(speakerDevice.deviceId);
+            } else {
+              // @ts-ignore
+              await remoteAudioRef.current.setSinkId("default");
+            }
+          } else {
+            // Switch to earpiece
+            // @ts-ignore
+            await remoteAudioRef.current.setSinkId("default");
+          }
+          setIsSpeakerOn(!isSpeakerOn);
+        }
+      } else if (callType === "video" && remoteVideoRef.current) {
+        // @ts-ignore
+        if (remoteVideoRef.current.setSinkId) {
+          if (!isSpeakerOn) {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const speakerDevice = devices.find(d => d.kind === "audiooutput" && d.label.toLowerCase().includes("speaker"));
+            if (speakerDevice) {
+              // @ts-ignore
+              await remoteVideoRef.current.setSinkId(speakerDevice.deviceId);
+            }
+          } else {
+            // @ts-ignore
+            await remoteVideoRef.current.setSinkId("default");
+          }
+          setIsSpeakerOn(!isSpeakerOn);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to switch audio output:", error);
+    }
+  };
+
   const createPeerConnection = (stream) => {
     const pc = new RTCPeerConnection(configuration);
-    stream.getTracks().forEach(track => pc.addTrack(track, stream));
+    
+    // Add local tracks
+    stream.getTracks().forEach(track => {
+      pc.addTrack(track, stream);
+    });
 
     pc.ontrack = (event) => {
-      if (remoteVideoRef.current) {
+      console.log("Received remote track:", event.track.kind);
+      setRemoteStream(event.streams[0]);
+      
+      if (callType === "video" && remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = event.streams[0];
+        remoteVideoRef.current.muted = false;
+        remoteVideoRef.current.volume = 1.0;
+        // Force audio to play
+        remoteVideoRef.current.play().catch(e => console.log("Auto-play prevented:", e));
+      } else if (callType === "audio" && remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = event.streams[0];
+        remoteAudioRef.current.muted = false;
+        remoteAudioRef.current.volume = 1.0;
+        // Force audio to play
+        remoteAudioRef.current.play().catch(e => console.log("Auto-play prevented:", e));
       }
     };
 
@@ -227,17 +300,25 @@ const MessagePage = () => {
       }
     };
 
-    pc.onconnectionstatechange = () => {
-      if (pc.connectionState === "connected") {
+    pc.oniceconnectionstatechange = () => {
+      console.log("ICE connection state:", pc.iceConnectionState);
+      if (pc.iceConnectionState === "connected") {
         setCallStatus("connected");
-        setIsCallConnected(true);
         stopRingtone();
         if (!callTimerRef.current) {
           callTimerRef.current = setInterval(() => {
             setCallDuration(prev => prev + 1);
           }, 1000);
         }
-      } else if (["disconnected", "failed"].includes(pc.connectionState)) {
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      console.log("Connection state:", pc.connectionState);
+      if (pc.connectionState === "connected") {
+        setCallStatus("connected");
+        stopRingtone();
+      } else if (["disconnected", "failed", "closed"].includes(pc.connectionState)) {
         endCall();
       }
     };
@@ -249,7 +330,7 @@ const MessagePage = () => {
     if (!selectedChatRef.current) return;
     
     // Fix 1: Check if already in a call
-    if (isCalling || isInCall || isCallConnected) {
+    if (isCalling || isInCall) {
       toast.error("Already in a call");
       return;
     }
@@ -263,7 +344,7 @@ const MessagePage = () => {
     setIsCalling(true);
     setCallStatus("ringing");
     setCallDuration(0);
-    setIsCallConnected(false);
+    setIsSpeakerOn(false);
     playRingtone();
 
     const stream = await initMediaStream(type);
@@ -278,7 +359,10 @@ const MessagePage = () => {
     peerConnectionRef.current = pc;
 
     try {
-      const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: type === "video" });
+      const offer = await pc.createOffer({ 
+        offerToReceiveAudio: true, 
+        offerToReceiveVideo: type === "video" 
+      });
       await pc.setLocalDescription(offer);
 
       socket.emit("call_user", {
@@ -300,7 +384,7 @@ const MessagePage = () => {
     if (!callData) return;
     
     // Fix 1: Check if already in a call
-    if (isCalling || isInCall || isCallConnected) {
+    if (isCalling || isInCall) {
       socket.emit("call_busy", { to: callData.from });
       return;
     }
@@ -311,7 +395,7 @@ const MessagePage = () => {
     setCallStatus("connecting");
     setIncomingCall(null);
     setCallDuration(0);
-    setIsCallConnected(false);
+    setIsSpeakerOn(false);
 
     const stream = await initMediaStream(callData.type);
     if (!stream) {
@@ -329,7 +413,6 @@ const MessagePage = () => {
 
       socket.emit("answer_call", { to: callData.from, answer });
       setCallStatus("connected");
-      setIsCallConnected(true);
       if (!callTimerRef.current) {
         callTimerRef.current = setInterval(() => {
           setCallDuration(prev => prev + 1);
@@ -343,6 +426,7 @@ const MessagePage = () => {
   };
 
   const endCall = useCallback(() => {
+    console.log("Ending call...");
     stopRingtone();
     if (callTimerRef.current) {
       clearInterval(callTimerRef.current);
@@ -360,12 +444,13 @@ const MessagePage = () => {
     }
     setIsCalling(false);
     setIsInCall(false);
-    setIsCallConnected(false);
     setCallType(null);
     setCallStatus(null);
     setLocalStream(null);
+    setRemoteStream(null);
     setIsMuted(false);
     setIsVideoOff(false);
+    setIsSpeakerOn(false);
     setCallDuration(0);
     setIncomingCall(null);
   }, [localStream, socket]);
@@ -373,14 +458,22 @@ const MessagePage = () => {
   const toggleMute = () => {
     if (localStream) {
       const track = localStream.getAudioTracks()[0];
-      if (track) { track.enabled = !track.enabled; setIsMuted(!track.enabled); }
+      if (track) { 
+        track.enabled = !track.enabled; 
+        setIsMuted(!track.enabled);
+        toast.success(track.enabled ? "Microphone on" : "Microphone off");
+      }
     }
   };
 
   const toggleVideo = () => {
     if (localStream && callType === "video") {
       const track = localStream.getVideoTracks()[0];
-      if (track) { track.enabled = !track.enabled; setIsVideoOff(!track.enabled); }
+      if (track) { 
+        track.enabled = !track.enabled; 
+        setIsVideoOff(!track.enabled);
+        toast.success(track.enabled ? "Video on" : "Video off");
+      }
     }
   };
 
@@ -433,9 +526,8 @@ const MessagePage = () => {
       if (chat && userId === chat.friendId) fetchConversations();
     };
 
-    // ── Incoming call ──────────────────────────────────────────────
     const onIncomingCall = (data) => {
-      if (isInCall || isCalling || isCallConnected) {
+      if (isInCall || isCalling) {
         socket.emit("call_busy", { to: data.from });
         return;
       }
@@ -452,7 +544,6 @@ const MessagePage = () => {
           setIsCalling(false);
           setIsInCall(true);
           setCallStatus("connected");
-          setIsCallConnected(true);
           stopRingtone();
           if (!callTimerRef.current) {
             callTimerRef.current = setInterval(() => {
@@ -470,7 +561,9 @@ const MessagePage = () => {
       if (peerConnectionRef.current && data.candidate) {
         try {
           await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
-        } catch (e) {}
+        } catch (e) {
+          console.error("Error adding ICE candidate:", e);
+        }
       }
     };
 
@@ -499,7 +592,7 @@ const MessagePage = () => {
       socket.off("ice_candidate", onIceCandidate);
       socket.off("call_error");
     };
-  }, [socket, isInCall, isCalling, isCallConnected, endCall, fetchConversations]);
+  }, [socket, isInCall, isCalling, endCall, fetchConversations]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -710,20 +803,24 @@ const MessagePage = () => {
                   className="absolute bottom-4 right-4 w-28 h-40 rounded-xl object-cover border border-white/20 shadow-xl" />
               </>
             ) : (
-              <div className="text-center">
-                <div className={`w-36 h-36 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-6 overflow-hidden ${callStatus === "ringing" ? "ring-4 ring-green-500 animate-pulse" : ""}`}>
-                  {selectedChat?.friendProfilePicture ? (
-                    <Image src={selectedChat.friendProfilePicture} alt="" width={144} height={144} className="object-cover" />
-                  ) : (
-                    <UserIcon className="h-16 w-16 text-white" />
-                  )}
+              <>
+                {/* Hidden audio element for audio calls */}
+                <audio ref={remoteAudioRef} autoPlay playsInline style={{ display: 'none' }} />
+                <div className="text-center">
+                  <div className={`w-36 h-36 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-6 overflow-hidden ${callStatus === "ringing" ? "ring-4 ring-green-500 animate-pulse" : ""}`}>
+                    {selectedChat?.friendProfilePicture ? (
+                      <Image src={selectedChat.friendProfilePicture} alt="" width={144} height={144} className="object-cover" />
+                    ) : (
+                      <UserIcon className="h-16 w-16 text-white" />
+                    )}
+                  </div>
+                  <h3 className="text-white text-2xl font-bold mb-2">{selectedChat?.friendName}</h3>
+                  <p className="text-white/50">
+                    {callStatus === "connected" ? formatCallDuration(callDuration) :
+                     callStatus === "ringing" ? "Ringing..." : "Connecting..."}
+                  </p>
                 </div>
-                <h3 className="text-white text-2xl font-bold mb-2">{selectedChat?.friendName}</h3>
-                <p className="text-white/50">
-                  {callStatus === "connected" ? formatCallDuration(callDuration) :
-                   callStatus === "ringing" ? "Ringing..." : "Connecting..."}
-                </p>
-              </div>
+              </>
             )}
           </div>
 
@@ -733,6 +830,13 @@ const MessagePage = () => {
               className={`w-14 h-14 rounded-full flex items-center justify-center transition ${isMuted ? "bg-red-500 hover:bg-red-600" : "bg-[#3a3b3c] hover:bg-[#4e4f50]"}`}>
               <MicrophoneIcon className="h-6 w-6 text-white" />
             </button>
+            
+            {/* Speaker button for both audio and video calls */}
+            <button onClick={toggleSpeaker}
+              className={`w-14 h-14 rounded-full flex items-center justify-center transition ${isSpeakerOn ? "bg-blue-500 hover:bg-blue-600" : "bg-[#3a3b3c] hover:bg-[#4e4f50]"}`}>
+              {isSpeakerOn ? <SpeakerWaveIcon className="h-6 w-6 text-white" /> : <SpeakerXMarkIcon className="h-6 w-6 text-white" />}
+            </button>
+            
             {callType === "video" && (
               <button onClick={toggleVideo}
                 className={`w-14 h-14 rounded-full flex items-center justify-center transition ${isVideoOff ? "bg-red-500 hover:bg-red-600" : "bg-[#3a3b3c] hover:bg-[#4e4f50]"}`}>
@@ -957,7 +1061,8 @@ const MessagePage = () => {
                 )}
               </div>
 
-              {/* Input bar - Fix 2: Fixed responsive issue for Android */}
+{/* mb-18 md:mb-0 */}
+              {/* Input bar */}
               <div className="px-4 mb-18 md:mb-0 py-3 bg-[#242526] border-t border-[#3a3b3c] flex-shrink-0">
                 <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                   {/* Emoji */}
@@ -980,7 +1085,7 @@ const MessagePage = () => {
                   </button>
                   <input ref={fileInputRef} type="file" accept="image/*,video/*,application/pdf" onChange={handleFileUpload} className="hidden" />
 
-                  {/* Text input - Fixed for mobile */}
+                  {/* Text input */}
                   <input
                     ref={inputRef}
                     type="text"
@@ -1025,13 +1130,12 @@ const MessagePage = () => {
         }
         .animate-bounce { animation: bounce 1s infinite; }
         
-        /* Fix 3: Audio/Video call audio fix */
+        /* Ensure remote video/audio streams work properly */
         video, audio {
           pointer-events: auto;
         }
         
-        /* Ensure remote video stream audio works */
-        video:not([muted]) {
+        video:not([muted]), audio:not([muted]) {
           audio: auto;
         }
       `}</style>
