@@ -1,5 +1,6 @@
 import MessagePage from "../components/messageComponents/MessagePage";
 
+
 const Message = () => {
     return (
         <div>

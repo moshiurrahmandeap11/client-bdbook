@@ -3,12 +3,12 @@
 import { useAuth } from "@/app/hooks/useAuth";
 import axiosInstance from "@/app/lib/axiosInstance";
 import {
-    CheckIcon,
-    UserGroupIcon,
-    UserIcon,
-    UserMinusIcon,
-    UserPlusIcon,
-    XMarkIcon
+  CheckIcon,
+  UserGroupIcon,
+  UserIcon,
+  UserMinusIcon,
+  UserPlusIcon,
+  XMarkIcon
 } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import Link from "next/link";
@@ -115,7 +115,7 @@ const CommunityPage = () => {
         <div className="flex flex-col items-center justify-center min-h-screen">
           <UserGroupIcon className="h-20 w-20 text-white/30 mb-4" />
           <h2 className="text-2xl font-bold text-white mb-2">Login Required</h2>
-          <p className="text-white/60 mb-6">Please login to see your community</p>
+          <p className="text-white/60 mb-6">Please login to see your Friends</p>
           <Link
             href="/auth/login"
             className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:scale-105 transition-transform"
@@ -145,7 +145,7 @@ const CommunityPage = () => {
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white via-purple-200 to-blue-200 bg-clip-text text-transparent flex items-center gap-3">
             <UserGroupIcon className="h-8 w-8 sm:h-10 sm:w-10 text-purple-400" />
-            Community
+            Frineds
           </h1>
           <p className="text-white/60 mt-2">Manage your friends and friend requests</p>
         </div>

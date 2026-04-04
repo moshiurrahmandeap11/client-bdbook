@@ -101,7 +101,7 @@ const SignUpPage = () => {
       if (result.success) {
         toast.success("Account created successfully!");
         setTimeout(() => {
-          router.push("/login"); // Redirect to login page
+          router.push("/auth/login"); // Redirect to login page
         }, 1500);
       }
     } catch (error) {

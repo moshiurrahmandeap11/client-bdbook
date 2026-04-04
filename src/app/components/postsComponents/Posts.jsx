@@ -6,7 +6,6 @@ import axiosInstance from "@/app/lib/axiosInstance";
 import {
   FaceSmileIcon,
   PhotoIcon,
-  PlusIcon,
   UserIcon,
   VideoCameraIcon,
   XMarkIcon
@@ -180,7 +179,7 @@ const Posts = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-teal-800 pt-20 pb-24">
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-9xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Create Post Card - Only show if authenticated */}
         {isAuthenticated && (
@@ -293,26 +292,13 @@ const Posts = () => {
               {/* No more posts message */}
               {!hasMore && posts.length > 0 && (
                 <div className="text-center py-8">
-                  <p className="text-white/40 text-sm">You've seen all posts! 🎉</p>
+                  <p className="text-white/40 text-sm">You&asop;ve seen all posts! 🎉</p>
                 </div>
               )}
             </>
           )}
         </div>
       </div>
-
-      {/* Floating Create Post Button - Only if authenticated */}
-      {isAuthenticated && (
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="fixed bottom-20 right-4 sm:bottom-24 sm:right-8 z-40 p-3 sm:p-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full shadow-2xl hover:scale-110 transition-all duration-300 group"
-        >
-          <PlusIcon className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
-          <span className="absolute right-full mr-2 top-1/2 transform -translate-y-1/2 bg-black/80 text-white text-sm px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-            Create Post
-          </span>
-        </button>
-      )}
 
       {/* Create Post Modal */}
       {showCreateModal && (
