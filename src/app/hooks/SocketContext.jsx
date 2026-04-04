@@ -24,7 +24,7 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     if (!token || !user) return;
 
-    const newSocket = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:6969", {
+    const newSocket = io(process.env.NEXT_PUBLIC_API_URL || "https://server-bdbook.onrender.com", {
       auth: { token },
       transports: ["websocket"],
     });
