@@ -89,7 +89,6 @@ const MessagePage = () => {
   const [callType, setCallType] = useState(null);
   const [callStatus, setCallStatus] = useState(null);
   const [localStream, setLocalStream] = useState(null);
-  const [remoteStream, setRemoteStream] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [incomingCall, setIncomingCall] = useState(null);
@@ -98,7 +97,6 @@ const MessagePage = () => {
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
-  const remoteAudioRef = useRef(null);
   const peerConnectionRef = useRef(null);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -109,7 +107,6 @@ const MessagePage = () => {
   const ringtoneRef = useRef(null);
   const selectedChatRef = useRef(null);
 
-  // selectedChat কে ref এ রাখি যাতে socket callback এ সবসময় latest value পাই
   useEffect(() => {
     selectedChatRef.current = selectedChat;
   }, [selectedChat]);
@@ -207,6 +204,7 @@ const MessagePage = () => {
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       setLocalStream(stream);
+      
       if (localVideoRef.current && type === "video") {
         localVideoRef.current.srcObject = stream;
       }
@@ -218,53 +216,26 @@ const MessagePage = () => {
     }
   };
 
-  // Fix 2: Speaker toggle function
   const toggleSpeaker = async () => {
     try {
-      if (callType === "audio" && remoteAudioRef.current) {
-        // @ts-ignore
-        if (remoteAudioRef.current.setSinkId) {
-          if (!isSpeakerOn) {
-            // Switch to speaker
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const speakerDevice = devices.find(d => d.kind === "audiooutput" && d.label.toLowerCase().includes("speaker"));
-            if (speakerDevice) {
-              // @ts-ignore
-              await remoteAudioRef.current.setSinkId(speakerDevice.deviceId);
-            } else {
-              // @ts-ignore
-              await remoteAudioRef.current.setSinkId("default");
-            }
-          } else {
-            // Switch to earpiece
-            // @ts-ignore
-            await remoteAudioRef.current.setSinkId("default");
+      if (remoteVideoRef.current && remoteVideoRef.current.setSinkId) {
+        if (!isSpeakerOn) {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const speakerDevice = devices.find(d => d.kind === "audiooutput" && d.label.toLowerCase().includes("speaker"));
+          if (speakerDevice) {
+            await remoteVideoRef.current.setSinkId(speakerDevice.deviceId);
           }
-          setIsSpeakerOn(!isSpeakerOn);
+        } else {
+          await remoteVideoRef.current.setSinkId("default");
         }
-      } else if (callType === "video" && remoteVideoRef.current) {
-        // @ts-ignore
-        if (remoteVideoRef.current.setSinkId) {
-          if (!isSpeakerOn) {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const speakerDevice = devices.find(d => d.kind === "audiooutput" && d.label.toLowerCase().includes("speaker"));
-            if (speakerDevice) {
-              // @ts-ignore
-              await remoteVideoRef.current.setSinkId(speakerDevice.deviceId);
-            }
-          } else {
-            // @ts-ignore
-            await remoteVideoRef.current.setSinkId("default");
-          }
-          setIsSpeakerOn(!isSpeakerOn);
-        }
+        setIsSpeakerOn(!isSpeakerOn);
       }
     } catch (error) {
       console.error("Failed to switch audio output:", error);
     }
   };
 
-  const createPeerConnection = (stream) => {
+  const createPeerConnection = (stream, isCaller) => {
     const pc = new RTCPeerConnection(configuration);
     
     // Add local tracks
@@ -272,25 +243,17 @@ const MessagePage = () => {
       pc.addTrack(track, stream);
     });
 
+    // Handle remote tracks
     pc.ontrack = (event) => {
       console.log("Received remote track:", event.track.kind);
-      setRemoteStream(event.streams[0]);
-      
-      if (callType === "video" && remoteVideoRef.current) {
+      if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = event.streams[0];
         remoteVideoRef.current.muted = false;
-        remoteVideoRef.current.volume = 1.0;
-        // Force audio to play
-        remoteVideoRef.current.play().catch(e => console.log("Auto-play prevented:", e));
-      } else if (callType === "audio" && remoteAudioRef.current) {
-        remoteAudioRef.current.srcObject = event.streams[0];
-        remoteAudioRef.current.muted = false;
-        remoteAudioRef.current.volume = 1.0;
-        // Force audio to play
-        remoteAudioRef.current.play().catch(e => console.log("Auto-play prevented:", e));
+        remoteVideoRef.current.play().catch(e => console.log("Auto-play error:", e));
       }
     };
 
+    // Handle ICE candidates
     pc.onicecandidate = (event) => {
       if (event.candidate && socket) {
         const targetId = selectedChatRef.current?.friendId;
@@ -300,9 +263,10 @@ const MessagePage = () => {
       }
     };
 
-    pc.oniceconnectionstatechange = () => {
-      console.log("ICE connection state:", pc.iceConnectionState);
-      if (pc.iceConnectionState === "connected") {
+    // Handle connection state
+    pc.onconnectionstatechange = () => {
+      console.log("Connection state:", pc.connectionState);
+      if (pc.connectionState === "connected") {
         setCallStatus("connected");
         stopRingtone();
         if (!callTimerRef.current) {
@@ -310,16 +274,15 @@ const MessagePage = () => {
             setCallDuration(prev => prev + 1);
           }, 1000);
         }
+      } else if (pc.connectionState === "failed" || pc.connectionState === "closed") {
+        endCall();
       }
     };
 
-    pc.onconnectionstatechange = () => {
-      console.log("Connection state:", pc.connectionState);
-      if (pc.connectionState === "connected") {
+    pc.oniceconnectionstatechange = () => {
+      console.log("ICE connection state:", pc.iceConnectionState);
+      if (pc.iceConnectionState === "connected") {
         setCallStatus("connected");
-        stopRingtone();
-      } else if (["disconnected", "failed", "closed"].includes(pc.connectionState)) {
-        endCall();
       }
     };
 
@@ -329,7 +292,6 @@ const MessagePage = () => {
   const startCall = async (type) => {
     if (!selectedChatRef.current) return;
     
-    // Fix 1: Check if already in a call
     if (isCalling || isInCall) {
       toast.error("Already in a call");
       return;
@@ -355,13 +317,13 @@ const MessagePage = () => {
       return;
     }
 
-    const pc = createPeerConnection(stream);
+    const pc = createPeerConnection(stream, true);
     peerConnectionRef.current = pc;
 
     try {
-      const offer = await pc.createOffer({ 
-        offerToReceiveAudio: true, 
-        offerToReceiveVideo: type === "video" 
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: type === "video"
       });
       await pc.setLocalDescription(offer);
 
@@ -383,7 +345,6 @@ const MessagePage = () => {
   const answerCall = async (callData) => {
     if (!callData) return;
     
-    // Fix 1: Check if already in a call
     if (isCalling || isInCall) {
       socket.emit("call_busy", { to: callData.from });
       return;
@@ -403,7 +364,7 @@ const MessagePage = () => {
       return;
     }
 
-    const pc = createPeerConnection(stream);
+    const pc = createPeerConnection(stream, false);
     peerConnectionRef.current = pc;
 
     try {
@@ -412,12 +373,6 @@ const MessagePage = () => {
       await pc.setLocalDescription(answer);
 
       socket.emit("answer_call", { to: callData.from, answer });
-      setCallStatus("connected");
-      if (!callTimerRef.current) {
-        callTimerRef.current = setInterval(() => {
-          setCallDuration(prev => prev + 1);
-        }, 1000);
-      }
     } catch (error) {
       console.error("Error answering call:", error);
       toast.error("Failed to answer call");
@@ -428,26 +383,34 @@ const MessagePage = () => {
   const endCall = useCallback(() => {
     console.log("Ending call...");
     stopRingtone();
+    
     if (callTimerRef.current) {
       clearInterval(callTimerRef.current);
       callTimerRef.current = null;
     }
+    
     if (localStream) {
-      localStream.getTracks().forEach(t => t.stop());
+      localStream.getTracks().forEach(track => track.stop());
     }
+    
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
+    
     if (socket && selectedChatRef.current) {
       socket.emit("end_call", { to: selectedChatRef.current.friendId });
     }
+    
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
+    
     setIsCalling(false);
     setIsInCall(false);
     setCallType(null);
     setCallStatus(null);
     setLocalStream(null);
-    setRemoteStream(null);
     setIsMuted(false);
     setIsVideoOff(false);
     setIsSpeakerOn(false);
@@ -458,10 +421,9 @@ const MessagePage = () => {
   const toggleMute = () => {
     if (localStream) {
       const track = localStream.getAudioTracks()[0];
-      if (track) { 
-        track.enabled = !track.enabled; 
+      if (track) {
+        track.enabled = !track.enabled;
         setIsMuted(!track.enabled);
-        toast.success(track.enabled ? "Microphone on" : "Microphone off");
       }
     }
   };
@@ -469,10 +431,9 @@ const MessagePage = () => {
   const toggleVideo = () => {
     if (localStream && callType === "video") {
       const track = localStream.getVideoTracks()[0];
-      if (track) { 
-        track.enabled = !track.enabled; 
+      if (track) {
+        track.enabled = !track.enabled;
         setIsVideoOff(!track.enabled);
-        toast.success(track.enabled ? "Video on" : "Video off");
       }
     }
   };
@@ -709,7 +670,6 @@ const MessagePage = () => {
     c.friendName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // ── Auth guard ────────────────────────────────────────────────────
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#18191a]">
@@ -729,7 +689,6 @@ const MessagePage = () => {
     );
   }
 
-  // ── Incoming call modal ───────────────────────────────────────────
   const IncomingCallModal = () => {
     if (!incomingCall) return null;
     return (
@@ -767,13 +726,11 @@ const MessagePage = () => {
     );
   };
 
-  // ── Active call UI ────────────────────────────────────────────────
   if (isInCall || isCalling) {
     return (
       <>
         <IncomingCallModal />
         <div className="fixed inset-0 z-50 bg-[#1c1e21] flex flex-col">
-          {/* Top bar */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 overflow-hidden flex items-center justify-center">
@@ -794,7 +751,6 @@ const MessagePage = () => {
             </div>
           </div>
 
-          {/* Video/Audio area */}
           <div className="flex-1 relative flex items-center justify-center bg-[#0f1011]">
             {callType === "video" ? (
               <>
@@ -803,39 +759,35 @@ const MessagePage = () => {
                   className="absolute bottom-4 right-4 w-28 h-40 rounded-xl object-cover border border-white/20 shadow-xl" />
               </>
             ) : (
-              <>
-                {/* Hidden audio element for audio calls */}
-                <audio ref={remoteAudioRef} autoPlay playsInline style={{ display: 'none' }} />
-                <div className="text-center">
-                  <div className={`w-36 h-36 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-6 overflow-hidden ${callStatus === "ringing" ? "ring-4 ring-green-500 animate-pulse" : ""}`}>
-                    {selectedChat?.friendProfilePicture ? (
-                      <Image src={selectedChat.friendProfilePicture} alt="" width={144} height={144} className="object-cover" />
-                    ) : (
-                      <UserIcon className="h-16 w-16 text-white" />
-                    )}
-                  </div>
-                  <h3 className="text-white text-2xl font-bold mb-2">{selectedChat?.friendName}</h3>
-                  <p className="text-white/50">
-                    {callStatus === "connected" ? formatCallDuration(callDuration) :
-                     callStatus === "ringing" ? "Ringing..." : "Connecting..."}
-                  </p>
+              <div className="text-center">
+                <div className={`w-36 h-36 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-6 overflow-hidden ${callStatus === "ringing" ? "ring-4 ring-green-500 animate-pulse" : ""}`}>
+                  {selectedChat?.friendProfilePicture ? (
+                    <Image src={selectedChat.friendProfilePicture} alt="" width={144} height={144} className="object-cover" />
+                  ) : (
+                    <UserIcon className="h-16 w-16 text-white" />
+                  )}
                 </div>
-              </>
+                <h3 className="text-white text-2xl font-bold mb-2">{selectedChat?.friendName}</h3>
+                <p className="text-white/50">
+                  {callStatus === "connected" ? formatCallDuration(callDuration) :
+                   callStatus === "ringing" ? "Ringing..." : "Connecting..."}
+                </p>
+              </div>
             )}
           </div>
 
-          {/* Controls */}
           <div className="px-6 py-6 flex items-center justify-center gap-5 border-t border-white/10">
             <button onClick={toggleMute}
               className={`w-14 h-14 rounded-full flex items-center justify-center transition ${isMuted ? "bg-red-500 hover:bg-red-600" : "bg-[#3a3b3c] hover:bg-[#4e4f50]"}`}>
               <MicrophoneIcon className="h-6 w-6 text-white" />
             </button>
             
-            {/* Speaker button for both audio and video calls */}
-            <button onClick={toggleSpeaker}
-              className={`w-14 h-14 rounded-full flex items-center justify-center transition ${isSpeakerOn ? "bg-blue-500 hover:bg-blue-600" : "bg-[#3a3b3c] hover:bg-[#4e4f50]"}`}>
-              {isSpeakerOn ? <SpeakerWaveIcon className="h-6 w-6 text-white" /> : <SpeakerXMarkIcon className="h-6 w-6 text-white" />}
-            </button>
+            {callType === "video" && (
+              <button onClick={toggleSpeaker}
+                className={`w-14 h-14 rounded-full flex items-center justify-center transition ${isSpeakerOn ? "bg-blue-500 hover:bg-blue-600" : "bg-[#3a3b3c] hover:bg-[#4e4f50]"}`}>
+                {isSpeakerOn ? <SpeakerWaveIcon className="h-6 w-6 text-white" /> : <SpeakerXMarkIcon className="h-6 w-6 text-white" />}
+              </button>
+            )}
             
             {callType === "video" && (
               <button onClick={toggleVideo}
@@ -858,13 +810,10 @@ const MessagePage = () => {
       <IncomingCallModal />
       <div className="fixed inset-0 bg-[#18191a] pt-16 md:pt-20">
         <div className="h-full max-w-7xl mx-auto flex overflow-hidden">
-
-          {/* ── Left sidebar ─────────────────────────────────────── */}
           <div className={`
             w-full md:w-[360px] flex-shrink-0 bg-[#242526] flex flex-col border-r border-[#3a3b3c]
             ${selectedChat ? "hidden md:flex" : "flex"}
           `}>
-            {/* Sidebar header */}
             <div className="px-4 pt-4 pb-3 border-b border-[#3a3b3c]">
               <h2 className="text-white text-2xl font-bold mb-3">Chats</h2>
               <div className="relative">
@@ -879,7 +828,6 @@ const MessagePage = () => {
               </div>
             </div>
 
-            {/* Conversation list */}
             <div className="flex-1 overflow-y-auto py-2">
               {filteredConversations.length === 0 ? (
                 <div className="text-center py-12 text-white/40 text-sm">
@@ -893,7 +841,6 @@ const MessagePage = () => {
                     <button key={chat.friendId} onClick={() => handleSelectChat(chat)}
                       className={`w-full flex items-center gap-3 px-3 py-2 mx-1 rounded-xl transition-all ${isActive ? "bg-[#3a3b3c]" : "hover:bg-[#3a3b3c]"}`}
                       style={{ width: "calc(100% - 8px)" }}>
-                      {/* Avatar */}
                       <div className="relative flex-shrink-0">
                         <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                           {chat.friendProfilePicture ? (
@@ -906,7 +853,6 @@ const MessagePage = () => {
                           <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-[#242526]" />
                         )}
                       </div>
-                      {/* Info */}
                       <div className="flex-1 min-w-0 text-left">
                         <div className="flex justify-between items-baseline">
                           <span className={`font-semibold text-sm truncate ${chat.unreadCount > 0 ? "text-white" : "text-white/80"}`}>
@@ -936,16 +882,14 @@ const MessagePage = () => {
             </div>
           </div>
 
-          {/* ── Right: Chat area ──────────────────────────────────── */}
           {selectedChat ? (
             <div className="flex-1 flex flex-col bg-[#18191a] min-w-0">
-              {/* Chat header */}
               <div className="flex items-center justify-between px-4 py-3 bg-[#242526] border-b border-[#3a3b3c] flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <button onClick={() => setSelectedChat(null)} className="md:hidden p-2 -ml-2 rounded-full hover:bg-white/10 transition">
                     <ArrowLeftIcon className="h-5 w-5 text-white" />
                   </button>
-                  <div className="relative cursor-pointer" onClick={() => {}}>
+                  <div className="relative cursor-pointer">
                     <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                       {selectedChat.friendProfilePicture ? (
                         <Image src={selectedChat.friendProfilePicture} alt={selectedChat.friendName} width={40} height={40} className="object-cover" />
@@ -964,7 +908,6 @@ const MessagePage = () => {
                     </p>
                   </div>
                 </div>
-                {/* Call buttons */}
                 <div className="flex items-center gap-1">
                   <button onClick={() => startCall("audio")} disabled={!onlineUsers.includes(selectedChat.friendId) || isCalling || isInCall}
                     className={`w-9 h-9 rounded-full flex items-center justify-center transition ${onlineUsers.includes(selectedChat.friendId) && !isCalling && !isInCall ? "bg-[#3a3b3c] hover:bg-[#4e4f50] text-blue-400" : "bg-[#2c2d2e] text-white/20 cursor-not-allowed"}`}
@@ -979,7 +922,6 @@ const MessagePage = () => {
                 </div>
               </div>
 
-              {/* Messages */}
               <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
                 {loadingMessages ? (
                   <div className="flex justify-center py-12">
@@ -1001,7 +943,6 @@ const MessagePage = () => {
 
                       return (
                         <div key={msg._id || idx} className={`flex ${isOwn ? "justify-end" : "justify-start"} items-end gap-2 ${marginTop}`}>
-                          {/* Avatar */}
                           {!isOwn && (
                             <div className="w-7 h-7 flex-shrink-0">
                               {showAvatar ? (
@@ -1028,7 +969,6 @@ const MessagePage = () => {
                               }
                             `}>
                               {renderMessageContent(msg)}
-                              {/* Timestamp on hover */}
                               <span className="absolute -bottom-5 right-0 text-[10px] text-white/30 opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
                                 {formatTime(msg.createdAt)}
                                 {isOwn && msg.isRead && " · Seen"}
@@ -1039,7 +979,6 @@ const MessagePage = () => {
                       );
                     })}
 
-                    {/* Typing indicator */}
                     {typingUser && (
                       <div className="flex justify-start items-end gap-2 mt-3">
                         <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
@@ -1061,11 +1000,8 @@ const MessagePage = () => {
                 )}
               </div>
 
-{/* mb-18 md:mb-0 */}
-              {/* Input bar */}
-              <div className="px-4 mb-18 md:mb-0 py-3 bg-[#242526] border-t border-[#3a3b3c] flex-shrink-0">
+              <div className="px-4 py-3 bg-[#242526] border-t border-[#3a3b3c] flex-shrink-0">
                 <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-                  {/* Emoji */}
                   <div className="relative flex-shrink-0" ref={emojiPickerRef}>
                     <button type="button" onClick={() => setShowEmojiPicker(p => !p)}
                       className="w-9 h-9 rounded-full flex items-center justify-center text-blue-400 hover:bg-[#3a3b3c] transition">
@@ -1078,14 +1014,12 @@ const MessagePage = () => {
                     )}
                   </div>
 
-                  {/* File */}
                   <button type="button" onClick={() => fileInputRef.current?.click()}
                     className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-blue-400 hover:bg-[#3a3b3c] transition">
                     <PaperClipIcon className="h-5 w-5" />
                   </button>
                   <input ref={fileInputRef} type="file" accept="image/*,video/*,application/pdf" onChange={handleFileUpload} className="hidden" />
 
-                  {/* Text input */}
                   <input
                     ref={inputRef}
                     type="text"
@@ -1097,7 +1031,6 @@ const MessagePage = () => {
                     style={{ WebkitAppearance: "none", WebkitTapHighlightColor: "transparent" }}
                   />
 
-                  {/* Send */}
                   <button type="submit" disabled={!newMessage.trim() || uploadingFile}
                     className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center bg-blue-500 hover:bg-blue-600 disabled:opacity-40 disabled:hover:bg-blue-500 transition">
                     {uploadingFile ? (
@@ -1130,7 +1063,6 @@ const MessagePage = () => {
         }
         .animate-bounce { animation: bounce 1s infinite; }
         
-        /* Ensure remote video/audio streams work properly */
         video, audio {
           pointer-events: auto;
         }
