@@ -25,7 +25,6 @@ import toast from "react-hot-toast";
 import { SearchSuggestionSkeleton } from "../Skeleton";
 import NotificationDropdown from "./NotificationDropdown";
 
-
 const Header = () => {
   const { user, logout, isAuthenticated, initialLoadDone } = useAuth();
   const { socket } = useSocket();
@@ -260,6 +259,7 @@ const Header = () => {
     );
   }
 
+  // ✅ FIX: Use 'suggestions' (not 'searchSuggestions')
   const suggestions = suggestionsData || [];
   const isSearching = isSuggestionsLoading;
 
@@ -300,8 +300,8 @@ const Header = () => {
                   )}
                 </div>
 
-                {/* Search Suggestions Dropdown */}
-                {showSearchDropdown && (searchSuggestions.length > 0 || isSearching) && (
+                {/* ✅ FIX: searchSuggestions -> suggestions */}
+                {showSearchDropdown && (suggestions.length > 0 || isSearching) && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-[#242526] rounded-xl border border-[#3a3b3c] shadow-2xl overflow-hidden z-50 max-h-80 overflow-y-auto">
                     {isSearching ? (
                       <SearchSuggestionSkeleton />
@@ -465,7 +465,7 @@ const Header = () => {
             )}
           </form>
 
-          {/* Mobile Search Suggestions */}
+          {/* ✅ FIX: Mobile search suggestions - searchSuggestions -> suggestions */}
           {showSearchDropdown && (suggestions.length > 0 || isSearching) && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-[#242526] rounded-xl border border-[#3a3b3c] shadow-2xl overflow-hidden z-50 max-h-64 overflow-y-auto">
               {isSearching ? (
