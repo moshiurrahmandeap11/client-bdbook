@@ -330,7 +330,7 @@ const VideoPlayer = ({ video, isMuted, isActive, onDoubleTap, onVideoRef }) => {
       
       {/* Controls - Visible on hover or when paused */}
       {(showControls || !isPlaying) && (
-        <div className="absolute  bottom-16 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 pb-3 transition-opacity duration-300">
+        <div className="absolute  bottom-16 md:bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 pb-3 transition-opacity duration-300">
           {/* Progress Bar */}
           <div className="w-full mb-3">
             <div 
