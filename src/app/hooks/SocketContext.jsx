@@ -1,4 +1,3 @@
-// contexts/SocketContext.jsx
 "use client";
 
 import { useAuth } from "@/app/hooks/useAuth";
@@ -22,19 +21,27 @@ export const SocketProvider = ({ children }) => {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    if (!token || !user) return;
-
-    //  "https://server-bdbook.onrender.com" ||
-    const newSocket = io(process.env.NEXT_PUBLIC_API_URL || "https://server-bdbook.onrender.com", {
-      auth: { token },
-      transports: ["websocket"],
-    });
+    // ✅ token না থাকলেও connect করো (guest support)
+    const newSocket = io(
+      process.env.NEXT_PUBLIC_API_URL || "https://server-bdbook.onrender.com",
+      {
+        auth: { token: token || null }, // token না থাকলে null পাঠাও
+        transports: ["websocket"],
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+      }
+    );
 
     socketRef.current = newSocket;
     setSocket(newSocket);
 
     newSocket.on("connect", () => {
-      console.log("Socket connected");
+      console.log("✅ Socket connected:", newSocket.id);
+    });
+
+    newSocket.on("connect_error", (err) => {
+      console.error("❌ Socket connection error:", err.message);
     });
 
     newSocket.on("user_online", (users) => {
@@ -42,7 +49,7 @@ export const SocketProvider = ({ children }) => {
     });
 
     newSocket.on("user_offline", (userId) => {
-      setOnlineUsers(prev => prev.filter(id => id !== userId));
+      setOnlineUsers((prev) => prev.filter((id) => id !== userId));
     });
 
     return () => {
@@ -50,7 +57,7 @@ export const SocketProvider = ({ children }) => {
         socketRef.current.disconnect();
       }
     };
-  }, [token, user]);
+  }, [token]); // token change হলে reconnect
 
   return (
     <SocketContext.Provider value={{ socket, onlineUsers }}>
