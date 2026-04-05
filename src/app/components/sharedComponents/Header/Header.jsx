@@ -15,13 +15,16 @@ import {
   VideoCameraSlashIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
+import { useQuery } from "@tanstack/react-query";
 import { MessageCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import { SearchSuggestionSkeleton } from "../Skeleton";
 import NotificationDropdown from "./NotificationDropdown";
+
 
 const Header = () => {
   const { user, logout, isAuthenticated, initialLoadDone } = useAuth();
@@ -29,13 +32,8 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
-  
-  // 🔍 Search States
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchSuggestions, setSearchSuggestions] = useState([]);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
 
   const profileMenuRef = useRef(null);
   const mobileMenuRef = useRef(null);
@@ -44,9 +42,6 @@ const Header = () => {
   
   const pathname = usePathname();
   const router = useRouter();
-  const messageCountInterval = useRef(null);
-  const fetchInProgress = useRef(false);
-  const lastFetchTime = useRef(0);
 
   const navItems = useMemo(() => {
     const publicNavItems = [
@@ -62,33 +57,34 @@ const Header = () => {
       : publicNavItems;
   }, [isAuthenticated]);
 
-  // 🔍 Fetch search suggestions from backend (users only for suggestions)
-  const fetchSearchSuggestions = useCallback(async (query) => {
-    if (!query.trim() || query.length < 2 || !isAuthenticated) {
-      setSearchSuggestions([]);
-      return;
-    }
-    
-    setIsSearching(true);
-    try {
-      // Using your existing /api/users/search/:query endpoint
-      const response = await axiosInstance.get(`/users/search/${encodeURIComponent(query)}`, {
+  // 🔍 Search suggestions using TanStack Query
+  const { data: suggestionsData, isLoading: isSuggestionsLoading } = useQuery({
+    queryKey: ["search-suggestions", searchQuery],
+    queryFn: async () => {
+      if (!searchQuery.trim() || searchQuery.length < 2) return [];
+      const response = await axiosInstance.get(`/users/search/${encodeURIComponent(searchQuery)}`, {
         params: { limit: 5 }
       });
-      
-      if (response.data.success && response.data.data) {
-        // Extract unique names for suggestions
-        const suggestions = [...new Set(
-          response.data.data.map(u => u.fullName).filter(Boolean)
-        )].slice(0, 5);
-        setSearchSuggestions(suggestions);
-      }
-    } catch (error) {
-      console.error("Failed to fetch suggestions:", error);
-    } finally {
-      setIsSearching(false);
-    }
-  }, [isAuthenticated]);
+      if (!response.data.success) return [];
+      return [...new Set(response.data.data.map(u => u.fullName).filter(Boolean))].slice(0, 5);
+    },
+    enabled: isAuthenticated && searchQuery.trim().length >= 2 && showSearchDropdown,
+    staleTime: 3 * 60 * 1000, // 3 minutes
+  });
+
+  // 🔍 Unread messages count using TanStack Query
+  const { data: unreadData } = useQuery({
+    queryKey: ["unread-messages-count"],
+    queryFn: async () => {
+      const response = await axiosInstance.get("/users/unread-messages/count");
+      return response.data.success ? response.data.count : 0;
+    },
+    enabled: isAuthenticated,
+    refetchInterval: 30000, // Refetch every 30 seconds
+    staleTime: 10 * 1000, // 10 seconds
+  });
+
+  const unreadMessagesCount = unreadData || 0;
 
   const handleSearchChange = (e) => {
     const value = e.target.value;
@@ -100,11 +96,9 @@ const Header = () => {
     
     if (value.trim().length >= 2) {
       searchTimeoutRef.current = setTimeout(() => {
-        fetchSearchSuggestions(value);
         setShowSearchDropdown(true);
       }, 300);
     } else {
-      setSearchSuggestions([]);
       setShowSearchDropdown(false);
     }
   };
@@ -115,7 +109,6 @@ const Header = () => {
       setShowSearchDropdown(false);
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setSearchQuery("");
-      setSearchSuggestions([]);
     }
   };
 
@@ -123,32 +116,23 @@ const Header = () => {
     setShowSearchDropdown(false);
     router.push(`/search?q=${encodeURIComponent(suggestion)}`);
     setSearchQuery("");
-    setSearchSuggestions([]);
   };
 
   const clearSearch = () => {
     setSearchQuery("");
-    setSearchSuggestions([]);
     setShowSearchDropdown(false);
   };
 
-  // 🔍 Close search dropdown on outside click
+  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setShowSearchDropdown(false);
       }
-      if (
-        profileMenuRef.current &&
-        !profileMenuRef.current.contains(event.target)
-      ) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
         setIsProfileMenuOpen(false);
       }
-      if (
-        mobileMenuRef.current &&
-        !mobileMenuRef.current.contains(event.target) &&
-        !event.target.closest(".mobile-menu-button")
-      ) {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target) && !event.target.closest(".mobile-menu-button")) {
         setIsMenuOpen(false);
       }
     };
@@ -156,54 +140,18 @@ const Header = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     };
   }, []);
 
-  // ── Message Count Functions ──────────────────────────────────────
-  const fetchUnreadMessagesCount = useCallback(async () => {
-    if (!isAuthenticated || fetchInProgress.current) return;
-    const now = Date.now();
-    if (now - lastFetchTime.current < 2000) return;
-    fetchInProgress.current = true;
-    lastFetchTime.current = now;
-    try {
-      const response = await axiosInstance.get("/users/unread-messages/count");
-      if (response.data.success) {
-        setUnreadMessagesCount(response.data.count);
-      }
-    } catch (error) {
-      console.error("Failed to fetch unread messages count:", error);
-    } finally {
-      fetchInProgress.current = false;
-    }
-  }, [isAuthenticated]);
-
-  const fetchUnreadMessagesCountForced = useCallback(async () => {
-    if (!isAuthenticated) return;
-    try {
-      const response = await axiosInstance.get("/users/unread-messages/count");
-      if (response.data.success) {
-        setUnreadMessagesCount(response.data.count);
-        lastFetchTime.current = Date.now();
-      }
-    } catch (error) {
-      console.error("Failed to fetch unread messages count (forced):", error);
-    }
-  }, [isAuthenticated]);
-
-  // ── Socket Events for Messages ───────────────────────────────────
+  // Socket events for messages
   useEffect(() => {
     if (!socket || !isAuthenticated) return;
 
     const handleNewMessage = (message) => {
       if (message.senderId !== user?._id) {
-        fetchUnreadMessagesCountForced();
         toast.custom(
           (t) => (
             <div
@@ -215,83 +163,31 @@ const Header = () => {
             >
               <div className="flex items-center gap-3">
                 {message.senderProfilePicture ? (
-                  <img
-                    src={message.senderProfilePicture}
-                    alt=""
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
+                  <img src={message.senderProfilePicture} alt="" className="w-10 h-10 rounded-full object-cover" />
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
                     <MessageCircle className="h-5 w-5 text-white" />
                   </div>
                 )}
                 <div className="flex-1">
-                  <p className="text-white text-sm font-medium">
-                    {message.senderName || "Someone"}
-                  </p>
-                  <p className="text-white/60 text-xs truncate">
-                    {message.message || "Sent you a message"}
-                  </p>
+                  <p className="text-white text-sm font-medium">{message.senderName || "Someone"}</p>
+                  <p className="text-white/60 text-xs truncate">{message.message || "Sent you a message"}</p>
                 </div>
               </div>
             </div>
           ),
-          { duration: 4000 },
+          { duration: 4000 }
         );
       }
     };
 
-    const handleMessagesRead = () => {
-      fetchUnreadMessagesCountForced();
-    };
-
     socket.on("receive_message", handleNewMessage);
-    socket.on("messages_read", handleMessagesRead);
-
     return () => {
       socket.off("receive_message", handleNewMessage);
-      socket.off("messages_read", handleMessagesRead);
     };
-  }, [
-    socket,
-    isAuthenticated,
-    user?._id,
-    router,
-    fetchUnreadMessagesCountForced,
-  ]);
+  }, [socket, isAuthenticated, user?._id, router]);
 
-  // ── Message Count Polling ────────────────────────────────────────
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    messageCountInterval.current = setInterval(() => {
-      fetchUnreadMessagesCount();
-    }, 30000);
-    return () => {
-      if (messageCountInterval.current)
-        clearInterval(messageCountInterval.current);
-    };
-  }, [isAuthenticated, fetchUnreadMessagesCount]);
-
-  // ── Tab Focus Refresh ────────────────────────────────────────────
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    let timeoutId;
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-          fetchUnreadMessagesCountForced();
-        }, 1000);
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      clearTimeout(timeoutId);
-    };
-  }, [isAuthenticated, fetchUnreadMessagesCountForced]);
-
-  // ── Scroll Effect ────────────────────────────────────────────────
+  // Scroll effect
   useEffect(() => {
     let ticking = false;
     const handleWindowScroll = () => {
@@ -307,19 +203,12 @@ const Header = () => {
     return () => window.removeEventListener("scroll", handleWindowScroll);
   }, []);
 
-  // ── Route Change Handler ─────────────────────────────────────────
+  // Route change handler
   useEffect(() => {
     setIsMenuOpen(false);
     setIsProfileMenuOpen(false);
     setShowSearchDropdown(false);
-
-    if (pathname === "/message" && isAuthenticated) {
-      const timer = setTimeout(() => {
-        fetchUnreadMessagesCountForced();
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [pathname, isAuthenticated, fetchUnreadMessagesCountForced]);
+  }, [pathname]);
 
   const handleLogout = useCallback(async () => {
     await logout();
@@ -351,14 +240,12 @@ const Header = () => {
             <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-white via-purple-200 to-blue-200 bg-clip-text text-transparent">
               BD BOOK
             </h1>
-            <p className="text-[10px] sm:text-xs text-white/50 hidden sm:block">
-              Connect & Share
-            </p>
+            <p className="text-[10px] sm:text-xs text-white/50 hidden sm:block">Connect & Share</p>
           </div>
         </div>
       </Link>
     ),
-    [],
+    []
   );
 
   if (!initialLoadDone) {
@@ -372,6 +259,9 @@ const Header = () => {
       </header>
     );
   }
+
+  const suggestions = suggestionsData || [];
+  const isSearching = isSuggestionsLoading;
 
   return (
     <>
@@ -414,16 +304,13 @@ const Header = () => {
                 {showSearchDropdown && (searchSuggestions.length > 0 || isSearching) && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-[#242526] rounded-xl border border-[#3a3b3c] shadow-2xl overflow-hidden z-50 max-h-80 overflow-y-auto">
                     {isSearching ? (
-                      <div className="flex items-center justify-center py-4">
-                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-purple-500"></div>
-                        <span className="ml-2 text-white/60 text-sm">Searching...</span>
-                      </div>
+                      <SearchSuggestionSkeleton />
                     ) : (
                       <>
                         <div className="px-4 py-2 border-b border-[#3a3b3c]">
                           <span className="text-white/40 text-xs">Quick Search</span>
                         </div>
-                        {searchSuggestions.map((suggestion, idx) => (
+                        {suggestions.map((suggestion, idx) => (
                           <button
                             key={idx}
                             type="button"
@@ -520,7 +407,7 @@ const Header = () => {
                               <p className="text-white font-semibold text-sm">{user.fullName || user.name}</p>
                               <p className="text-white/50 text-xs mt-1 truncate">{user.email}</p>
                             </div>
-                            <button onClick={handleProfileNavigate} className="w-full flex items-center gap-3 px-4 py-2.5 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group">
+                            <button onClick={() => { setIsProfileMenuOpen(false); router.push(`/profile/${user._id}`); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group">
                               <UserCircleIcon className="h-5 w-5 group-hover:text-purple-400" />
                               <span className="text-sm">Profile</span>
                             </button>
@@ -579,14 +466,12 @@ const Header = () => {
           </form>
 
           {/* Mobile Search Suggestions */}
-          {showSearchDropdown && (searchSuggestions.length > 0 || isSearching) && (
+          {showSearchDropdown && (suggestions.length > 0 || isSearching) && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-[#242526] rounded-xl border border-[#3a3b3c] shadow-2xl overflow-hidden z-50 max-h-64 overflow-y-auto">
               {isSearching ? (
-                <div className="flex items-center justify-center py-4">
-                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-purple-500"></div>
-                </div>
+                <SearchSuggestionSkeleton />
               ) : (
-                searchSuggestions.map((suggestion, idx) => (
+                suggestions.map((suggestion, idx) => (
                   <button
                     key={idx}
                     type="button"
@@ -682,14 +567,6 @@ const Header = () => {
                     <span className="font-medium">Log out</span>
                   </button>
                 </>
-              )}
-              {!isAuthenticated && (
-                <div className="border-t border-white/10 mt-2 pt-2">
-                  <button onClick={() => { setIsMenuOpen(false); handleGetStarted(); }} className="w-full flex items-center gap-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 transition-all duration-200">
-                    <ArrowRightOnRectangleIcon className="h-5 w-5" />
-                    <span className="font-medium">Get Started</span>
-                  </button>
-                </div>
               )}
             </div>
           </div>

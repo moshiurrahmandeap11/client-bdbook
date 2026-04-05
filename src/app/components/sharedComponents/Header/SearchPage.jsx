@@ -2,91 +2,79 @@
 
 import { useAuth } from "@/app/hooks/useAuth";
 import axiosInstance from "@/app/lib/axiosInstance";
+
 import {
     MagnifyingGlassIcon,
     UserIcon,
     VideoCameraIcon,
-    XMarkIcon
+    XMarkIcon,
 } from "@heroicons/react/24/outline";
+import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { SearchSkeleton } from "../Skeleton";
 
 const SearchPage = () => {
   const { user, isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState({
-    users: [],
-    posts: [],
-  });
-  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   
   const router = useRouter();
   const searchParams = useSearchParams();
   const inputRef = useRef(null);
-  const searchTimeoutRef = useRef(null);
 
-  // Load query from URL on mount
+  // Load query from URL
   useEffect(() => {
     const query = searchParams.get("q");
     if (query) {
       setSearchQuery(query);
-      performSearch(query);
     }
-    // Focus input
     setTimeout(() => inputRef.current?.focus(), 100);
   }, [searchParams]);
 
-  // Debounced search - fetch both users and posts
-  const performSearch = useCallback(async (query) => {
-    if (!query.trim() || !isAuthenticated) return;
-    
-    setLoading(true);
-    try {
-      // Fetch users from your existing endpoint
-      const [usersRes, postsRes] = await Promise.allSettled([
-        axiosInstance.get(`/users/search/${encodeURIComponent(query)}`, { params: { limit: 20 } }),
-        // Fetch posts and filter client-side (since backend doesn't have post search endpoint)
-        axiosInstance.get("/posts", { params: { limit: 50 } }),
-      ]);
+  // Fetch users using TanStack Query
+  const { data: usersData, isLoading: isUsersLoading } = useQuery({
+    queryKey: ["search-users", searchQuery],
+    queryFn: async () => {
+      if (!searchQuery.trim() || searchQuery.length < 2) return [];
+      const response = await axiosInstance.get(`/users/search/${encodeURIComponent(searchQuery)}`, {
+        params: { limit: 20 }
+      });
+      return response.data.success ? response.data.data : [];
+    },
+    enabled: isAuthenticated && searchQuery.trim().length >= 2,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
-      const users = usersRes.status === "fulfilled" && usersRes.value.data.success 
-        ? usersRes.value.data.data 
-        : [];
-
-      // Client-side filter posts by description/content
-      let posts = [];
-      if (postsRes.status === "fulfilled" && postsRes.value.data.success) {
-        const allPosts = postsRes.value.data.data;
-        const searchLower = query.toLowerCase();
-        posts = allPosts.filter(post => 
-          post.description?.toLowerCase().includes(searchLower) ||
-          post.userName?.toLowerCase().includes(searchLower)
-        ).slice(0, 20); // Limit results
-      }
-
-      setSearchResults({ users, posts });
-    } catch (error) {
-      console.error("Search failed:", error);
-      toast.error("Failed to fetch search results");
-    } finally {
-      setLoading(false);
-    }
-  }, [isAuthenticated]);
+  // Fetch posts using TanStack Query
+  const { data: postsData, isLoading: isPostsLoading } = useQuery({
+    queryKey: ["search-posts", searchQuery],
+    queryFn: async () => {
+      if (!searchQuery.trim()) return [];
+      const response = await axiosInstance.get("/posts", { params: { limit: 100 } });
+      if (!response.data.success) return [];
+      
+      const searchLower = searchQuery.toLowerCase();
+      return response.data.data.filter(post => 
+        post.description?.toLowerCase().includes(searchLower) ||
+        post.userName?.toLowerCase().includes(searchLower)
+      ).slice(0, 20);
+    },
+    enabled: isAuthenticated && searchQuery.trim().length >= 2,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
-      performSearch(searchQuery);
     }
   };
 
   const clearSearch = () => {
     setSearchQuery("");
-    setSearchResults({ users: [], posts: [] });
     router.push("/search");
     inputRef.current?.focus();
   };
@@ -159,17 +147,15 @@ const SearchPage = () => {
     </Link>
   );
 
+  const users = usersData || [];
+  const posts = postsData || [];
+  const isLoading = isUsersLoading || isPostsLoading;
+
   const renderResults = () => {
-    if (loading) {
-      return (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
-        </div>
-      );
+    if (isLoading) {
+      return <SearchSkeleton />;
     }
 
-    const { users, posts } = searchResults;
-    
     if (activeTab === "all") {
       if (users.length === 0 && posts.length === 0 && searchQuery.trim()) {
         return (
@@ -244,13 +230,9 @@ const SearchPage = () => {
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
-                if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-                searchTimeoutRef.current = setTimeout(() => {
-                  if (e.target.value.trim()) {
-                    router.push(`/search?q=${encodeURIComponent(e.target.value)}`);
-                    performSearch(e.target.value);
-                  }
-                }, 500);
+                if (e.target.value.trim()) {
+                  router.push(`/search?q=${encodeURIComponent(e.target.value)}`, { scroll: false });
+                }
               }}
               placeholder="Search BD BOOK..."
               className="w-full bg-[#242526] text-white rounded-full py-3 pl-12 pr-12 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
