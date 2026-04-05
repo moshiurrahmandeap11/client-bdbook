@@ -5,6 +5,7 @@ import { useAuth } from "@/app/hooks/useAuth";
 import axiosInstance from "@/app/lib/axiosInstance";
 import {
   ArrowLeftIcon,
+  ArrowUturnLeftIcon,
   DocumentIcon,
   FaceSmileIcon,
   MagnifyingGlassIcon,
@@ -19,7 +20,8 @@ import {
   TrashIcon,
   UserIcon,
   VideoCameraIcon,
-  VideoCameraSlashIcon
+  VideoCameraSlashIcon,
+  XMarkIcon
 } from "@heroicons/react/24/outline";
 import { PhoneIcon as PhoneSolidIcon } from "@heroicons/react/24/solid";
 import EmojiPicker from "emoji-picker-react";
@@ -102,6 +104,11 @@ const MessagePage = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Reply feature state
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [showReplyMenu, setShowReplyMenu] = useState(null);
+  
   const searchParams = useSearchParams();
   const initialUserId = searchParams.get("userId");
 
@@ -167,14 +174,14 @@ const MessagePage = () => {
   };
 
   // Auto-select chat if userId is provided in URL
-useEffect(() => {
-  if (initialUserId && conversations.length > 0 && !selectedChat) {
-    const chat = conversations.find(c => c.friendId === initialUserId);
-    if (chat) {
-      handleSelectChat(chat);
+  useEffect(() => {
+    if (initialUserId && conversations.length > 0 && !selectedChat) {
+      const chat = conversations.find(c => c.friendId === initialUserId);
+      if (chat) {
+        handleSelectChat(chat);
+      }
     }
-  }
-}, [initialUserId, conversations, selectedChat]);
+  }, [initialUserId, conversations, selectedChat]);
 
   const playRingtone = () => {
     try {
@@ -552,10 +559,13 @@ useEffect(() => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target)) {
         setShowEmojiPicker(false);
       }
+      if (showReplyMenu && !e.target.closest('.reply-menu-container')) {
+        setShowReplyMenu(null);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [showReplyMenu]);
 
   // Cleanup audio preview URL on unmount
   useEffect(() => {
@@ -574,7 +584,19 @@ useEffect(() => {
     setSelectedChat(chat);
     fetchMessages(chat.friendId);
     setShowEmojiPicker(false);
+    setReplyingTo(null);
     if (socket) socket.emit("join_room", chat.friendId);
+  };
+
+  // Reply feature functions
+  const handleReply = (message) => {
+    setReplyingTo(message);
+    setShowReplyMenu(null);
+    inputRef.current?.focus();
+  };
+
+  const cancelReply = () => {
+    setReplyingTo(null);
   };
 
   const handleSendMessage = async (e) => {
@@ -587,9 +609,17 @@ useEffect(() => {
       socket.emit("send_message", {
         receiverId: selectedChat.friendId,
         message,
-        messageType: "text"
+        messageType: "text",
+        replyTo: replyingTo ? {
+          messageId: replyingTo._id,
+          message: replyingTo.message,
+          senderId: replyingTo.senderId,
+          senderName: replyingTo.senderId === user._id ? "You" : selectedChat.friendName,
+          messageType: replyingTo.messageType
+        } : null
       });
     }
+    setReplyingTo(null);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     socket?.emit("typing", { receiverId: selectedChat.friendId, isTyping: false });
   };
@@ -609,11 +639,19 @@ useEffect(() => {
           messageType: type,
           mediaUrl: ev.target.result,
           fileName: file.name,
-          fileSize: file.size
+          fileSize: file.size,
+          replyTo: replyingTo ? {
+            messageId: replyingTo._id,
+            message: replyingTo.message,
+            senderId: replyingTo.senderId,
+            senderName: replyingTo.senderId === user._id ? "You" : selectedChat.friendName,
+            messageType: replyingTo.messageType
+          } : null
         });
       }
       playMessageSendSound();
       setUploadingFile(false);
+      setReplyingTo(null);
     };
     reader.readAsDataURL(file);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -719,11 +757,19 @@ useEffect(() => {
           mediaUrl: base64Audio,
           fileName: `voice_${Date.now()}.webm`,
           fileSize: recordedBlob.size,
-          duration: recordingTime
+          duration: recordingTime,
+          replyTo: replyingTo ? {
+            messageId: replyingTo._id,
+            message: replyingTo.message,
+            senderId: replyingTo.senderId,
+            senderName: replyingTo.senderId === user._id ? "You" : selectedChat.friendName,
+            messageType: replyingTo.messageType
+          } : null
         });
       }
       
       playMessageSendSound();
+      setReplyingTo(null);
       
       // Cleanup
       setRecordedBlob(null);
@@ -900,6 +946,36 @@ useEffect(() => {
     );
   };
 
+  // Reply preview component
+  const ReplyPreview = ({ message, onCancel }) => {
+    const getReplyContent = () => {
+      if (message.messageType === "image") return "📷 Photo";
+      if (message.messageType === "video") return "🎥 Video";
+      if (message.messageType === "document") return "📄 Document";
+      if (message.messageType === "voice") return "🎤 Voice message";
+      return message.message;
+    };
+
+    return (
+      <div className="px-4 py-2 bg-[#3a3b3c] border-l-4 border-blue-500 flex items-center justify-between">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-blue-400 font-semibold mb-0.5">
+            {message.senderId === user._id ? "You" : selectedChat?.friendName}
+          </p>
+          <p className="text-sm text-white/70 truncate">
+            {getReplyContent()}
+          </p>
+        </div>
+        <button 
+          onClick={onCancel}
+          className="ml-3 p-1 hover:bg-white/10 rounded-full transition"
+        >
+          <XMarkIcon className="h-4 w-4 text-white/60" />
+        </button>
+      </div>
+    );
+  };
+
   const renderMessageContent = (msg) => {
     if (msg.messageType === "image") {
       return (
@@ -935,6 +1011,33 @@ useEffect(() => {
     
     const text = typeof msg.message === "string" ? msg.message : String(msg.message || "");
     return <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{text}</p>;
+  };
+
+  // Render reply quote in message
+  const renderReplyQuote = (replyData) => {
+    if (!replyData) return null;
+    
+    const getQuoteContent = () => {
+      if (replyData.messageType === "image") return "📷 Photo";
+      if (replyData.messageType === "video") return "🎥 Video";
+      if (replyData.messageType === "document") return "📄 Document";
+      if (replyData.messageType === "voice") return "🎤 Voice message";
+      return replyData.message;
+    };
+
+    return (
+      <div className="mb-2 pb-2 border-b border-white/10">
+        <div className="flex items-center gap-1 mb-1">
+          <ArrowUturnLeftIcon className="h-3 w-3 text-white/50" />
+          <span className="text-xs text-blue-300 font-medium">
+            {replyData.senderName}
+          </span>
+        </div>
+        <p className="text-xs text-white/60 line-clamp-2 pl-4">
+          {getQuoteContent()}
+        </p>
+      </div>
+    );
   };
 
   const filteredConversations = conversations.filter(c =>
@@ -1221,7 +1324,34 @@ useEffect(() => {
                       const marginTop = isSameAsPrev ? "mt-0.5" : "mt-3";
 
                       return (
-                        <div key={msg._id || idx} className={`flex ${isOwn ? "justify-end" : "justify-start"} items-end gap-2 ${marginTop}`}>
+                        <div 
+                          key={msg._id || idx} 
+                          className={`flex ${isOwn ? "justify-end" : "justify-start"} items-end gap-2 ${marginTop} group relative`}
+                        >
+                          {/* Reply Menu Button (show on hover) */}
+                          <div className={`reply-menu-container absolute ${isOwn ? 'left-0' : 'right-0'} top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity ${isOwn ? '-translate-x-full mr-2' : 'translate-x-full ml-2'}`}>
+                            <button
+                              onClick={() => setShowReplyMenu(showReplyMenu === msg._id ? null : msg._id)}
+                              className="p-1.5 bg-[#3a3b3c] hover:bg-[#4e4f50] rounded-full shadow-lg"
+                              title="Reply"
+                            >
+                              <ArrowUturnLeftIcon className="h-4 w-4 text-white/70" />
+                            </button>
+                            
+                            {/* Reply Menu Dropdown */}
+                            {showReplyMenu === msg._id && (
+                              <div className="absolute top-full mt-1 bg-[#242526] rounded-lg shadow-xl border border-[#3a3b3c] py-1 z-10 min-w-[120px]">
+                                <button
+                                  onClick={() => handleReply(msg)}
+                                  className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#3a3b3c] flex items-center gap-2"
+                                >
+                                  <ArrowUturnLeftIcon className="h-4 w-4" />
+                                  Reply
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
                           {/* Avatar */}
                           {!isOwn && (
                             <div className="w-7 h-7 flex-shrink-0">
@@ -1248,7 +1378,12 @@ useEffect(() => {
                                 : "bg-[#3a3b3c] text-white"
                               }
                             `}>
+                              {/* Reply Quote */}
+                              {msg.replyTo && renderReplyQuote(msg.replyTo)}
+                              
+                              {/* Message Content */}
                               {renderMessageContent(msg)}
+                              
                               {/* Timestamp on hover */}
                               <span className="absolute -bottom-5 right-0 text-[10px] text-white/30 opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
                                 {formatTime(msg.createdAt)}
@@ -1350,6 +1485,11 @@ useEffect(() => {
                 </div>
               )}
 
+              {/* Reply Preview */}
+              {replyingTo && (
+                <ReplyPreview message={replyingTo} onCancel={cancelReply} />
+              )}
+
               {/* Input bar */}
               <div className="px-4 mb-18 md:mb-0 py-3 bg-[#242526] border-t border-[#3a3b3c] flex-shrink-0">
                 <form onSubmit={handleSendMessage} className="flex items-center gap-2">
@@ -1393,7 +1533,7 @@ useEffect(() => {
                     value={newMessage}
                     onChange={e => setNewMessage(e.target.value)}
                     onKeyUp={handleTyping}
-                    placeholder="Aa"
+                    placeholder={replyingTo ? "Reply to message..." : "Aa"}
                     className="flex-1 min-w-0 bg-[#3a3b3c] text-white text-sm rounded-full px-4 py-2.5 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     style={{ WebkitAppearance: "none", WebkitTapHighlightColor: "transparent" }}
                   />
@@ -1461,6 +1601,14 @@ useEffect(() => {
           cursor: pointer;
           background: rgba(255,255,255,0.2);
           border-radius: 2px;
+        }
+        
+        /* Line clamp utility */
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
       `}</style>
     </>
