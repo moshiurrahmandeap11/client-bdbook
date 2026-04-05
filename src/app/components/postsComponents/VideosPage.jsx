@@ -185,18 +185,18 @@ const LikesModal = ({ video, onClose }) => {
 };
 
 // ─── Video Player ──────────────────────────────────────────────────────────────
+// ─── Video Player ──────────────────────────────────────────────────────────────
 const VideoPlayer = ({ video, isMuted, isActive, onDoubleTap }) => {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [showControls, setShowControls] = useState(false);
-  const ctrlTimer = useRef(null);
-  const lastTap = useRef(0);
 
+  // Auto play/pause when video becomes active/inactive
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
+
     if (isActive) {
       el.play().catch(() => {});
     } else {
@@ -206,21 +206,26 @@ const VideoPlayer = ({ video, isMuted, isActive, onDoubleTap }) => {
     }
   }, [isActive]);
 
+  // Mute sync
   useEffect(() => {
     if (videoRef.current) videoRef.current.muted = isMuted;
   }, [isMuted]);
 
+  // Progress & metadata
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
+
     const onTime = () => setProgress((el.currentTime / el.duration) * 100 || 0);
-    const onMeta = () => setDuration(el.duration);
+    const onMeta = () => setDuration(el.duration || 0);
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
+
     el.addEventListener("timeupdate", onTime);
     el.addEventListener("loadedmetadata", onMeta);
     el.addEventListener("play", onPlay);
     el.addEventListener("pause", onPause);
+
     return () => {
       el.removeEventListener("timeupdate", onTime);
       el.removeEventListener("loadedmetadata", onMeta);
@@ -237,12 +242,12 @@ const VideoPlayer = ({ video, isMuted, isActive, onDoubleTap }) => {
 
   const handleTap = () => {
     const now = Date.now();
-    if (now - lastTap.current < 280) {
+    if (now - (videoRef.current?.lastTap || 0) < 280) {
       onDoubleTap?.();
     } else {
       togglePlay();
     }
-    lastTap.current = now;
+    if (videoRef.current) videoRef.current.lastTap = now;
   };
 
   const handleSeek = (e) => {
@@ -254,78 +259,59 @@ const VideoPlayer = ({ video, isMuted, isActive, onDoubleTap }) => {
     }
   };
 
-  const showCtrl = () => {
-    setShowControls(true);
-    if (ctrlTimer.current) clearTimeout(ctrlTimer.current);
-    ctrlTimer.current = setTimeout(() => setShowControls(false), 3000);
-  };
-
   const fmt = (s) => {
     if (!s || isNaN(s)) return "0:00";
     return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
   };
 
   return (
-    <div
-      className="absolute inset-0 w-full h-full"
-      onMouseMove={showCtrl}
-      onTouchStart={showCtrl}
-    >
+    <div className="absolute inset-0 w-full h-full">
       <video
         ref={videoRef}
         src={video.media?.url}
         className="w-full h-full object-contain"
         poster={video.media?.thumbnail || ""}
-        loop={false}
         muted={isMuted}
         playsInline
         preload="auto"
         onClick={handleTap}
       />
 
+      {/* Play Overlay */}
       {!isPlaying && (
         <div
           className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer"
           onClick={handleTap}
         >
-          <PlayIcon className="h-16 w-16 text-white drop-shadow-lg opacity-90" />
+          <PlayIcon className="h-16 w-16 text-white drop-shadow-lg" />
         </div>
       )}
 
-      {(showControls || !isPlaying) && (
+      {/* ==================== CONTROLS - ALWAYS VISIBLE ==================== */}
+      <div className="absolute bottom-18 md:bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 pb-3">
+        {/* Progress Bar */}
         <div
-          className="absolute bottom-20 md:bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pb-2"
-          onClick={(e) => e.stopPropagation()}
+          className="w-full h-1.5 bg-white/30 rounded-full cursor-pointer mb-3 relative overflow-hidden"
+          onClick={handleSeek}
         >
-          {/* Seek bar */}
           <div
-            className="w-full h-1.5 bg-white/30 rounded-full cursor-pointer mb-3 relative"
-            onClick={handleSeek}
+            className="h-full bg-purple-500 rounded-full relative"
+            style={{ width: `${progress}%` }}
           >
-            <div
-              className="h-full bg-purple-500 rounded-full"
-              style={{ width: `${progress}%` }}
-            >
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-white rounded-full shadow -translate-x-0" />
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={togglePlay}
-              className="text-white hover:text-purple-400 transition"
-            >
-              {isPlaying ? (
-                <PauseIcon className="h-5 w-5" />
-              ) : (
-                <PlayIcon className="h-5 w-5" />
-              )}
-            </button>
-            <span className="text-white text-xs">
-              {fmt(videoRef.current?.currentTime)} / {fmt(duration)}
-            </span>
+            <div className="absolute -top-1 right-0 w-4 h-4 bg-white rounded-full shadow-md -translate-x-1/2" />
           </div>
         </div>
-      )}
+
+        {/* Time + Play Button */}
+        <div className="flex items-center justify-between text-white text-xs">
+          <button onClick={togglePlay} className="hover:text-purple-400 transition p-1 -ml-1">
+            {isPlaying ? <PauseIcon className="h-5 w-5" /> : <PlayIcon className="h-5 w-5" />}
+          </button>
+          <span className="tabular-nums">
+            {fmt(videoRef.current?.currentTime || 0)} / {fmt(duration)}
+          </span>
+        </div>
+      </div>
     </div>
   );
 };
