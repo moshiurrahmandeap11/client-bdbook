@@ -14,7 +14,6 @@ export const AuthProvider = ({children}) => {
     useEffect(() => {
         if(typeof window !== 'undefined') {
             const storedToken = localStorage.getItem('token');
-            console.log("stored token:", storedToken); // for debug
             setToken(storedToken);
 
             // if token not found the end the loading
@@ -55,7 +54,6 @@ export const AuthProvider = ({children}) => {
 
             try {
                 setLoading(true);
-                console.log('Loading user with token : ', token); // for debug
 
                 const response = await axiosInstance.get(`/users/me`);
                 console.log("user response :", response.data);

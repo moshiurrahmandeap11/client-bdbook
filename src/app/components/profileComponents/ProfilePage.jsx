@@ -5,6 +5,7 @@ import axiosInstance from "@/app/lib/axiosInstance";
 import {
   CalendarIcon,
   CameraIcon,
+  ChatBubbleLeftRightIcon,
   ClockIcon,
   DocumentTextIcon,
   LinkIcon,
@@ -38,8 +39,6 @@ const ProfilePage = () => {
     followers: 0,
     following: 0,
   });
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [isLoadingFollow, setIsLoadingFollow] = useState(false);
   
   // Friend request states
   const [friendStatus, setFriendStatus] = useState(null);
@@ -80,6 +79,15 @@ const ProfilePage = () => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Navigate to message page with this user
+  const handleMessageClick = () => {
+    if (!isAuthenticated) {
+      router.push("/auth/login");
+      return;
+    }
+    router.push(`/message?userId=${id}`);
   };
 
   const fetchProfileData = async () => {
@@ -123,17 +131,6 @@ const ProfilePage = () => {
             following: 0,
           }));
         }
-        
-        // Check if current user is following this profile
-        if (isAuthenticated && currentUser) {
-          try {
-            const followResponse = await axiosInstance.get(`/users/following/check/${id}`);
-            setIsFollowing(followResponse.data.data.isFollowing);
-          } catch (followError) {
-            console.log("Follow check endpoint not available yet:", followError.message);
-            setIsFollowing(false);
-          }
-        }
       }
     } catch (error) {
       console.error("Failed to fetch profile:", error);
@@ -149,31 +146,6 @@ const ProfilePage = () => {
       checkFriendStatus();
     }
   }, [id, isAuthenticated, currentUser]);
-
-  const handleFollow = async () => {
-    if (!isAuthenticated) {
-      router.push("/auth/login");
-      return;
-    }
-    
-    setIsLoadingFollow(true);
-    try {
-      const response = await axiosInstance.post(`/users/follow/${id}`);
-      if (response.data.success) {
-        setIsFollowing(!isFollowing);
-        setStats(prev => ({
-          ...prev,
-          followers: isFollowing ? prev.followers - 1 : prev.followers + 1,
-        }));
-        toast.success(isFollowing ? "Unfollowed successfully" : "Followed successfully");
-      }
-    } catch (error) {
-      console.error("Follow action failed:", error);
-      toast.error(error.response?.data?.message || "Action failed");
-    } finally {
-      setIsLoadingFollow(false);
-    }
-  };
 
   const formatDate = (date) => {
     if (!date) return "Unknown";
@@ -312,20 +284,16 @@ const ProfilePage = () => {
               </div>
             </div>
             
-            {/* Action Buttons - Follow & Friend */}
+            {/* Action Buttons - Message & Friend (Follow removed) */}
             {!isOwnProfile && (
               <div className="flex gap-2">
-                {/* Follow Button */}
+                {/* Message Button - Primary Action */}
                 <button
-                  onClick={handleFollow}
-                  disabled={isLoadingFollow}
-                  className={`px-6 py-2 rounded-xl font-semibold transition-all duration-300 ${
-                    isFollowing
-                      ? "bg-white/10 border border-white/20 text-white hover:bg-white/20"
-                      : "bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:scale-105"
-                  } disabled:opacity-50`}
+                  onClick={handleMessageClick}
+                  className="px-6 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:scale-105 transition-all duration-300 flex items-center gap-2"
                 >
-                  {isLoadingFollow ? "Processing..." : isFollowing ? "Following" : "Follow"}
+                  <ChatBubbleLeftRightIcon className="h-5 w-5" />
+                  Message
                 </button>
                 
                 {/* Friend Request Button */}
@@ -351,7 +319,7 @@ const ProfilePage = () => {
                   <button
                     onClick={handleSendFriendRequest}
                     disabled={isProcessing}
-                    className="px-6 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:scale-105 transition-all duration-300 disabled:opacity-50 flex items-center gap-2"
+                    className="px-6 py-2 rounded-xl bg-white/10 border border-white/20 text-white font-semibold hover:bg-white/20 transition-all duration-300 disabled:opacity-50 flex items-center gap-2"
                   >
                     <UserPlusIcon className="h-5 w-5" />
                     {isProcessing ? "Sending..." : "Add Friend"}

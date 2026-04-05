@@ -25,6 +25,7 @@ import { PhoneIcon as PhoneSolidIcon } from "@heroicons/react/24/solid";
 import EmojiPicker from "emoji-picker-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -101,6 +102,8 @@ const MessagePage = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const searchParams = useSearchParams();
+  const initialUserId = searchParams.get("userId");
 
   // Voice Message States
   const [isRecording, setIsRecording] = useState(false);
@@ -162,6 +165,16 @@ const MessagePage = () => {
       }
     ]
   };
+
+  // Auto-select chat if userId is provided in URL
+useEffect(() => {
+  if (initialUserId && conversations.length > 0 && !selectedChat) {
+    const chat = conversations.find(c => c.friendId === initialUserId);
+    if (chat) {
+      handleSelectChat(chat);
+    }
+  }
+}, [initialUserId, conversations, selectedChat]);
 
   const playRingtone = () => {
     try {
