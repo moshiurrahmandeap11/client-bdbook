@@ -211,7 +211,7 @@ const Posts = () => {
                 onClick={() => setShowCreateModal(true)}
                 className="flex-1 text-left px-4 py-2.5 bg-white/10 rounded-full text-white/70 hover:bg-white/20 active:bg-white/30 transition-colors text-sm"
               >
-                What's on your mind?
+                What&asop;s on your mind?
               </button>
             </div>
             <div className="flex gap-2 mt-3 pt-3 border-t border-white/10">
@@ -299,7 +299,7 @@ const Posts = () => {
             {!hasNextPage && allPosts.length > 0 && (
               <div className="text-center py-8">
                 <CheckCircleIcon className="h-10 w-10 text-white/20 mx-auto mb-2" />
-                <p className="text-white/40 text-sm">You've seen all posts! 🎉</p>
+                <p className="text-white/40 text-sm">You&asop;ve seen all posts! 🎉</p>
               </div>
             )}
           </div>
