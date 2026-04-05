@@ -4,6 +4,7 @@ import { useSocket } from "@/app/hooks/SocketContext";
 import { useAuth } from "@/app/hooks/useAuth";
 import axiosInstance from "@/app/lib/axiosInstance";
 import {
+  ArrowLeftIcon,
   ArrowRightOnRectangleIcon,
   Bars3Icon,
   Cog6ToothIcon,
@@ -33,11 +34,15 @@ const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [showMobileProfileMenu, setShowMobileProfileMenu] = useState(false); // ✅ Mobile profile menu
 
   const profileMenuRef = useRef(null);
   const mobileMenuRef = useRef(null);
   const searchRef = useRef(null);
+  const mobileProfileRef = useRef(null);
   const searchTimeoutRef = useRef(null);
+  const mobileSearchInputRef = useRef(null);
   
   const pathname = usePathname();
   const router = useRouter();
@@ -67,11 +72,12 @@ const Header = () => {
       if (!response.data.success) return [];
       return [...new Set(response.data.data.map(u => u.fullName).filter(Boolean))].slice(0, 5);
     },
-    enabled: isAuthenticated && searchQuery.trim().length >= 2 && showSearchDropdown,
-    staleTime: 3 * 60 * 1000, // 3 minutes
+    // ✅ FIX: Enable query when authenticated AND query length >= 2 (remove dropdown dependency)
+    enabled: isAuthenticated && searchQuery.trim().length >= 2,
+    staleTime: 3 * 60 * 1000,
   });
 
-  // 🔍 Unread messages count using TanStack Query
+  // 🔍 Unread messages count
   const { data: unreadData } = useQuery({
     queryKey: ["unread-messages-count"],
     queryFn: async () => {
@@ -79,8 +85,8 @@ const Header = () => {
       return response.data.success ? response.data.count : 0;
     },
     enabled: isAuthenticated,
-    refetchInterval: 30000, // Refetch every 30 seconds
-    staleTime: 10 * 1000, // 10 seconds
+    refetchInterval: 30000,
+    staleTime: 10 * 1000,
   });
 
   const unreadMessagesCount = unreadData || 0;
@@ -95,10 +101,16 @@ const Header = () => {
     
     if (value.trim().length >= 2) {
       searchTimeoutRef.current = setTimeout(() => {
-        setShowSearchDropdown(true);
+        if (showMobileSearch) {
+          setShowMobileSearch(true);
+        } else {
+          setShowSearchDropdown(true);
+        }
       }, 300);
     } else {
       setShowSearchDropdown(false);
+      // Keep mobile search open but hide suggestions when query < 2
+      if (showMobileSearch) setShowMobileSearch(true);
     }
   };
 
@@ -106,6 +118,7 @@ const Header = () => {
     e?.preventDefault();
     if (searchQuery.trim()) {
       setShowSearchDropdown(false);
+      setShowMobileSearch(false);
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setSearchQuery("");
     }
@@ -113,6 +126,7 @@ const Header = () => {
 
   const handleSuggestionClick = (suggestion) => {
     setShowSearchDropdown(false);
+    setShowMobileSearch(false);
     router.push(`/search?q=${encodeURIComponent(suggestion)}`);
     setSearchQuery("");
   };
@@ -120,9 +134,29 @@ const Header = () => {
   const clearSearch = () => {
     setSearchQuery("");
     setShowSearchDropdown(false);
+    setShowMobileSearch(true);
+    mobileSearchInputRef.current?.focus();
   };
 
-  // Close dropdown on outside click
+  const openMobileSearch = () => {
+    setShowMobileSearch(true);
+    setSearchQuery("");
+    setTimeout(() => mobileSearchInputRef.current?.focus(), 100);
+  };
+
+  const closeMobileSearch = () => {
+    setShowMobileSearch(false);
+    setSearchQuery("");
+    setShowSearchDropdown(false);
+  };
+
+  // ✅ Mobile profile menu toggle
+  const toggleMobileProfileMenu = () => {
+    setShowMobileProfileMenu(prev => !prev);
+    setIsMenuOpen(false);
+  };
+
+  // Close all dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
@@ -130,6 +164,9 @@ const Header = () => {
       }
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
         setIsProfileMenuOpen(false);
+      }
+      if (mobileProfileRef.current && !mobileProfileRef.current.contains(event.target)) {
+        setShowMobileProfileMenu(false);
       }
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target) && !event.target.closest(".mobile-menu-button")) {
         setIsMenuOpen(false);
@@ -145,7 +182,7 @@ const Header = () => {
     };
   }, []);
 
-  // Socket events for messages
+  // Socket events
   useEffect(() => {
     if (!socket || !isAuthenticated) return;
 
@@ -202,16 +239,19 @@ const Header = () => {
     return () => window.removeEventListener("scroll", handleWindowScroll);
   }, []);
 
-  // Route change handler
+  // Route change handler - close all menus
   useEffect(() => {
     setIsMenuOpen(false);
     setIsProfileMenuOpen(false);
     setShowSearchDropdown(false);
+    setShowMobileSearch(false);
+    setShowMobileProfileMenu(false);
   }, [pathname]);
 
   const handleLogout = useCallback(async () => {
     await logout();
     setIsProfileMenuOpen(false);
+    setShowMobileProfileMenu(false);
     router.push("/auth/login");
   }, [logout, router]);
 
@@ -225,22 +265,19 @@ const Header = () => {
 
   const handleProfileNavigate = useCallback(() => {
     setIsProfileMenuOpen(false);
-    router.push(`/profile/${user?._id || user?.id}`);
+    setShowMobileProfileMenu(false);
+    const userId = user?._id || user?.id;
+    if (userId) {
+      router.push(`/profile/${userId}`);
+    }
   }, [router, user]);
 
+  // ✅ BD Logo Only (No text)
   const Logo = useMemo(
     () => (
       <Link href="/" className="group">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center transform group-hover:scale-105 transition-all duration-300 shadow-lg">
-            <span className="text-white font-bold text-lg sm:text-xl">BD</span>
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-white via-purple-200 to-blue-200 bg-clip-text text-transparent">
-              BD BOOK
-            </h1>
-            <p className="text-[10px] sm:text-xs text-white/50 hidden sm:block">Connect & Share</p>
-          </div>
+        <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center transform group-hover:scale-105 transition-all duration-300 shadow-lg">
+          <span className="text-white font-bold text-xl">BD</span>
         </div>
       </Link>
     ),
@@ -259,14 +296,14 @@ const Header = () => {
     );
   }
 
-  // ✅ FIX: Use 'suggestions' (not 'searchSuggestions')
   const suggestions = suggestionsData || [];
   const isSearching = isSuggestionsLoading;
 
   return (
     <>
+      {/* ==================== DESKTOP HEADER ==================== */}
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        className={`hidden md:block fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isScrolled
             ? "backdrop-blur-xl bg-black/30 border-b border-white/10 shadow-lg"
             : "bg-transparent"
@@ -274,219 +311,326 @@ const Header = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
-            <div className="flex items-center shrink-0">{Logo}</div>
-
-            {/* 🔍 Facebook-style Search Bar - Desktop */}
-            <div className="hidden md:flex flex-1 max-w-xl mx-8 relative" ref={searchRef}>
-              <form onSubmit={handleSearchSubmit} className="w-full relative">
-                <div className="relative">
-                  <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                    onFocus={() => searchQuery.trim().length >= 2 && setShowSearchDropdown(true)}
-                    placeholder="Search BD BOOK..."
-                    className="w-full bg-[#3a3b3c] text-white rounded-full py-2.5 pl-10 pr-10 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={clearSearch}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition"
-                    >
-                      <XMarkIcon className="h-4 w-4 text-white/60" />
-                    </button>
-                  )}
-                </div>
-
-                {/* ✅ FIX: searchSuggestions -> suggestions */}
-                {showSearchDropdown && (suggestions.length > 0 || isSearching) && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-[#242526] rounded-xl border border-[#3a3b3c] shadow-2xl overflow-hidden z-50 max-h-80 overflow-y-auto">
-                    {isSearching ? (
-                      <SearchSuggestionSkeleton />
-                    ) : (
-                      <>
-                        <div className="px-4 py-2 border-b border-[#3a3b3c]">
-                          <span className="text-white/40 text-xs">Quick Search</span>
-                        </div>
-                        {suggestions.map((suggestion, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => handleSuggestionClick(suggestion)}
-                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#3a3b3c] transition text-left"
-                          >
-                            <MagnifyingGlassIcon className="h-4 w-4 text-white/40 flex-shrink-0" />
-                            <span className="text-white text-sm">{suggestion}</span>
-                          </button>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => handleSearchSubmit({ preventDefault: () => {} })}
-                          className="w-full flex items-center gap-3 px-4 py-3 bg-purple-600/20 hover:bg-purple-600/30 transition text-left border-t border-[#3a3b3c]"
-                        >
-                          <MagnifyingGlassIcon className="h-4 w-4 text-purple-400 flex-shrink-0" />
-                          <span className="text-purple-300 text-sm font-medium">
-                            Search for "{searchQuery}" in all posts & people
-                          </span>
-                        </button>
-                      </>
+            {/* Left: Logo + Search */}
+            <div className="flex items-center gap-4 flex-1">
+              {Logo}
+              
+              {/* Desktop Search Bar */}
+              <div className="flex-1 max-w-xl relative" ref={searchRef}>
+                <form onSubmit={handleSearchSubmit} className="w-full relative">
+                  <div className="relative">
+                    <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                      onFocus={() => searchQuery.trim().length >= 2 && setShowSearchDropdown(true)}
+                      placeholder="Search BD BOOK..."
+                      className="w-full bg-[#3a3b3c] text-white rounded-full py-2.5 pl-10 pr-10 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={clearSearch}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition"
+                      >
+                        <XMarkIcon className="h-4 w-4 text-white/60" />
+                      </button>
                     )}
                   </div>
-                )}
-              </form>
+
+                  {/* Search Suggestions */}
+                  {/* ✅ FIX: Show when searching OR has suggestions */}
+                  {(showSearchDropdown || isSearching) && searchQuery.trim().length >= 2 && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-[#242526] rounded-xl border border-[#3a3b3c] shadow-2xl overflow-hidden z-50 max-h-80 overflow-y-auto">
+                      {isSearching ? (
+                        <SearchSuggestionSkeleton />
+                      ) : suggestions.length > 0 ? (
+                        <>
+                          <div className="px-4 py-2 border-b border-[#3a3b3c]">
+                            <span className="text-white/40 text-xs">Quick Search</span>
+                          </div>
+                          {suggestions.map((suggestion, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => handleSuggestionClick(suggestion)}
+                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#3a3b3c] transition text-left"
+                            >
+                              <MagnifyingGlassIcon className="h-4 w-4 text-white/40 flex-shrink-0" />
+                              <span className="text-white text-sm">{suggestion}</span>
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => handleSearchSubmit({ preventDefault: () => {} })}
+                            className="w-full flex items-center gap-3 px-4 py-3 bg-purple-600/20 hover:bg-purple-600/30 transition text-left border-t border-[#3a3b3c]"
+                          >
+                            <MagnifyingGlassIcon className="h-4 w-4 text-purple-400 flex-shrink-0" />
+                            <span className="text-purple-300 text-sm font-medium">
+                              Search for "{searchQuery}" in all posts & people
+                            </span>
+                          </button>
+                        </>
+                      ) : searchQuery.trim().length >= 2 ? (
+                        <div className="px-4 py-6 text-center text-white/40 text-sm">
+                          No results found
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                </form>
+              </div>
             </div>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center justify-center space-x-1 lg:space-x-2">
-              {navItems.map((item) => {
-                const isActive = pathname === item.href;
-                const Icon = item.icon;
-                const isMessage = item.name === "Messages";
-                const hasUnread = isMessage && unreadMessagesCount > 0;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`relative px-3 py-2 rounded-xl text-sm font-medium transition-all duration-300 group ${
-                      isActive
-                        ? "text-white bg-white/10 backdrop-blur-sm"
-                        : "text-white/70 hover:text-white hover:bg-white/5"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 relative">
-                      <Icon className={`h-4 w-4 transition-all duration-300 ${isActive ? "text-purple-400" : "group-hover:text-purple-400"}`} />
-                      <span>{item.name}</span>
-                      {hasUnread && (
-                        <span className="absolute -top-2 -right-4 min-w-[18px] h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1 animate-pulse">
-                          {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
-                        </span>
-                      )}
-                    </div>
-                    {isActive && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
-                    )}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            {/* Right Section */}
+            {/* Right: Navigation + Profile */}
             <div className="flex items-center gap-3">
-              {isAuthenticated && user ? (
-                <>
-                  <NotificationDropdown isAuthenticated={isAuthenticated} socket={socket} user={user} />
-
-                  {/* Profile */}
-                  <div className="relative" ref={profileMenuRef}>
-                    <button
-                      onClick={handleProfileClick}
-                      className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 group"
+              <nav className="flex items-center justify-center space-x-1 lg:space-x-2">
+                {navItems.map((item) => {
+                  const isActive = pathname === item.href;
+                  const Icon = item.icon;
+                  const isMessage = item.name === "Messages";
+                  const hasUnread = isMessage && unreadMessagesCount > 0;
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={`relative px-3 py-2 rounded-xl text-sm font-medium transition-all duration-300 group ${
+                        isActive
+                          ? "text-white bg-white/10 backdrop-blur-sm"
+                          : "text-white/70 hover:text-white hover:bg-white/5"
+                      }`}
                     >
-                      {user.profilePicture?.url ? (
-                        <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden border-2 border-purple-500/50 group-hover:border-purple-500 transition-all">
-                          <Image src={user.profilePicture.url} alt={user.fullName} fill className="object-cover" />
-                        </div>
-                      ) : (
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
-                          <UserCircleIcon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                        </div>
+                      <div className="flex items-center gap-2 relative">
+                        <Icon className={`h-4 w-4 transition-all duration-300 ${isActive ? "text-purple-400" : "group-hover:text-purple-400"}`} />
+                        <span>{item.name}</span>
+                        {hasUnread && (
+                          <span className="absolute -top-2 -right-4 min-w-[18px] h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1 animate-pulse">
+                            {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
+                          </span>
+                        )}
+                      </div>
+                      {isActive && (
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
                       )}
-                      <span className="hidden sm:block text-white font-medium text-sm">
-                        {user.fullName?.split(" ")[0] || "User"}
-                      </span>
-                    </button>
+                    </Link>
+                  );
+                })}
+              </nav>
 
-                    {isProfileMenuOpen && (
-                      <>
-                        <div className="fixed inset-0 z-40 md:hidden bg-black/50 backdrop-blur-sm" onClick={() => setIsProfileMenuOpen(false)} />
-                        <div className="absolute right-0 mt-2 w-56 rounded-xl backdrop-blur-xl bg-black/90 border border-white/20 shadow-2xl overflow-hidden animate-fadeInDown z-50">
-                          <div className="py-2">
-                            <div className="px-4 py-3 border-b border-white/10">
-                              <p className="text-white font-semibold text-sm">{user.fullName || user.name}</p>
-                              <p className="text-white/50 text-xs mt-1 truncate">{user.email}</p>
-                            </div>
-                            <button onClick={() => { setIsProfileMenuOpen(false); router.push(`/profile/${user._id}`); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group">
-                              <UserCircleIcon className="h-5 w-5 group-hover:text-purple-400" />
-                              <span className="text-sm">Profile</span>
-                            </button>
-                            <Link href="/community" className="flex items-center gap-3 px-4 py-2.5 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group" onClick={() => setIsProfileMenuOpen(false)}>
-                              <UserGroupIcon className="h-5 w-5 group-hover:text-purple-400" />
-                              <span className="text-sm">Friends</span>
-                            </Link>
-                            <Link href="/settings" className="flex items-center gap-3 px-4 py-2.5 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group" onClick={() => setIsProfileMenuOpen(false)}>
-                              <Cog6ToothIcon className="h-5 w-5 group-hover:text-purple-400" />
-                              <span className="text-sm">Settings</span>
-                            </Link>
-                            <div className="border-t border-white/10 my-1"></div>
-                            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 group">
-                              <ArrowRightOnRectangleIcon className="h-5 w-5 group-hover:rotate-180 transition-transform duration-300" />
-                              <span className="text-sm">Log out</span>
-                            </button>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <button onClick={handleGetStarted} className="px-4 sm:px-6 py-1.5 sm:py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-sm sm:text-base">
-                  Get Started
+              <NotificationDropdown isAuthenticated={isAuthenticated} socket={socket} user={user} />
+
+              {/* Profile */}
+              <div className="relative" ref={profileMenuRef}>
+                <button
+                  onClick={handleProfileClick}
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 group"
+                >
+                  {user?.profilePicture?.url ? (
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-purple-500/50 group-hover:border-purple-500 transition-all">
+                      <Image src={user.profilePicture.url} alt={user?.fullName || "User"} fill className="object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
+                      <UserCircleIcon className="h-6 w-6 text-white" />
+                    </div>
+                  )}
+                  <span className="text-white font-medium text-sm">
+                    {user?.fullName?.split(" ")[0] || "User"}
+                  </span>
                 </button>
-              )}
 
-              {/* Mobile Menu Button */}
-              <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden p-2 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 mobile-menu-button" aria-label="Menu">
-                {isMenuOpen ? <XMarkIcon className="h-6 w-6 text-white" /> : <Bars3Icon className="h-6 w-6 text-white" />}
-              </button>
+                {isProfileMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40 md:hidden bg-black/50 backdrop-blur-sm" onClick={() => setIsProfileMenuOpen(false)} />
+                    <div className="absolute right-0 mt-2 w-56 rounded-xl backdrop-blur-xl bg-black/90 border border-white/20 shadow-2xl overflow-hidden animate-fadeInDown z-50">
+                      <div className="py-2">
+                        <div className="px-4 py-3 border-b border-white/10">
+                          <p className="text-white font-semibold text-sm">{user?.fullName || user?.name || "User"}</p>
+                          <p className="text-white/50 text-xs mt-1 truncate">{user?.email || ""}</p>
+                        </div>
+                        <button onClick={() => { setIsProfileMenuOpen(false); handleProfileNavigate(); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group">
+                          <UserCircleIcon className="h-5 w-5 group-hover:text-purple-400" />
+                          <span className="text-sm">Profile</span>
+                        </button>
+                        <Link href="/community" className="flex items-center gap-3 px-4 py-2.5 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group" onClick={() => setIsProfileMenuOpen(false)}>
+                          <UserGroupIcon className="h-5 w-5 group-hover:text-purple-400" />
+                          <span className="text-sm">Friends</span>
+                        </Link>
+                        <Link href="/settings" className="flex items-center gap-3 px-4 py-2.5 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group" onClick={() => setIsProfileMenuOpen(false)}>
+                          <Cog6ToothIcon className="h-5 w-5 group-hover:text-purple-400" />
+                          <span className="text-sm">Settings</span>
+                        </Link>
+                        <div className="border-t border-white/10 my-1"></div>
+                        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 group">
+                          <ArrowRightOnRectangleIcon className="h-5 w-5 group-hover:rotate-180 transition-transform duration-300" />
+                          <span className="text-sm">Log out</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* 🔍 Mobile Search Bar */}
-      <div className="md:hidden fixed top-16 left-0 right-0 z-40 px-4 py-2 bg-[#18191a]/95 backdrop-blur-xl border-b border-white/10">
-        <div className="relative" ref={searchRef}>
-          <form onSubmit={handleSearchSubmit}>
-            <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={handleSearchChange}
-              onFocus={() => searchQuery.trim().length >= 2 && setShowSearchDropdown(true)}
-              placeholder="Search..."
-              className="w-full bg-[#3a3b3c] text-white rounded-full py-2.5 pl-10 pr-10 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 transition text-sm"
-            />
-            {searchQuery && (
-              <button type="button" onClick={clearSearch} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition">
-                <XMarkIcon className="h-4 w-4 text-white/60" />
-              </button>
-            )}
-          </form>
+      {/* ==================== MOBILE HEADER ==================== */}
+      <header className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#242526] border-b border-white/10">
+        <div className="px-4 h-16 flex items-center justify-between">
+          {/* Left: BD Logo */}
+          {Logo}
 
-          {/* ✅ FIX: Mobile search suggestions - searchSuggestions -> suggestions */}
-          {showSearchDropdown && (suggestions.length > 0 || isSearching) && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-[#242526] rounded-xl border border-[#3a3b3c] shadow-2xl overflow-hidden z-50 max-h-64 overflow-y-auto">
-              {isSearching ? (
-                <SearchSuggestionSkeleton />
-              ) : (
-                suggestions.map((suggestion, idx) => (
+          {/* Right: Search + Profile + Menu */}
+          <div className="flex items-center gap-1">
+            {/* Search Icon */}
+            <button
+              onClick={openMobileSearch}
+              className="p-2 rounded-full hover:bg-white/10 transition"
+              aria-label="Search"
+            >
+              <MagnifyingGlassIcon className="h-6 w-6 text-white" />
+            </button>
+
+            {/* ✅ FIX: Mobile Profile Icon */}
+            {isAuthenticated && user && (
+              <div className="relative" ref={mobileProfileRef}>
+                <button
+                  onClick={toggleMobileProfileMenu}
+                  className="p-1 rounded-full hover:bg-white/10 transition"
+                  aria-label="Profile"
+                >
+                  {user?.profilePicture?.url ? (
+                    <div className="relative w-8 h-8 rounded-full overflow-hidden border border-purple-500/50">
+                      <Image src={user.profilePicture.url} alt={user?.fullName || "User"} fill className="object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
+                      <UserCircleIcon className="h-5 w-5 text-white" />
+                    </div>
+                  )}
+                </button>
+
+                {/* Mobile Profile Dropdown */}
+                {showMobileProfileMenu && (
+                  <>
+                    <div className="fixed inset-0 z-[55] bg-black/50" onClick={() => setShowMobileProfileMenu(false)} />
+                    <div className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-[#242526] border border-white/10 shadow-2xl overflow-hidden z-[60] animate-fadeInDown">
+                      <div className="py-2">
+                        <button onClick={() => { setShowMobileProfileMenu(false); handleProfileNavigate(); }} className="w-full flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition text-left">
+                          <UserCircleIcon className="h-5 w-5" />
+                          <span className="text-sm">Profile</span>
+                        </button>
+                        <Link href="/community" className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition" onClick={() => setShowMobileProfileMenu(false)}>
+                          <UserGroupIcon className="h-5 w-5" />
+                          <span className="text-sm">Friends</span>
+                        </Link>
+                        <Link href="/settings" className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition" onClick={() => setShowMobileProfileMenu(false)}>
+                          <Cog6ToothIcon className="h-5 w-5" />
+                          <span className="text-sm">Settings</span>
+                        </Link>
+                        <div className="border-t border-white/10 my-1"></div>
+                        <button onClick={() => { setShowMobileProfileMenu(false); handleLogout(); }} className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition text-left">
+                          <ArrowRightOnRectangleIcon className="h-5 w-5" />
+                          <span className="text-sm">Log out</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Menu Button */}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="p-2 rounded-full hover:bg-white/10 transition mobile-menu-button"
+              aria-label="Menu"
+            >
+              {isMenuOpen ? <XMarkIcon className="h-6 w-6 text-white" /> : <Bars3Icon className="h-6 w-6 text-white" />}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* ==================== MOBILE SEARCH OVERLAY ==================== */}
+      {showMobileSearch && (
+        <div className="md:hidden fixed inset-0 z-[60] bg-[#242526]">
+          {/* Search Header */}
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
+            <button
+              onClick={closeMobileSearch}
+              className="p-2 -ml-2 rounded-full hover:bg-white/10 transition"
+            >
+              <ArrowLeftIcon className="h-5 w-5 text-white" />
+            </button>
+            <div className="flex-1 relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+              <input
+                ref={mobileSearchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder="Search BD BOOK..."
+                className="w-full bg-[#3a3b3c] text-white rounded-full py-2.5 pl-10 pr-10 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                autoFocus
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full"
+                >
+                  <XMarkIcon className="h-4 w-4 text-white/60" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Search Results */}
+          <div className="overflow-y-auto max-h-[calc(100vh-80px)]">
+            {isSearching ? (
+              <SearchSuggestionSkeleton />
+            ) : suggestions.length > 0 && searchQuery.trim().length >= 2 ? (
+              <div className="py-2">
+                <div className="px-4 py-2 border-b border-white/10">
+                  <span className="text-white/40 text-xs">Quick Search</span>
+                </div>
+                {suggestions.map((suggestion, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => handleSuggestionClick(suggestion)}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#3a3b3c] transition text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition text-left"
                   >
                     <MagnifyingGlassIcon className="h-4 w-4 text-white/40 flex-shrink-0" />
                     <span className="text-white text-sm">{suggestion}</span>
                   </button>
-                ))
-              )}
-            </div>
-          )}
+                ))}
+                <button
+                  type="button"
+                  onClick={() => handleSearchSubmit({ preventDefault: () => {} })}
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-purple-600/20 hover:bg-purple-600/30 transition text-left border-t border-white/10"
+                >
+                  <MagnifyingGlassIcon className="h-4 w-4 text-purple-400 flex-shrink-0" />
+                  <span className="text-purple-300 text-sm font-medium">
+                    Search for "{searchQuery}" in all posts & people
+                  </span>
+                </button>
+              </div>
+            ) : searchQuery.trim().length >= 2 ? (
+              <div className="text-center py-12 text-white/40">
+                <p>No results found</p>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-white/40">
+                <p className="text-sm">Type to search...</p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40">
@@ -523,7 +667,7 @@ const Header = () => {
       {isMenuOpen && (
         <>
           <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden" onClick={() => setIsMenuOpen(false)} />
-          <div ref={mobileMenuRef} className="md:hidden fixed inset-x-4 top-36 z-45 rounded-2xl backdrop-blur-xl bg-black/90 border border-white/20 shadow-2xl overflow-hidden animate-slideDown">
+          <div ref={mobileMenuRef} className="md:hidden fixed inset-x-4 top-20 z-45 rounded-2xl backdrop-blur-xl bg-black/90 border border-white/20 shadow-2xl overflow-hidden animate-slideDown">
             <div className="py-3 overflow-y-auto max-h-[calc(100vh-100px)]">
               {navItems.map((item) => {
                 const isActive = pathname === item.href;
@@ -576,7 +720,7 @@ const Header = () => {
       <style jsx global>{`
         body { padding-top: 64px; padding-bottom: 0px; }
         @media (min-width: 768px) { body { padding-top: 80px; } }
-        @media (max-width: 768px) { body { padding-top: 120px; padding-bottom: 64px; } }
+        @media (max-width: 768px) { body { padding-bottom: 64px; } }
         @keyframes fadeInDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
