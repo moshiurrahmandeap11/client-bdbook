@@ -53,17 +53,17 @@ const RoomPage = () => {
   const [elapsed, setElapsed] = useState(0);
   const [meetingStarted, setMeetingStarted] = useState(false);
   const [roomJoined, setRoomJoined] = useState(false);
+  const [isNegotiating, setIsNegotiating] = useState(false);
 
   const localVideoRef = useRef(null);
   const previewVideoRef = useRef(null);
   const peerConnectionsRef = useRef({});
   const messagesEndRef = useRef(null);
   const chatInputRef = useRef(null);
-  const audioContextRef = useRef(null);
   const timerRef = useRef(null);
   const isJoiningRef = useRef(false);
 
-  // Optimized WebRTC Configuration
+  // WebRTC Configuration
   const configuration = {
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" },
@@ -81,16 +81,8 @@ const RoomPage = () => {
         username: "openrelayproject",
         credential: "openrelayproject",
       },
-      {
-        urls: "turn:openrelay.metered.ca:443?transport=tcp",
-        username: "openrelayproject",
-        credential: "openrelayproject",
-      },
     ],
     iceCandidatePoolSize: 10,
-    bundlePolicy: "max-bundle",
-    rtcpMuxPolicy: "require",
-    sdpSemantics: 'unified-plan'
   };
 
   const formatTime = (secs) => {
@@ -105,7 +97,7 @@ const RoomPage = () => {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   };
 
-  // Initialize local media stream with better quality
+  // Initialize local media stream
   const initLocalStream = async (video = true, audio = true) => {
     try {
       const constraints = {
@@ -113,21 +105,21 @@ const RoomPage = () => {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          sampleRate: 48000,
         } : false,
         video: video ? {
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 },
-          frameRate: { ideal: 30, max: 60 },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 },
         } : false,
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
-      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-        await audioContextRef.current.close();
-      }
-      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      // Set initial mute states
+      const audioTrack = stream.getAudioTracks()[0];
+      const videoTrack = stream.getVideoTracks()[0];
+      if (audioTrack) audioTrack.enabled = isMicOn;
+      if (videoTrack) videoTrack.enabled = isCameraOn;
       
       return stream;
     } catch (error) {
@@ -238,14 +230,15 @@ const RoomPage = () => {
         localVideoRef.current.srcObject = stream;
       }
 
+      const userId = user?._id || joinName;
+
       socket.emit("join_room", {
         roomId: roomId,
-        userId: user?._id || joinName,
+        userId: userId,
         userName: joinName,
         userProfilePicture: user?.profilePicture?.url || null,
       });
       
-      // Timeout for join
       setTimeout(() => {
         if (isJoiningRef.current && !roomJoined) {
           console.log("Join timeout");
@@ -267,45 +260,81 @@ const RoomPage = () => {
     }
   };
 
-  // Create peer connection for a participant
-const createPeerConnection = useCallback((participantId, stream) => {
-  const pc = new RTCPeerConnection(configuration);
+  // Create peer connection for a participant - FIXED
+  const createPeerConnection = useCallback((participantId) => {
+    if (!localStream) {
+      console.log("No local stream yet");
+      return null;
+    }
 
-  stream.getTracks().forEach(track => pc.addTrack(track, stream));
+    // Close existing connection if any
+    if (peerConnectionsRef.current[participantId]) {
+      peerConnectionsRef.current[participantId].close();
+      delete peerConnectionsRef.current[participantId];
+    }
 
-  pc.ontrack = (event) => {
-    console.log(`✅ Received remote stream from ${participantId}`);
-    setParticipants(prev =>
-      prev.map(p =>
-        p.id === participantId
-          ? { ...p, stream: event.streams[0], connected: true }
-          : p
-      )
-    );
-  };
+    const pc = new RTCPeerConnection(configuration);
 
-  pc.onicecandidate = (event) => {
-    if (event.candidate) {
-      socket.emit("ice_candidate", {
-        roomId,
-        to: participantId,
-        candidate: event.candidate,
+    // Add ALL local tracks to the connection
+    localStream.getTracks().forEach(track => {
+      pc.addTrack(track, localStream);
+      console.log(`Added ${track.kind} track to connection with ${participantId}`);
+    });
+
+    // Handle incoming tracks
+    pc.ontrack = (event) => {
+      console.log(`Received ${event.track.kind} track from ${participantId}`);
+      
+      setParticipants(prev => {
+        const existing = prev.find(p => p.id === participantId);
+        if (existing && !existing.stream) {
+          return prev.map(p => 
+            p.id === participantId ? { ...p, stream: event.streams[0], connected: true } : p
+          );
+        }
+        if (!existing) {
+          return [...prev, {
+            id: participantId,
+            name: participantId,
+            stream: event.streams[0],
+            connected: true,
+            profilePicture: null,
+          }];
+        }
+        return prev;
       });
-    }
-  };
+    };
 
-  pc.onconnectionstatechange = () => {
-    console.log(`Connection state ${participantId}:`, pc.connectionState);
-    if (pc.connectionState === "connected") {
-      setParticipants(prev => prev.map(p => p.id === participantId ? { ...p, connected: true } : p));
-    } else if (["disconnected", "failed", "closed"].includes(pc.connectionState)) {
-      removeParticipant(participantId);
-    }
-  };
+    // Handle ICE candidates
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit("ice_candidate", {
+          roomId: roomId,
+          to: participantId,
+          candidate: event.candidate,
+        });
+      }
+    };
 
-  peerConnectionsRef.current[participantId] = pc;
-  return pc;
-}, [roomId, socket]);
+    // Handle connection state
+    pc.onconnectionstatechange = () => {
+      console.log(`Connection state with ${participantId}:`, pc.connectionState);
+      if (pc.connectionState === "connected") {
+        console.log(`✅ Successfully connected to ${participantId}`);
+      } else if (pc.connectionState === "failed" || pc.connectionState === "closed") {
+        console.log(`❌ Connection lost with ${participantId}`);
+        removeParticipant(participantId);
+      }
+    };
+
+    // Handle ICE connection state
+    pc.oniceconnectionstatechange = () => {
+      console.log(`ICE connection state with ${participantId}:`, pc.iceConnectionState);
+    };
+
+    peerConnectionsRef.current[participantId] = pc;
+    return pc;
+  }, [localStream, roomId, socket]);
 
   const removeParticipant = (participantId) => {
     if (peerConnectionsRef.current[participantId]) {
@@ -317,25 +346,33 @@ const createPeerConnection = useCallback((participantId, stream) => {
 
   // Handle incoming offer
   const handleOffer = useCallback(async (data) => {
-    if (!localStream) return;
-    
     console.log("Received offer from:", data.from);
+    
+    if (!localStream) {
+      console.log("No local stream, cannot handle offer");
+      return;
+    }
     
     let pc = peerConnectionsRef.current[data.from];
     if (!pc) {
-      pc = createPeerConnection(data.from, localStream);
+      pc = createPeerConnection(data.from);
+      if (!pc) return;
     }
     
     try {
       await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+      console.log("Remote description set from offer");
+      
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
+      console.log("Answer created and set");
       
       socket.emit("answer", {
         roomId: roomId,
         to: data.from,
-        answer: answer
+        answer: answer,
       });
+      console.log("Answer sent to:", data.from);
     } catch (error) {
       console.error("Error handling offer:", error);
     }
@@ -348,59 +385,74 @@ const createPeerConnection = useCallback((participantId, stream) => {
     if (pc) {
       try {
         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        console.log("Remote description set from answer");
       } catch (error) {
         console.error("Error handling answer:", error);
       }
     }
   }, []);
 
-  // Handle incoming ICE candidate
+  // Handle ICE candidate
   const handleIceCandidate = useCallback(async (data) => {
     const pc = peerConnectionsRef.current[data.from];
     if (pc && data.candidate) {
       try {
         await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+        console.log("ICE candidate added for:", data.from);
       } catch (error) {
         console.error("Error adding ICE candidate:", error);
       }
     }
   }, []);
 
-  // Handle new participant
-const handleNewParticipant = useCallback(async (data) => {
-  console.log("🆕 New participant:", data.userId);
+  // Handle new participant - FIXED with delay
+  const handleNewParticipant = useCallback(async (data) => {
+    console.log("New participant joined:", data.userId, data.userName);
+    
+    // Add to participants list
+    setParticipants(prev => {
+      if (prev.some(p => p.id === data.userId)) return prev;
+      return [...prev, {
+        id: data.userId,
+        name: data.userName,
+        profilePicture: data.userProfilePicture,
+        stream: null,
+        connected: false,
+      }];
+    });
 
-  setParticipants(prev => {
-    if (prev.some(p => p.id === data.userId)) return prev;
-    return [...prev, {
-      id: data.userId,
-      name: data.userName,
-      profilePicture: data.userProfilePicture,
-      stream: null,
-      connected: false,
-    }];
-  });
-
-  // ছোট delay দিয়ে localStream নিশ্চিত করুন
-  setTimeout(async () => {
-    if (!localStream) return;
-
-    const pc = createPeerConnection(data.userId, localStream);
-    try {
-      const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
-      await pc.setLocalDescription(offer);
-
-      socket.emit("offer", {
-        roomId,
-        to: data.userId,
-        offer,
-      });
-      console.log(`📤 Offer sent to ${data.userId}`);
-    } catch (err) {
-      console.error("Offer creation failed:", err);
-    }
-  }, 300);
-}, [localStream, roomId, socket, createPeerConnection]);
+    // Small delay to ensure everything is ready
+    setTimeout(async () => {
+      if (!localStream) {
+        console.log("No local stream yet, waiting...");
+        return;
+      }
+      
+      // Check if connection already exists
+      if (peerConnectionsRef.current[data.userId]) {
+        console.log("Connection already exists for:", data.userId);
+        return;
+      }
+      
+      const pc = createPeerConnection(data.userId);
+      if (!pc) return;
+      
+      try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        console.log("Offer created and set for:", data.userId);
+        
+        socket.emit("offer", {
+          roomId: roomId,
+          to: data.userId,
+          offer: offer,
+        });
+        console.log("Offer sent to:", data.userId);
+      } catch (error) {
+        console.error("Error creating offer:", error);
+      }
+    }, 500);
+  }, [localStream, roomId, socket, createPeerConnection]);
 
   const handleParticipantLeft = useCallback((data) => {
     console.log("Participant left:", data.userId);
@@ -425,6 +477,7 @@ const handleNewParticipant = useCallback(async (data) => {
     if (!socket) return;
 
     socket.on("room_created", (data) => {
+      console.log("Room created:", data);
       setRoomName(data.roomName);
       setIsConnecting(false);
       setRoomJoined(true);
@@ -432,13 +485,14 @@ const handleNewParticipant = useCallback(async (data) => {
     });
 
     socket.on("room_joined", (data) => {
+      console.log("Room joined:", data);
       setRoomName(data.roomName);
       setParticipants(data.participants.map(p => ({
         id: p.userId,
         name: p.userName,
         profilePicture: p.userProfilePicture,
         stream: null,
-        connected: false
+        connected: false,
       })));
       setIsJoining(false);
       setIsConnecting(false);
@@ -494,9 +548,6 @@ const handleNewParticipant = useCallback(async (data) => {
       if (localStream) localStream.getTracks().forEach(t => t.stop());
       if (screenStream) screenStream.getTracks().forEach(t => t.stop());
       if (previewStream) previewStream.getTracks().forEach(t => t.stop());
-      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-        audioContextRef.current.close();
-      }
       Object.values(peerConnectionsRef.current).forEach(pc => pc.close());
       if (socket && roomId && roomJoined) {
         socket.emit("leave_room", { roomId });
@@ -527,32 +578,36 @@ const handleNewParticipant = useCallback(async (data) => {
     }
   };
 
-  // Start screen sharing
+  // Start screen sharing - FIXED
   const startScreenShare = async () => {
     try {
       const screenStreamObj = await navigator.mediaDevices.getDisplayMedia({
         video: true,
-        audio: false
+        audio: false,
       });
-      
-      setScreenStream(screenStreamObj);
-      setIsScreenSharing(true);
       
       const screenTrack = screenStreamObj.getVideoTracks()[0];
       
-      // Replace video track for all peer connections
-      Object.values(peerConnectionsRef.current).forEach(pc => {
+      // Get all peer connections
+      const connections = Object.entries(peerConnectionsRef.current);
+      
+      // For each connection, replace video track
+      for (const [participantId, pc] of connections) {
         const senders = pc.getSenders();
         const videoSender = senders.find(s => s.track?.kind === 'video');
-        if (videoSender && screenTrack) {
-          videoSender.replaceTrack(screenTrack);
+        if (videoSender) {
+          await videoSender.replaceTrack(screenTrack);
+          console.log(`Replaced video track for ${participantId}`);
         }
-      });
+      }
       
       // Update local video display
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = screenStreamObj;
       }
+      
+      setScreenStream(screenStreamObj);
+      setIsScreenSharing(true);
       
       screenTrack.onended = () => {
         stopScreenShare();
@@ -565,32 +620,35 @@ const handleNewParticipant = useCallback(async (data) => {
     }
   };
 
-  // Stop screen sharing
+  // Stop screen sharing - FIXED
   const stopScreenShare = async () => {
-    if (screenStream) {
-      screenStream.getTracks().forEach(t => t.stop());
-      setScreenStream(null);
-      setIsScreenSharing(false);
+    if (!screenStream) return;
+    
+    screenStream.getTracks().forEach(t => t.stop());
+    setScreenStream(null);
+    setIsScreenSharing(false);
+    
+    if (localStream) {
+      const videoTrack = localStream.getVideoTracks()[0];
       
-      if (localStream) {
-        const videoTrack = localStream.getVideoTracks()[0];
-        
-        // Switch back to camera track
-        Object.values(peerConnectionsRef.current).forEach(pc => {
-          const senders = pc.getSenders();
-          const videoSender = senders.find(s => s.track?.kind === 'video');
-          if (videoSender && videoTrack) {
-            videoSender.replaceTrack(videoTrack);
-          }
-        });
-        
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = localStream;
+      // Switch back to camera track for all connections
+      const connections = Object.entries(peerConnectionsRef.current);
+      for (const [participantId, pc] of connections) {
+        const senders = pc.getSenders();
+        const videoSender = senders.find(s => s.track?.kind === 'video');
+        if (videoSender && videoTrack) {
+          await videoSender.replaceTrack(videoTrack);
+          console.log(`Switched back to camera for ${participantId}`);
         }
       }
       
-      toast.success("Screen sharing stopped");
+      // Update local video display
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = localStream;
+      }
     }
+    
+    toast.success("Screen sharing stopped");
   };
 
   const sendMessage = (e) => {
@@ -813,6 +871,7 @@ const handleNewParticipant = useCallback(async (data) => {
   }
 
   if (showJoinModal) return <JoinModal />;
+  
   if (isConnecting || isJoining) {
     return (
       <div className="min-h-screen bg-[#202124] flex items-center justify-center">
@@ -861,8 +920,9 @@ const handleNewParticipant = useCallback(async (data) => {
       const stream = isLocal ? localStream : participant.stream;
       if (stream && videoRef.current.srcObject !== stream) {
         videoRef.current.srcObject = stream;
+        console.log(`Video element updated for ${displayName}`);
       }
-    }, [isLocal ? localStream : participant.stream]);
+    }, [isLocal ? localStream : participant.stream, displayName]);
 
     return (
       <div
