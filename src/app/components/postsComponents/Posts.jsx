@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useAuth } from "@/app/hooks/useAuth";
 import axiosInstance from "@/app/lib/axiosInstance";
 import {
@@ -10,85 +9,154 @@ import {
   VideoCameraIcon,
   XMarkIcon
 } from "@heroicons/react/24/outline";
+import { CheckCircleIcon } from "@heroicons/react/24/solid";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import PostCard from "../sharedComponents/PostCard/PostCard";
 
+// Skeleton Components (same as before)
+const PostSkeleton = () => (
+  <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/20 p-4 animate-pulse">
+    <div className="flex items-center gap-3 mb-3">
+      <div className="w-10 h-10 rounded-full bg-white/20"></div>
+      <div className="flex-1">
+        <div className="h-4 bg-white/20 rounded w-32 mb-2"></div>
+        <div className="h-3 bg-white/20 rounded w-24"></div>
+      </div>
+    </div>
+    <div className="h-4 bg-white/20 rounded w-3/4 mb-2"></div>
+    <div className="h-4 bg-white/20 rounded w-1/2 mb-4"></div>
+    <div className="aspect-video bg-white/20 rounded-xl mb-4"></div>
+    <div className="flex justify-between pt-3 border-t border-white/10">
+      <div className="h-8 bg-white/20 rounded w-20"></div>
+      <div className="h-8 bg-white/20 rounded w-20"></div>
+      <div className="h-8 bg-white/20 rounded w-20"></div>
+    </div>
+  </div>
+);
+
+const FeedSkeleton = () => (
+  <div className="space-y-4 max-w-3xl mx-auto">
+    {[...Array(3)].map((_, i) => (
+      <PostSkeleton key={i} />
+    ))}
+  </div>
+);
+
+// Main Posts Component
 const Posts = () => {
   const { user, isAuthenticated } = useAuth();
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [page, setPage] = useState(1);
-  const [totalPosts, setTotalPosts] = useState(0);
-  const [creatingPost, setCreatingPost] = useState(false);
+  const queryClient = useQueryClient();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [postDescription, setPostDescription] = useState("");
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [mediaPreview, setMediaPreview] = useState(null);
   const [mediaType, setMediaType] = useState(null);
   const fileInputRef = useRef(null);
-  const observerRef = useRef(null);
-  const lastPostRef = useRef(null);
+  const loadMoreRef = useRef(null);
 
-  // Fetch posts with pagination
-  const fetchPosts = async (pageNum = 1, isLoadMore = false) => {
-    try {
-      if (isLoadMore) {
-        setLoadingMore(true);
-      } else {
-        setLoading(true);
+  // Fetch posts with infinite query - better caching
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey: ["posts"],
+    queryFn: async ({ pageParam = 1 }) => {
+      const response = await axiosInstance.get(`/posts?page=${pageParam}&limit=10`);
+      return response.data;
+    },
+    getNextPageParam: (lastPage) => {
+      const { page, pages } = lastPage.pagination;
+      if (page < pages) {
+        return page + 1;
       }
-      
-      const response = await axiosInstance.get(`/posts?page=${pageNum}&limit=5`);
-      
-      if (response.data.success) {
-        const newPosts = response.data.data;
-        const total = response.data.pagination?.total || 0;
-        
-        setTotalPosts(total);
-        
-        if (isLoadMore) {
-          setPosts(prev => [...prev, ...newPosts]);
-        } else {
-          setPosts(newPosts);
-        }
-        
-        setHasMore(newPosts.length === 5 && (isLoadMore ? posts.length + newPosts.length : newPosts.length) < total);
-        setPage(pageNum);
-      }
-    } catch (error) {
-      console.error("Failed to fetch posts:", error);
-      toast.error("Failed to load posts");
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
+      return undefined;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes - longer cache
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    refetchOnReconnect: false,
+    retry: 2,
+    retryDelay: 1000,
+  });
+
+  // Prefetch single post data
+  const prefetchPost = (postId) => {
+    queryClient.prefetchQuery({
+      queryKey: ["post", postId],
+      queryFn: async () => {
+        const response = await axiosInstance.get(`/posts/${postId}`);
+        return response.data;
+      },
+      staleTime: 5 * 60 * 1000,
+    });
   };
 
-  // Initial fetch
+  // Create post mutation with better cache update
+  const createPostMutation = useMutation({
+    mutationFn: async (formData) => {
+      const response = await axiosInstance.post("/posts/create", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return response.data;
+    },
+    onSuccess: (newPost) => {
+      // Update cache optimistically
+      queryClient.setQueryData(["posts"], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: [
+            {
+              ...old.pages[0],
+              data: [newPost.data, ...(old.pages[0]?.data || [])],
+            },
+            ...old.pages.slice(1),
+          ],
+        };
+      });
+      
+      setShowCreateModal(false);
+      setPostDescription("");
+      setSelectedMedia(null);
+      setMediaPreview(null);
+      toast.success("Post created successfully!");
+      
+      // Refetch to ensure consistency
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["posts"] });
+      }, 1000);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Failed to create post");
+    },
+  });
+
+  // Intersection Observer for infinite scroll
   useEffect(() => {
-    fetchPosts(1, false);
-  }, []);
-
-  // Infinite scroll observer
-  const lastPostElementRef = useCallback(node => {
-    if (loading || loadingMore) return;
-    if (observerRef.current) observerRef.current.disconnect();
+    if (!loadMoreRef.current) return;
     
-    observerRef.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore && !loadingMore) {
-        fetchPosts(page + 1, true);
-      }
-    });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1, rootMargin: "100px" }
+    );
     
-    if (node) observerRef.current.observe(node);
-  }, [loading, loadingMore, hasMore, page]);
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Handle create post
   const handleCreatePost = async () => {
     if (!isAuthenticated) {
       toast.error("Please login to create a post");
@@ -100,41 +168,11 @@ const Posts = () => {
       return;
     }
 
-    setCreatingPost(true);
-    try {
-      const formData = new FormData();
-      
-      if (postDescription.trim()) {
-        formData.append("description", postDescription);
-      }
-      
-      if (selectedMedia) {
-        formData.append("media", selectedMedia);
-      }
-
-      const response = await axiosInstance.post("/posts/create", formData, {
-        headers: { 
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      if (response.data.success) {
-        toast.success("Post created successfully!");
-        setShowCreateModal(false);
-        setPostDescription("");
-        setSelectedMedia(null);
-        setMediaPreview(null);
-        setMediaType(null);
-        // Reset to first page and refresh
-        setPage(1);
-        fetchPosts(1, false);
-      }
-    } catch (error) {
-      console.error("Create post error:", error);
-      toast.error(error.response?.data?.message || "Failed to create post");
-    } finally {
-      setCreatingPost(false);
-    }
+    const formData = new FormData();
+    if (postDescription.trim()) formData.append("description", postDescription);
+    if (selectedMedia) formData.append("media", selectedMedia);
+    
+    createPostMutation.mutate(formData);
   };
 
   const handleMediaSelect = (e) => {
@@ -156,148 +194,137 @@ const Posts = () => {
     setMediaType(file.type.startsWith("video") ? "video" : "image");
     
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setMediaPreview(reader.result);
-    };
+    reader.onloadend = () => setMediaPreview(reader.result);
     reader.readAsDataURL(file);
   };
 
-  const refreshPosts = () => {
-    setPage(1);
-    fetchPosts(1, false);
-  };
+  const allPosts = data?.pages.flatMap((page) => page.data) || [];
 
-  if (loading && posts.length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-teal-800 pt-20">
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-        </div>
-      </div>
-    );
-  }
+  // Prefetch next posts when nearing the end
+  useEffect(() => {
+    if (allPosts.length > 0 && hasNextPage && !isFetchingNextPage) {
+      const lastPost = allPosts[allPosts.length - 1];
+      if (lastPost) {
+        prefetchPost(lastPost._id);
+      }
+    }
+  }, [allPosts, hasNextPage, isFetchingNextPage]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-teal-800 pt-20 pb-24">
-      <div className="w-full max-w-9xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        {/* Create Post Card - Only show if authenticated */}
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        {/* Create Post Card */}
         {isAuthenticated && (
-          <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/20 p-4 mb-6 max-w-3xl mx-auto">
+          <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/20 p-4 mb-6 shadow-xl">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center overflow-hidden">
                 {user?.profilePicture?.url ? (
-                  <Image
-                    src={user.profilePicture.url}
-                    alt={user.fullName}
-                    width={40}
-                    height={40}
-                    className="object-cover"
-                  />
+                  <Image src={user.profilePicture.url} alt={user.fullName} width={40} height={40} className="object-cover" />
                 ) : (
                   <UserIcon className="h-5 w-5 text-white" />
                 )}
               </div>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex-1 text-left px-4 py-2 bg-white/10 rounded-xl text-white/70 hover:bg-white/20 transition-colors"
+                className="flex-1 text-left px-4 py-2.5 bg-white/10 rounded-full text-white/70 hover:bg-white/20 transition-colors text-sm"
               >
                 What's on your mind, {user?.fullName?.split(" ")[0]}?
               </button>
             </div>
-            <div className="flex gap-4 mt-3 pt-3 border-t border-white/10">
+            <div className="flex gap-2 mt-3 pt-3 border-t border-white/10">
               <button
                 onClick={() => {
                   setShowCreateModal(true);
                   setTimeout(() => fileInputRef.current?.click(), 100);
                 }}
-                className="flex-1 flex items-center justify-center gap-2 py-2 text-white/60 hover:text-white hover:bg-white/5 rounded-xl transition"
+                className="flex-1 flex items-center justify-center gap-2 py-2 text-white/60 hover:text-white hover:bg-white/5 rounded-xl transition group"
               >
-                <PhotoIcon className="h-5 w-5 text-green-400" />
-                <span className="text-sm">Photo</span>
+                <VideoCameraIcon className="h-5 w-5 text-red-400 group-hover:scale-110 transition" />
+                <span className="text-sm font-medium">Live video</span>
               </button>
               <button
                 onClick={() => {
                   setShowCreateModal(true);
                   setTimeout(() => fileInputRef.current?.click(), 100);
                 }}
-                className="flex-1 flex items-center justify-center gap-2 py-2 text-white/60 hover:text-white hover:bg-white/5 rounded-xl transition"
+                className="flex-1 flex items-center justify-center gap-2 py-2 text-white/60 hover:text-white hover:bg-white/5 rounded-xl transition group"
               >
-                <VideoCameraIcon className="h-5 w-5 text-red-400" />
-                <span className="text-sm">Video</span>
+                <PhotoIcon className="h-5 w-5 text-green-400 group-hover:scale-110 transition" />
+                <span className="text-sm font-medium">Photo/video</span>
               </button>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex-1 flex items-center justify-center gap-2 py-2 text-white/60 hover:text-white hover:bg-white/5 rounded-xl transition"
+                className="flex-1 flex items-center justify-center gap-2 py-2 text-white/60 hover:text-white hover:bg-white/5 rounded-xl transition group"
               >
-                <FaceSmileIcon className="h-5 w-5 text-yellow-400" />
-                <span className="text-sm">Feeling</span>
+                <FaceSmileIcon className="h-5 w-5 text-yellow-400 group-hover:scale-110 transition" />
+                <span className="text-sm font-medium">Feeling</span>
               </button>
             </div>
           </div>
         )}
 
-        {/* Posts Feed - Centered with max-w-3xl for Facebook-like width */}
-        <div className="space-y-4 max-w-3xl mx-auto">
-          {posts.length === 0 ? (
-            <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/20 p-12 text-center">
-              <PhotoIcon className="h-16 w-16 text-white/30 mx-auto mb-4" />
-              <p className="text-white/60">No posts yet.</p>
-              {isAuthenticated ? (
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="mt-4 px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:scale-105 transition-transform"
-                >
-                  Create First Post
-                </button>
-              ) : (
-                <Link
-                  href="/auth/login"
-                  className="inline-block mt-4 px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:scale-105 transition-transform"
-                >
-                  Login to See Posts
-                </Link>
-              )}
+        {/* Posts Feed */}
+        {isLoading ? (
+          <FeedSkeleton />
+        ) : allPosts.length === 0 ? (
+          <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/20 p-12 text-center">
+            <div className="w-20 h-20 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <PhotoIcon className="h-10 w-10 text-white" />
             </div>
-          ) : (
-            <>
-              {posts.map((post, index) => {
-                if (index === posts.length - 1) {
-                  return (
-                    <div key={post._id} ref={lastPostElementRef}>
-                      <PostCard 
-                        post={post} 
-                        onPostUpdate={refreshPosts}
-                      />
-                    </div>
-                  );
-                } else {
-                  return (
-                    <PostCard 
-                      key={post._id} 
-                      post={post} 
-                      onPostUpdate={refreshPosts}
-                    />
-                  );
-                }
-              })}
-              
-              {/* Loading more indicator */}
-              {loadingMore && (
-                <div className="flex justify-center py-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
+            <h3 className="text-xl font-semibold text-white mb-2">No Posts Yet</h3>
+            <p className="text-white/60 mb-6">Be the first to share something with the community!</p>
+            {isAuthenticated ? (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:scale-105 transition-transform"
+              >
+                Create Your First Post
+              </button>
+            ) : (
+              <Link
+                href="/auth/login"
+                className="inline-block px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:scale-105 transition-transform"
+              >
+                Login to See Posts
+              </Link>
+            )}
+          </div>
+        ) : (
+          <>
+            {allPosts.map((post, index) => (
+              <div
+                key={post._id}
+                ref={index === allPosts.length - 1 ? loadMoreRef : null}
+              >
+                <PostCard
+                  post={post}
+                  onPostUpdate={() => {
+                    queryClient.invalidateQueries({ queryKey: ["posts"] });
+                  }}
+                  currentUser={user}
+                />
+              </div>
+            ))}
+            
+            {/* Loading more indicator */}
+            {isFetchingNextPage && (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
+              </div>
+            )}
+            
+            {/* End of feed */}
+            {!hasNextPage && allPosts.length > 0 && (
+              <div className="text-center py-8">
+                <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <CheckCircleIcon className="h-6 w-6 text-white/40" />
                 </div>
-              )}
-              
-              {/* No more posts message */}
-              {!hasMore && posts.length > 0 && (
-                <div className="text-center py-8">
-                  <p className="text-white/40 text-sm">You&asop;ve seen all posts! 🎉</p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+                <p className="text-white/40 text-sm">You've seen all posts! 🎉</p>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Create Post Modal */}
@@ -323,13 +350,7 @@ const Posts = () => {
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center overflow-hidden">
                   {user?.profilePicture?.url ? (
-                    <Image
-                      src={user.profilePicture.url}
-                      alt={user.fullName}
-                      width={40}
-                      height={40}
-                      className="object-cover"
-                    />
+                    <Image src={user.profilePicture.url} alt={user.fullName} width={40} height={40} className="object-cover" />
                   ) : (
                     <UserIcon className="h-5 w-5 text-white" />
                   )}
@@ -345,59 +366,67 @@ const Posts = () => {
                 placeholder="What's on your mind?"
                 rows="4"
                 className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                autoFocus
               />
 
               {mediaPreview && (
-                <div className="relative mt-4 rounded-xl overflow-hidden">
+                <div className="relative mt-4 rounded-xl overflow-hidden bg-black/30">
                   {mediaType === "video" ? (
                     <video src={mediaPreview} controls className="w-full max-h-64" />
                   ) : (
-                    <Image src={mediaPreview} alt="Preview" width={500} height={300} className="w-full object-cover" />
+                    <Image src={mediaPreview} alt="Preview" width={500} height={300} className="w-full object-cover max-h-64" />
                   )}
                   <button
                     onClick={() => {
                       setSelectedMedia(null);
                       setMediaPreview(null);
                     }}
-                    className="absolute top-2 right-2 p-1 bg-black/50 rounded-full hover:bg-black/70 transition"
+                    className="absolute top-2 right-2 p-1 bg-black/70 rounded-full hover:bg-black/90 transition"
                   >
                     <XMarkIcon className="h-5 w-5 text-white" />
                   </button>
                 </div>
               )}
 
-              <div className="mt-4 flex gap-2">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex-1 py-2 bg-white/10 rounded-xl text-white hover:bg-white/20 transition flex items-center justify-center gap-2"
-                >
-                  <PhotoIcon className="h-5 w-5 text-green-400" />
-                  <span>Photo</span>
-                </button>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex-1 py-2 bg-white/10 rounded-xl text-white hover:bg-white/20 transition flex items-center justify-center gap-2"
-                >
-                  <VideoCameraIcon className="h-5 w-5 text-red-400" />
-                  <span>Video</span>
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,video/*"
-                  onChange={handleMediaSelect}
-                  className="hidden"
-                />
+              <div className="mt-4 border border-white/20 rounded-xl p-3">
+                <p className="text-white/60 text-sm mb-2">Add to your post</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20 transition flex items-center justify-center gap-2"
+                  >
+                    <PhotoIcon className="h-5 w-5 text-green-400" />
+                    <span className="text-sm">Photo</span>
+                  </button>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20 transition flex items-center justify-center gap-2"
+                  >
+                    <VideoCameraIcon className="h-5 w-5 text-red-400" />
+                    <span className="text-sm">Video</span>
+                  </button>
+                  <button className="flex-1 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20 transition flex items-center justify-center gap-2">
+                    <FaceSmileIcon className="h-5 w-5 text-yellow-400" />
+                    <span className="text-sm">Feeling</span>
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={handleMediaSelect}
+                    className="hidden"
+                  />
+                </div>
               </div>
             </div>
 
             <div className="sticky bottom-0 p-4 border-t border-white/10 bg-black/90">
               <button
                 onClick={handleCreatePost}
-                disabled={creatingPost}
-                className="w-full py-2 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl text-white font-semibold hover:scale-105 transition-all duration-300 disabled:opacity-50"
+                disabled={createPostMutation.isPending}
+                className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl text-white font-semibold hover:scale-105 transition-all duration-300 disabled:opacity-50"
               >
-                {creatingPost ? (
+                {createPostMutation.isPending ? (
                   <div className="flex items-center justify-center gap-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
                     Creating...

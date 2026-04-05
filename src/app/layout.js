@@ -3,6 +3,7 @@ import Header from "./components/sharedComponents/Header/Header";
 import "./globals.css";
 import { AuthProvider } from "./hooks/AuthProvider";
 import { SocketProvider } from "./hooks/SocketContext";
+import { QueryProvider } from "./providers/QueryProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,12 +28,14 @@ export default function RootLayout({ children }) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <AuthProvider>
-          <SocketProvider>
-            <Header />
-            {children}
-          </SocketProvider>
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <SocketProvider>
+              <Header />
+              {children}
+            </SocketProvider>
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );
