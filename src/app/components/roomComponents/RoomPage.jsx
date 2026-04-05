@@ -3,18 +3,18 @@
 import { useSocket } from "@/app/hooks/SocketContext";
 import { useAuth } from "@/app/hooks/useAuth";
 import {
-    ChatBubbleLeftRightIcon,
-    MicrophoneIcon,
-    PhoneXMarkIcon,
-    PresentationChartLineIcon,
-    SignalIcon,
-    UserGroupIcon,
-    VideoCameraIcon,
-    VideoCameraSlashIcon,
-    XMarkIcon
+  ChatBubbleLeftRightIcon,
+  MicrophoneIcon,
+  PhoneXMarkIcon,
+  PresentationChartLineIcon,
+  SignalIcon,
+  UserGroupIcon,
+  VideoCameraIcon,
+  VideoCameraSlashIcon,
+  XMarkIcon
 } from "@heroicons/react/24/outline";
 import {
-    ClipboardDocumentIcon
+  ClipboardDocumentIcon
 } from "@heroicons/react/24/solid";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -60,6 +60,8 @@ const RoomPage = () => {
   const chatInputRef = useRef(null);
   const audioContextRef = useRef(null);
   const timerRef = useRef(null);
+
+  
 
   // WebRTC Configuration
   const configuration = {
