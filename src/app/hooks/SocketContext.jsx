@@ -23,7 +23,7 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     // ✅ token না থাকলেও connect করো (guest support)
     const newSocket = io(
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:6969",
+      process.env.NEXT_PUBLIC_API_URL || "https://server-bdbook.onrender.com",
       {
         auth: { token: token || null }, // token না থাকলে null পাঠাও
         transports: ["websocket"],
