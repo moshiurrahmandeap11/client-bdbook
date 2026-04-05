@@ -294,7 +294,7 @@ const VideoPlayer = ({ video, isMuted, isActive, onDoubleTap }) => {
 
       {(showControls || !isPlaying) && (
         <div
-          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pb-2"
+          className="absolute bottom-20 md:bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pb-2"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Seek bar */}
@@ -779,7 +779,7 @@ const VideosPage = () => {
                       {video.description}
                     </p>
                   )}
-                  <p className="text-white/50 text-xs drop-shadow">
+                  <p className="text-white/50  text-xs drop-shadow">
                     {getTimeAgo(video.createdAt)}
                   </p>
                 </div>
