@@ -204,7 +204,7 @@ const VideoSkeleton = () => (
 const VideosPage = () => {
   const { user, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [commentModal, setCommentModal] = useState({ isOpen: false, video: null, index: null });
   const [commentText, setCommentText] = useState("");
