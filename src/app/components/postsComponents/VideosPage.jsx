@@ -57,7 +57,7 @@ const VideoAction = ({ icon, count, onClick, onLongPress }) => {
       onMouseLeave={cancel}
       className="flex flex-col items-center gap-1 group select-none"
     >
-      <div className="bg-black/40 backdrop-blur-sm rounded-full p-3 group-active:scale-90 group-hover:scale-110 transition-transform">
+      <div className="group-active:scale-90 group-hover:scale-110 transition-transform">
         {icon}
       </div>
       <span className="text-white text-xs font-medium drop-shadow">{count || 0}</span>
@@ -653,19 +653,6 @@ const VideosPage = () => {
             : <SpeakerWaveIcon className="h-5 w-5 text-white" />}
         </button>
 
-        {/* Dot indicators */}
-        <div className="fixed right-2 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-1.5">
-          {allVideos.slice(0, 12).map((_, i) => (
-            <button
-              key={i}
-              onClick={() => snapToIndex(i)}
-              className={`w-1.5 rounded-full transition-all duration-300 ${
-                i === activeIndex ? "h-6 bg-purple-500" : "h-1.5 bg-white/30"
-              }`}
-            />
-          ))}
-        </div>
-
         {/* Draggable container */}
         <div
           ref={containerRef}
@@ -707,9 +694,6 @@ const VideosPage = () => {
                     }
                   />
                 )}
-
-                {/* Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/20 pointer-events-none" />
 
                 {/* Right actions */}
                 <div className="absolute right-3 bottom-28 sm:bottom-32 flex flex-col items-center gap-5 z-10">
