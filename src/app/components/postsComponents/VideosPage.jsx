@@ -750,7 +750,7 @@ const VideosPage = () => {
                 </div>
 
                 {/* Bottom info */}
-                <div className="absolute bottom-24 sm:bottom-16 left-3 right-16 z-10">
+                <div className="absolute bottom-36 sm:bottom-16 left-3 right-16 z-10">
                   <Link href={`/profile/${video.userId}`}>
                     <div className="flex items-center gap-2.5 mb-2">
                       <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center overflow-hidden ring-2 ring-white/20 flex-shrink-0">
