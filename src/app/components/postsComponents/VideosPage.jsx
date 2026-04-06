@@ -1,4 +1,7 @@
+// VideosPage.jsx - Fixed version with working share functionality
+
 "use client";
+
 import { useAuth } from "@/app/hooks/useAuth";
 import axiosInstance from "@/app/lib/axiosInstance";
 import {
@@ -25,6 +28,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import ShareModal from "./ShareModal";
 
 // Optimized Video Action Button
 const VideoAction = ({ icon, count, onClick, onLongPress }) => {
@@ -95,9 +99,7 @@ const LikesModal = ({ video, onClose }) => {
       try {
         const res = await axiosInstance.get(`/posts/${video._id}/likes`);
         if (res.data.success && Array.isArray(res.data.data)) return res.data.data;
-      } catch {
-        return null;
-      }
+      } catch { return null; }
       return null;
     },
     staleTime: 60 * 1000,
@@ -111,20 +113,12 @@ const LikesModal = ({ video, onClose }) => {
   }));
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm animate-fadeIn"
-      onClick={onClose}
-    >
-      <div
-        className="w-full sm:max-w-md bg-gradient-to-br from-purple-900 via-blue-900 to-teal-800 rounded-t-2xl sm:rounded-2xl overflow-hidden max-h-[70vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
+      <div className="w-full sm:max-w-md bg-gradient-to-br from-purple-900 via-blue-900 to-teal-800 rounded-t-2xl sm:rounded-2xl overflow-hidden max-h-[70vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-2">
             <HeartSolidIcon className="h-5 w-5 text-red-500" />
-            <h3 className="text-lg font-semibold text-white">
-              Reactions <span className="text-white/50 text-base">({video.likesCount || likes.length})</span>
-            </h3>
+            <h3 className="text-lg font-semibold text-white">Reactions <span className="text-white/50 text-base">({video.likesCount || likes.length})</span></h3>
           </div>
           <button onClick={onClose} className="p-1 rounded-full bg-white/10 active:bg-white/20 transition">
             <XMarkIcon className="h-5 w-5 text-white" />
@@ -132,9 +126,7 @@ const LikesModal = ({ video, onClose }) => {
         </div>
         <div className="overflow-y-auto flex-1 p-2">
           {isLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-            </div>
+            <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>
           ) : likes.length === 0 ? (
             <div className="text-center py-12">
               <HeartIcon className="h-12 w-12 text-white/20 mx-auto mb-2" />
@@ -146,9 +138,7 @@ const LikesModal = ({ video, onClose }) => {
                 <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center overflow-hidden flex-shrink-0">
                   {person.profilePicture ? (
                     <Image src={person.profilePicture} alt={person.name || "User"} width={40} height={40} className="object-cover" />
-                  ) : (
-                    <UserIcon className="h-5 w-5 text-white" />
-                  )}
+                  ) : (<UserIcon className="h-5 w-5 text-white" />)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-white font-medium text-sm truncate">{person.name || person.userName || "User"}</p>
@@ -163,7 +153,7 @@ const LikesModal = ({ video, onClose }) => {
   );
 };
 
-// Optimized Video Player with Fixed Controls
+// Optimized Video Player
 const VideoPlayer = ({ video, isMuted, isActive, onDoubleTap, onVideoRef }) => {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -174,61 +164,33 @@ const VideoPlayer = ({ video, isMuted, isActive, onDoubleTap, onVideoRef }) => {
   const lastTapRef = useRef(0);
   const controlsTimerRef = useRef(null);
 
-  useEffect(() => {
-    if (onVideoRef && videoRef.current) onVideoRef(videoRef.current);
-  }, [onVideoRef]);
+  useEffect(() => { if (onVideoRef && videoRef.current) onVideoRef(videoRef.current); }, [onVideoRef]);
 
-  // Auto-play when active and not user-paused
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    
     if (isActive && !userPaused) {
       const playPromise = el.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          setIsPlaying(false);
-        });
-      }
-    } else if (!isActive) {
-      el.pause();
-      setIsPlaying(false);
-    }
+      if (playPromise !== undefined) playPromise.catch(() => setIsPlaying(false));
+    } else if (!isActive) { el.pause(); setIsPlaying(false); }
   }, [isActive, userPaused]);
 
-  // Mute sync
-  useEffect(() => {
-    if (videoRef.current) videoRef.current.muted = isMuted;
-  }, [isMuted]);
+  useEffect(() => { if (videoRef.current) videoRef.current.muted = isMuted; }, [isMuted]);
 
-  // Video event listeners
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    
-    const onTime = () => {
-      requestAnimationFrame(() => {
-        if (el.duration) {
-          setProgress((el.currentTime / el.duration) * 100);
-        }
-      });
-    };
+    const onTime = () => requestAnimationFrame(() => { if (el.duration) setProgress((el.currentTime / el.duration) * 100); });
     const onMeta = () => setDuration(el.duration || 0);
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
-    const onEnded = () => {
-      el.currentTime = 0;
-      if (!userPaused && isActive) {
-        el.play().catch(() => {});
-      }
-    };
+    const onEnded = () => { el.currentTime = 0; if (!userPaused && isActive) el.play().catch(() => {}); };
     
     el.addEventListener("timeupdate", onTime);
     el.addEventListener("loadedmetadata", onMeta);
     el.addEventListener("play", onPlay);
     el.addEventListener("pause", onPause);
     el.addEventListener("ended", onEnded);
-    
     return () => {
       el.removeEventListener("timeupdate", onTime);
       el.removeEventListener("loadedmetadata", onMeta);
@@ -238,149 +200,65 @@ const VideoPlayer = ({ video, isMuted, isActive, onDoubleTap, onVideoRef }) => {
     };
   }, [userPaused, isActive]);
 
-  // Show controls temporarily on user interaction
   const showControlsTemporarily = useCallback(() => {
     setShowControls(true);
     if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
-    controlsTimerRef.current = setTimeout(() => {
-      if (isPlaying) {
-        setShowControls(false);
-      }
-    }, 2000);
+    controlsTimerRef.current = setTimeout(() => { if (isPlaying) setShowControls(false); }, 2000);
   }, [isPlaying]);
 
-  // Toggle play/pause
   const togglePlay = useCallback(() => {
     const el = videoRef.current;
     if (!el) return;
-    
-    if (el.paused) {
-      el.play().catch(() => {});
-      setUserPaused(false);
-    } else {
-      el.pause();
-      setUserPaused(true);
-    }
+    if (el.paused) { el.play().catch(() => {}); setUserPaused(false); }
+    else { el.pause(); setUserPaused(true); }
     showControlsTemporarily();
   }, [showControlsTemporarily]);
 
-  // Handle tap (single tap toggles play/pause, double tap for like)
   const handleTap = useCallback(() => {
     const now = Date.now();
-    if (now - lastTapRef.current < 280) {
-      onDoubleTap?.();
-    } else {
-      togglePlay();
-    }
+    if (now - lastTapRef.current < 280) onDoubleTap?.();
+    else togglePlay();
     lastTapRef.current = now;
   }, [onDoubleTap, togglePlay]);
 
-  // Handle seek bar click
   const handleSeek = useCallback((e) => {
+    e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     if (videoRef.current && duration) {
       videoRef.current.currentTime = pct * duration;
       setProgress(pct * 100);
-      if (videoRef.current.paused && !userPaused) {
-        videoRef.current.play().catch(() => {});
-      }
+      if (videoRef.current.paused && !userPaused) videoRef.current.play().catch(() => {});
     }
     showControlsTemporarily();
   }, [duration, userPaused, showControlsTemporarily]);
 
-  // Handle mouse move to show controls
-  const handleMouseMove = useCallback(() => {
-    showControlsTemporarily();
-  }, [showControlsTemporarily]);
+  const handleMouseMove = useCallback(() => showControlsTemporarily(), [showControlsTemporarily]);
 
-  const formatTime = (s) => {
-    if (!s || isNaN(s)) return "0:00";
-    const minutes = Math.floor(s / 60);
-    const seconds = Math.floor(s % 60);
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  };
+  const formatTime = (s) => { if (!s || isNaN(s)) return "0:00"; const m = Math.floor(s / 60); const sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, "0")}`; };
 
   return (
-    <div 
-      className="absolute inset-0 w-full h-full group"
-      onMouseMove={handleMouseMove}
-      onTouchStart={handleMouseMove}
-    >
-      <video
-        ref={videoRef}
-        src={video.media?.url}
-        className="w-full h-full object-contain"
-        poster={video.media?.thumbnail || ""}
-        muted={isMuted}
-        playsInline
-        preload="auto"
-        onClick={handleTap}
-      />
-      
-      {/* Play/Pause Overlay - only show when paused */}
-      {!isPlaying && (
-        <div 
-          className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer transition-opacity duration-300"
-          onClick={handleTap}
-        >
-          <PlayIcon className="h-20 w-20 text-white drop-shadow-2xl animate-scaleIn" />
-        </div>
-      )}
-      
-      {/* Controls - Visible on hover or when paused */}
+    <div className="absolute inset-0 w-full h-full group" onMouseMove={handleMouseMove} onTouchStart={handleMouseMove}>
+      <video ref={videoRef} src={video.media?.url} className="w-full h-full object-contain" poster={video.media?.thumbnail || ""} muted={isMuted} playsInline preload="auto" onClick={handleTap} />
+      {!isPlaying && (<div className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer transition-opacity duration-300" onClick={handleTap}><PlayIcon className="h-20 w-20 text-white drop-shadow-2xl animate-scaleIn" /></div>)}
       {(showControls || !isPlaying) && (
-        <div className="absolute  bottom-16 md:bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 pb-3 transition-opacity duration-300">
-          {/* Progress Bar */}
+        <div className="absolute bottom-16 md:bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 pb-3 transition-opacity duration-300">
           <div className="w-full mb-3">
-            <div 
-              className="w-full h-1.5 bg-white/30 rounded-full cursor-pointer relative overflow-hidden"
-              onClick={handleSeek}
-            >
-              <div 
-                className="absolute left-0 top-0 h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"
-                style={{ width: `${progress}%` }}
-              >
+            <div className="w-full h-1.5 bg-white/30 rounded-full cursor-pointer relative overflow-hidden" onClick={handleSeek}>
+              <div className="absolute left-0 top-0 h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" style={{ width: `${progress}%` }}>
                 <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg -translate-x-1/2" />
               </div>
             </div>
           </div>
-          
-          {/* Controls Row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* Play/Pause Button */}
-              <button 
-                onClick={togglePlay} 
-                className="text-white hover:text-purple-400 transition-transform hover:scale-110 p-1"
-              >
-                {isPlaying ? (
-                  <PauseIcon className="h-6 w-6" />
-                ) : (
-                  <PlayIcon className="h-6 w-6" />
-                )}
+              <button onClick={togglePlay} className="text-white hover:text-purple-400 transition-transform hover:scale-110 p-1">
+                {isPlaying ? <PauseIcon className="h-6 w-6" /> : <PlayIcon className="h-6 w-6" />}
               </button>
-              
-              {/* Time Display */}
-              <span className="text-white text-xs font-mono">
-                {formatTime(videoRef.current?.currentTime || 0)} / {formatTime(duration)}
-              </span>
+              <span className="text-white text-xs font-mono">{formatTime(videoRef.current?.currentTime || 0)} / {formatTime(duration)}</span>
             </div>
-            
-            {/* Mute/Unmute Button (optional) */}
-            <button 
-              onClick={() => {
-                if (videoRef.current) {
-                  videoRef.current.muted = !videoRef.current.muted;
-                }
-              }}
-              className="text-white hover:text-purple-400 transition-transform hover:scale-110 p-1"
-            >
-              {isMuted ? (
-                <SpeakerXMarkIcon className="h-5 w-5" />
-              ) : (
-                <SpeakerWaveIcon className="h-5 w-5" />
-              )}
+            <button onClick={() => { if (videoRef.current) videoRef.current.muted = !videoRef.current.muted; }} className="text-white hover:text-purple-400 transition-transform hover:scale-110 p-1">
+              {isMuted ? <SpeakerXMarkIcon className="h-5 w-5" /> : <SpeakerWaveIcon className="h-5 w-5" />}
             </button>
           </div>
         </div>
@@ -402,7 +280,9 @@ const VideoSkeleton = () => (
   </div>
 );
 
-// Main Videos Page
+// ═══════════════════════════════════════════════════════════════════════════
+// ── MAIN VIDEOS PAGE ───────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
 const VideosPage = () => {
   const { user, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
@@ -411,6 +291,7 @@ const VideosPage = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [commentModal, setCommentModal] = useState({ isOpen: false, video: null, index: null });
   const [likesModal, setLikesModal] = useState({ isOpen: false, video: null });
+  const [shareModal, setShareModal] = useState({ isOpen: false, video: null });
   const [commentText, setCommentText] = useState("");
   const [floatingHearts, setFloatingHearts] = useState({});
 
@@ -421,17 +302,12 @@ const VideosPage = () => {
   const scrollTimeoutRef = useRef(null);
   const videoRefsMap = useRef(new Map());
 
-  // Optimized infinite query with smaller limit
+  // Optimized infinite query
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
     queryKey: ["videos"],
     queryFn: async ({ pageParam = 1 }) => {
       const res = await axiosInstance.get(`/posts?page=${pageParam}&limit=8`);
-      if (res.data.success) {
-        return {
-          data: res.data.data.filter((p) => p.media?.resourceType === "video"),
-          pagination: res.data.pagination,
-        };
-      }
+      if (res.data.success) return { data: res.data.data.filter((p) => p.media?.resourceType === "video"), pagination: res.data.pagination };
       return { data: [], pagination: { page: 1, pages: 1 } };
     },
     getNextPageParam: (last) => (last.pagination.page < last.pagination.pages ? last.pagination.page + 1 : undefined),
@@ -443,11 +319,8 @@ const VideosPage = () => {
 
   const allVideos = useMemo(() => data?.pages.flatMap((p) => p.data) || [], [data]);
 
-  useEffect(() => {
-    activeIndexRef.current = activeIndex;
-  }, [activeIndex]);
+  useEffect(() => { activeIndexRef.current = activeIndex; }, [activeIndex]);
 
-  // Optimized snap function
   const snapToIndex = useCallback((index, fast = false) => {
     if (!containerRef.current) return;
     const total = allVideos.length;
@@ -456,59 +329,17 @@ const VideosPage = () => {
     containerRef.current.style.transition = `transform ${duration} cubic-bezier(0.2, 0.9, 0.4, 1.1)`;
     containerRef.current.style.transform = `translateY(-${clamped * 100}vh)`;
     setActiveIndex(clamped);
-    if (clamped >= total - 2 && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
+    if (clamped >= total - 2 && hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [allVideos.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Touch handlers
-  const handleTouchStart = useCallback((e) => {
-    touchStartRef.current = { y: e.touches[0].clientY, time: Date.now() };
-    isDraggingRef.current = true;
-    if (containerRef.current) containerRef.current.style.transition = "none";
-  }, []);
-
-  const handleTouchMove = useCallback((e) => {
-    if (!isDraggingRef.current) return;
-    const diff = e.touches[0].clientY - touchStartRef.current.y;
-    const base = -activeIndexRef.current * window.innerHeight;
-    const idx = activeIndexRef.current;
-    const resistance = (idx === 0 && diff > 0) || (idx >= allVideos.length - 1 && diff < 0) ? 0.3 : 1;
-    if (containerRef.current) {
-      containerRef.current.style.transform = `translateY(${base + diff * resistance}px)`;
-    }
-  }, [allVideos.length]);
-
-  const handleTouchEnd = useCallback((e) => {
-    if (!isDraggingRef.current) return;
-    isDraggingRef.current = false;
-    const diff = e.changedTouches[0].clientY - touchStartRef.current.y;
-    const elapsed = Date.now() - touchStartRef.current.time;
-    const velocity = Math.abs(diff) / elapsed;
-    const cur = activeIndexRef.current;
-    const shouldChange = velocity > 0.3 || Math.abs(diff) > 40;
-    if (shouldChange && diff < 0 && cur < allVideos.length - 1) snapToIndex(cur + 1, velocity > 0.6);
-    else if (shouldChange && diff > 0 && cur > 0) snapToIndex(cur - 1, velocity > 0.6);
-    else snapToIndex(cur);
-    touchStartRef.current = { y: 0, time: 0 };
-  }, [allVideos.length, snapToIndex]);
-
-  // Wheel handler with throttle
-  const handleWheel = useCallback((e) => {
-    e.preventDefault();
-    if (scrollTimeoutRef.current) return;
-    const cur = activeIndexRef.current;
-    if (e.deltaY > 0 && cur < allVideos.length - 1) snapToIndex(cur + 1);
-    else if (e.deltaY < 0 && cur > 0) snapToIndex(cur - 1);
-    scrollTimeoutRef.current = setTimeout(() => { scrollTimeoutRef.current = null; }, 200);
-  }, [allVideos.length, snapToIndex]);
+  const handleTouchStart = useCallback((e) => { touchStartRef.current = { y: e.touches[0].clientY, time: Date.now() }; isDraggingRef.current = true; if (containerRef.current) containerRef.current.style.transition = "none"; }, []);
+  const handleTouchMove = useCallback((e) => { if (!isDraggingRef.current) return; const diff = e.touches[0].clientY - touchStartRef.current.y; const base = -activeIndexRef.current * window.innerHeight; const idx = activeIndexRef.current; const resistance = (idx === 0 && diff > 0) || (idx >= allVideos.length - 1 && diff < 0) ? 0.3 : 1; if (containerRef.current) containerRef.current.style.transform = `translateY(${base + diff * resistance}px)`; }, [allVideos.length]);
+  const handleTouchEnd = useCallback((e) => { if (!isDraggingRef.current) return; isDraggingRef.current = false; const diff = e.changedTouches[0].clientY - touchStartRef.current.y; const elapsed = Date.now() - touchStartRef.current.time; const velocity = Math.abs(diff) / elapsed; const cur = activeIndexRef.current; const shouldChange = velocity > 0.3 || Math.abs(diff) > 40; if (shouldChange && diff < 0 && cur < allVideos.length - 1) snapToIndex(cur + 1, velocity > 0.6); else if (shouldChange && diff > 0 && cur > 0) snapToIndex(cur - 1, velocity > 0.6); else snapToIndex(cur); touchStartRef.current = { y: 0, time: 0 }; }, [allVideos.length, snapToIndex]);
+  const handleWheel = useCallback((e) => { e.preventDefault(); if (scrollTimeoutRef.current) return; const cur = activeIndexRef.current; if (e.deltaY > 0 && cur < allVideos.length - 1) snapToIndex(cur + 1); else if (e.deltaY < 0 && cur > 0) snapToIndex(cur - 1); scrollTimeoutRef.current = setTimeout(() => { scrollTimeoutRef.current = null; }, 200); }, [allVideos.length, snapToIndex]);
 
   useEffect(() => {
     const wrapper = document.getElementById("video-wrapper");
-    if (wrapper) {
-      wrapper.addEventListener("wheel", handleWheel, { passive: false });
-      return () => wrapper.removeEventListener("wheel", handleWheel);
-    }
+    if (wrapper) { wrapper.addEventListener("wheel", handleWheel, { passive: false }); return () => wrapper.removeEventListener("wheel", handleWheel); }
   }, [handleWheel]);
 
   // Like mutation
@@ -519,23 +350,7 @@ const VideosPage = () => {
       const prev = queryClient.getQueryData(["videos"]);
       queryClient.setQueryData(["videos"], (old) => {
         if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page, pi) => ({
-            ...page,
-            data: page.data.map((video, vi) => {
-              if (pi === Math.floor(index / 8) && vi === index % 8) {
-                const liked = video.likes?.includes(user?._id);
-                return {
-                  ...video,
-                  likesCount: liked ? (video.likesCount || 0) - 1 : (video.likesCount || 0) + 1,
-                  likes: liked ? video.likes.filter(id => id !== user?._id) : [...(video.likes || []), user?._id],
-                };
-              }
-              return video;
-            }),
-          })),
-        };
+        return { ...old, pages: old.pages.map((page, pi) => ({ ...page, data: page.data.map((video, vi) => { if (pi === Math.floor(index / 8) && vi === index % 8) { const liked = video.likes?.includes(user?._id); return { ...video, likesCount: liked ? (video.likesCount || 0) - 1 : (video.likesCount || 0) + 1, likes: liked ? video.likes.filter(id => id !== user?._id) : [...(video.likes || []), user?._id] }; } return video; }) })) };
       });
       return { prev };
     },
@@ -548,24 +363,65 @@ const VideosPage = () => {
     onSuccess: (_, { index }) => {
       queryClient.setQueryData(["videos"], (old) => {
         if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page, pi) => ({
-            ...page,
-            data: page.data.map((video, vi) => {
-              if (pi === Math.floor(index / 8) && vi === index % 8) {
-                return { ...video, commentsCount: (video.commentsCount || 0) + 1 };
-              }
-              return video;
-            }),
-          })),
-        };
+        return { ...old, pages: old.pages.map((page, pi) => ({ ...page, data: page.data.map((video, vi) => { if (pi === Math.floor(index / 8) && vi === index % 8) return { ...video, commentsCount: (video.commentsCount || 0) + 1 }; return video; }) })) };
       });
       setCommentText("");
       setCommentModal({ isOpen: false, video: null, index: null });
       toast.success("Comment added!");
     },
     onError: () => toast.error("Failed to add comment"),
+  });
+
+  // ✅ FIXED: Share mutation with proper post ID
+  const shareMutation = useMutation({
+    mutationFn: async ({ videoId }) => {
+      const postId = String(videoId)?.trim();
+      console.log("Sharing video with ID:", postId);
+      const res = await axiosInstance.post(`/posts/${postId}/share`);
+      return res.data;
+    },
+    onSuccess: (_, { video }) => {
+      toast.success("Video shared to your feed!");
+      queryClient.invalidateQueries({ queryKey: ["videos"] });
+      setShareModal({ isOpen: false, video: null });
+    },
+    onError: (err) => {
+      console.error('Share error details:', err.response?.data);
+      toast.error(err.response?.data?.message || "Failed to share video");
+    },
+  });
+
+  // ✅ FIXED: Share to message mutation
+  const shareToMessageMutation = useMutation({
+    mutationFn: async ({ friendId, video }) => {
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const postUrl = `${origin}/post/details/${video._id}`;
+      const res = await axiosInstance.post(`/users/send-message/${friendId}`, {
+        message: JSON.stringify({
+          type: "post_share",
+          postId: video._id,
+          postUrl: postUrl,
+          postText: video.description || "Check out this video",
+          postAuthor: video.userName,
+          postAuthorProfilePic: video.userProfilePicture,
+          hasMedia: !!video.media?.url,
+          mediaType: video.media?.resourceType,
+          mediaUrl: video.media?.url,
+          sharedBy: user?.fullName,
+          sharedByProfilePic: user?.profilePicture?.url,
+        }),
+        messageType: "share",
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      toast.success("Video shared via message!");
+      setShareModal({ isOpen: false, video: null });
+    },
+    onError: (err) => {
+      console.error('Share message error:', err.response?.data);
+      toast.error("Failed to share via message");
+    },
   });
 
   const handleDoubleTap = (video, index) => {
@@ -586,6 +442,34 @@ const VideosPage = () => {
     commentMutation.mutate({ videoId: commentModal.video._id, text: commentText, index: commentModal.index });
   };
 
+  // ✅ FIXED: Share handlers with proper data
+  const handleShareClick = useCallback((video) => {
+    if (!isAuthenticated) { toast.error("Please login to share"); return; }
+    setShareModal({ isOpen: true, video });
+  }, [isAuthenticated]);
+
+  // ✅ FIXED: Generate share preview with proper video data
+  const getSharePreview = useCallback((video) => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const postUrl = `${origin}/post/details/${video._id}`;
+    const text = video.description || "Check out this video";
+    return { postUrl, text };
+  }, []);
+
+  const handleShareToFeed = useCallback(() => {
+    if (!shareModal.video) return;
+    shareMutation.mutate({ videoId: shareModal.video._id, video: shareModal.video });
+  }, [shareModal.video, shareMutation]);
+
+  const handleShareToMessage = useCallback((friendId) => {
+    if (!shareModal.video) return;
+    shareToMessageMutation.mutate({ friendId, video: shareModal.video });
+  }, [shareModal.video, shareToMessageMutation]);
+
+  const handleCopyLink = useCallback((url) => {
+    toast.success("Link copied!");
+  }, []);
+
   const getTimeAgo = (date) => {
     if (!date) return "recently";
     const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
@@ -597,11 +481,7 @@ const VideosPage = () => {
   };
 
   if (isLoading && allVideos.length === 0) {
-    return (
-      <div className="min-h-screen bg-black">
-        {[...Array(3)].map((_, i) => <VideoSkeleton key={i} />)}
-      </div>
-    );
+    return (<div className="min-h-screen bg-black">{[...Array(3)].map((_, i) => <VideoSkeleton key={i} />)}</div>);
   }
 
   if (!isLoading && allVideos.length === 0) {
@@ -623,47 +503,27 @@ const VideosPage = () => {
   return (
     <>
       <style>{`
-        @keyframes floatHeart {
-          0% { opacity: 0; transform: scale(0.2); }
-          25% { opacity: 1; transform: scale(1.4); }
-          65% { opacity: 1; transform: scale(1.1); }
-          100% { opacity: 0; transform: scale(1.3) translateY(-40px); }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
+        @keyframes floatHeart { 0% { opacity: 0; transform: scale(0.2); } 25% { opacity: 1; transform: scale(1.4); } 65% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0; transform: scale(1.3) translateY(-40px); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .animate-fadeIn { animation: fadeIn 0.2s ease-out; }
       `}</style>
+      
       <div id="video-wrapper" className="fixed inset-0 bg-black overflow-hidden touch-none select-none">
-        <button
-          onClick={() => setIsMuted(p => !p)}
-          className="fixed top-20 right-4 z-50 bg-black/50 rounded-full p-2.5 backdrop-blur-sm active:bg-black/70 transition"
-        >
+        <button onClick={() => setIsMuted(p => !p)} className="fixed top-20 right-4 z-50 bg-black/50 rounded-full p-2.5 backdrop-blur-sm active:bg-black/70 transition">
           {isMuted ? <SpeakerXMarkIcon className="h-5 w-5 text-white" /> : <SpeakerWaveIcon className="h-5 w-5 text-white" />}
         </button>
-        <div
-          ref={containerRef}
-          className="w-full"
-          style={{ transform: "translateY(0px)", willChange: "transform" }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
+        
+        <div ref={containerRef} className="w-full" style={{ transform: "translateY(0px)", willChange: "transform" }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
           {allVideos.map((video, index) => {
             const isLiked = video.likes?.includes(user?._id) || false;
             const isActive = index === activeIndex;
             return (
               <div key={video._id} className="relative bg-black" style={{ height: "100vh", width: "100vw" }}>
-                <VideoPlayer
-                  video={video}
-                  isMuted={isMuted}
-                  isActive={isActive}
-                  onDoubleTap={() => handleDoubleTap(video, index)}
-                  onVideoRef={(ref) => videoRefsMap.current.set(video._id, ref)}
-                />
+                <VideoPlayer video={video} isMuted={isMuted} isActive={isActive} onDoubleTap={() => handleDoubleTap(video, index)} onVideoRef={(ref) => videoRefsMap.current.set(video._id, ref)} />
                 {floatingHearts[video._id] && <FloatingHeart onDone={() => setFloatingHearts(p => { const n = { ...p }; delete n[video._id]; return n; })} />}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                
+                {/* Action Buttons */}
                 <div className="absolute right-3 bottom-28 sm:bottom-32 flex flex-col items-center gap-5 z-10">
                   <VideoAction
                     icon={isLiked ? <HeartSolidIcon className="h-7 w-7 sm:h-8 sm:w-8 text-red-500" /> : <HeartIcon className="h-7 w-7 sm:h-8 sm:w-8 text-white" />}
@@ -679,18 +539,18 @@ const VideosPage = () => {
                   <VideoAction
                     icon={<ShareIcon className="h-7 w-7 sm:h-8 sm:w-8 text-white" />}
                     count={video.sharesCount || 0}
-                    onClick={() => window.location.href = `/post/details/${video._id}`}
+                    onClick={() => handleShareClick(video)}
                   />
                 </div>
+                
+                {/* Video Info */}
                 <div className="absolute bottom-36 sm:bottom-20 left-3 right-16 z-10">
                   <Link href={`/profile/${video.userId}`}>
                     <div className="flex items-center gap-2.5 mb-2">
                       <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center overflow-hidden ring-2 ring-white/20 flex-shrink-0">
                         {video.userProfilePicture ? (
                           <Image src={video.userProfilePicture} alt={video.userName} width={40} height={40} className="object-cover" />
-                        ) : (
-                          <UserIcon className="h-5 w-5 text-white" />
-                        )}
+                        ) : (<UserIcon className="h-5 w-5 text-white" />)}
                       </div>
                       <span className="font-semibold text-white text-sm sm:text-base drop-shadow">{video.userName}</span>
                     </div>
@@ -705,23 +565,20 @@ const VideosPage = () => {
               </div>
             );
           })}
-          {isFetchingNextPage && (
-            <div className="relative bg-black flex items-center justify-center" style={{ height: "100vh", width: "100vw" }}>
-              <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
+          
+          {isFetchingNextPage && (<div className="relative bg-black flex items-center justify-center" style={{ height: "100vh", width: "100vw" }}><div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>)}
           {!hasNextPage && allVideos.length > 0 && (
             <div className="relative bg-black flex items-center justify-center" style={{ height: "100vh", width: "100vw" }}>
               <div className="text-center px-6">
                 <VideoCameraIcon className="h-16 w-16 text-white/30 mx-auto mb-3" />
                 <p className="text-white/60 mb-4">You've seen all videos! 🎉</p>
-                <button onClick={() => window.location.reload()} className="px-6 py-2 bg-purple-600 rounded-full text-white text-sm hover:bg-purple-700 transition">
-                  Watch Again
-                </button>
+                <button onClick={() => window.location.reload()} className="px-6 py-2 bg-purple-600 rounded-full text-white text-sm hover:bg-purple-700 transition">Watch Again</button>
               </div>
             </div>
           )}
         </div>
+        
+        {/* Comment Modal */}
         {commentModal.isOpen && (
           <div className="fixed inset-0 bottom-22 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setCommentModal({ isOpen: false, video: null, index: null })}>
             <div className="relative w-full sm:max-w-lg bg-gradient-to-br from-purple-900 via-blue-900 to-teal-800 rounded-t-2xl sm:rounded-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
@@ -735,9 +592,7 @@ const VideosPage = () => {
                 <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center overflow-hidden flex-shrink-0">
                   {commentModal.video?.userProfilePicture ? (
                     <Image src={commentModal.video.userProfilePicture} alt={commentModal.video.userName} width={48} height={48} className="object-cover" />
-                  ) : (
-                    <UserIcon className="h-6 w-6 text-white" />
-                  )}
+                  ) : (<UserIcon className="h-6 w-6 text-white" />)}
                 </div>
                 <div className="flex-1">
                   <p className="font-semibold text-white">{commentModal.video?.userName}</p>
@@ -760,7 +615,24 @@ const VideosPage = () => {
             </div>
           </div>
         )}
+        
+        {/* Likes Modal */}
         {likesModal.isOpen && likesModal.video && <LikesModal video={likesModal.video} onClose={() => setLikesModal({ isOpen: false, video: null })} />}
+        
+        {/* ✅ FIXED: Share Modal - Now properly working */}
+        {shareModal.isOpen && shareModal.video && (
+          <ShareModal
+            post={shareModal.video}
+            user={user}
+            sharePreview={getSharePreview(shareModal.video)}
+            onClose={() => setShareModal({ isOpen: false, video: null })}
+            onShareToFeed={handleShareToFeed}
+            onShareToMessage={handleShareToMessage}
+            onCopyLink={handleCopyLink}
+            isSharingToFeed={shareMutation.isPending}
+            isSharingToMessage={shareToMessageMutation.isPending}
+          />
+        )}
       </div>
     </>
   );
