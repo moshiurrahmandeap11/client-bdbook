@@ -24,11 +24,15 @@ const SharedPostContent = memo(({ shareData, isOwn }) => {
     return null;
   }
 
-  const handleClick = () => {
-    if (parsedData.postUrl) {
-      window.open(parsedData.postUrl, "_blank");
-    }
-  };
+const handleClick = () => {
+  if (!parsedData.postUrl) return;
+
+  if (parsedData.postUrl.startsWith("/")) {
+    router.push(parsedData.postUrl); // internal
+  } else {
+    window.location.href = parsedData.postUrl; // external
+  }
+};
 
   return (
     <div 
