@@ -35,7 +35,13 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
-  const [showMobileProfileMenu, setShowMobileProfileMenu] = useState(false); // ✅ Mobile profile menu
+  const [showMobileProfileMenu, setShowMobileProfileMenu] = useState(false);
+  const [ctaHover, setCtaHover] = useState(false);
+
+  // Swipe navigation states
+  const [touchStart, setTouchStart] = useState({ x: 0, y: 0 });
+  const [touchEnd, setTouchEnd] = useState({ x: 0, y: 0 });
+  const [isSwiping, setIsSwiping] = useState(false);
 
   const profileMenuRef = useRef(null);
   const mobileMenuRef = useRef(null);
@@ -43,9 +49,23 @@ const Header = () => {
   const mobileProfileRef = useRef(null);
   const searchTimeoutRef = useRef(null);
   const mobileSearchInputRef = useRef(null);
+  const swipeContainerRef = useRef(null);
   
   const pathname = usePathname();
   const router = useRouter();
+
+  // Navigation items in order for swipe navigation
+  const navItemsInOrder = useMemo(() => {
+    const items = [
+      { name: "Home", href: "/", icon: HomeIcon },
+      { name: "Videos", href: "/videos", icon: VideoCameraIcon },
+      { name: "Room", href: "/room", icon: VideoCameraSlashIcon },
+    ];
+    if (isAuthenticated) {
+      items.push({ name: "Messages", href: "/message", icon: MessageCircle });
+    }
+    return items;
+  }, [isAuthenticated]);
 
   const navItems = useMemo(() => {
     const publicNavItems = [
@@ -61,7 +81,69 @@ const Header = () => {
       : publicNavItems;
   }, [isAuthenticated]);
 
-  // 🔍 Search suggestions using TanStack Query
+  // Get current index for swipe navigation
+  const currentIndex = useMemo(() => {
+    return navItemsInOrder.findIndex(item => item.href === pathname);
+  }, [pathname, navItemsInOrder]);
+
+  // Handle swipe navigation
+  const handleTouchStart = useCallback((e) => {
+    setTouchStart({
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY
+    });
+    setTouchEnd({
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY
+    });
+    setIsSwiping(true);
+  }, []);
+
+  const handleTouchMove = useCallback((e) => {
+    if (!isSwiping) return;
+    setTouchEnd({
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY
+    });
+  }, [isSwiping]);
+
+  const handleTouchEnd = useCallback(() => {
+    setIsSwiping(false);
+    
+    const deltaX = touchEnd.x - touchStart.x;
+    const deltaY = touchEnd.y - touchStart.y;
+    
+    // Only trigger horizontal swipe if horizontal movement is greater than vertical
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+      if (deltaX > 0) {
+        // Right swipe - go to previous
+        if (currentIndex > 0) {
+          const prevItem = navItemsInOrder[currentIndex - 1];
+          if (prevItem) {
+            router.push(prevItem.href);
+            // Haptic feedback (vibration) if supported
+            if (navigator.vibrate) navigator.vibrate(50);
+          }
+        }
+      } else if (deltaX < 0) {
+        // Left swipe - go to next
+        if (currentIndex < navItemsInOrder.length - 1) {
+          const nextItem = navItemsInOrder[currentIndex + 1];
+          if (nextItem) {
+            router.push(nextItem.href);
+            // Haptic feedback (vibration) if supported
+            if (navigator.vibrate) navigator.vibrate(50);
+          }
+        }
+      }
+    }
+    
+    // Reset touch positions
+    setTouchStart({ x: 0, y: 0 });
+    setTouchEnd({ x: 0, y: 0 });
+  }, [touchStart, touchEnd, currentIndex, navItemsInOrder, router]);
+
+  // Search suggestions using TanStack Query
   const { data: suggestionsData, isLoading: isSuggestionsLoading } = useQuery({
     queryKey: ["search-suggestions", searchQuery],
     queryFn: async () => {
@@ -72,12 +154,11 @@ const Header = () => {
       if (!response.data.success) return [];
       return [...new Set(response.data.data.map(u => u.fullName).filter(Boolean))].slice(0, 5);
     },
-    // ✅ FIX: Enable query when authenticated AND query length >= 2 (remove dropdown dependency)
     enabled: isAuthenticated && searchQuery.trim().length >= 2,
     staleTime: 3 * 60 * 1000,
   });
 
-  // 🔍 Unread messages count
+  // Unread messages count
   const { data: unreadData } = useQuery({
     queryKey: ["unread-messages-count"],
     queryFn: async () => {
@@ -109,7 +190,6 @@ const Header = () => {
       }, 300);
     } else {
       setShowSearchDropdown(false);
-      // Keep mobile search open but hide suggestions when query < 2
       if (showMobileSearch) setShowMobileSearch(true);
     }
   };
@@ -150,7 +230,6 @@ const Header = () => {
     setShowSearchDropdown(false);
   };
 
-  // ✅ Mobile profile menu toggle
   const toggleMobileProfileMenu = () => {
     setShowMobileProfileMenu(prev => !prev);
     setIsMenuOpen(false);
@@ -272,7 +351,7 @@ const Header = () => {
     }
   }, [router, user]);
 
-  // ✅ BD Logo Only (No text)
+  // Logo component
   const Logo = useMemo(
     () => (
       <Link href="/" className="group">
@@ -298,6 +377,32 @@ const Header = () => {
 
   const suggestions = suggestionsData || [];
   const isSearching = isSuggestionsLoading;
+
+  // Swipe indicator component
+  const SwipeIndicator = () => {
+    if (currentIndex === -1) return null;
+    const showLeft = currentIndex > 0;
+    const showRight = currentIndex < navItemsInOrder.length - 1;
+    
+    if (!showLeft && !showRight) return null;
+    
+    return (
+      <div className="md:hidden fixed inset-x-0 bottom-20 z-30 pointer-events-none">
+        <div className="flex justify-between px-4">
+          {showLeft && (
+            <div className="bg-black/50 backdrop-blur-sm rounded-full p-2 animate-pulse">
+              <span className="text-white text-xs">← Swipe right</span>
+            </div>
+          )}
+          {showRight && (
+            <div className="bg-black/50 backdrop-blur-sm rounded-full p-2 ml-auto animate-pulse">
+              <span className="text-white text-xs">Swipe left →</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -340,7 +445,6 @@ const Header = () => {
                   </div>
 
                   {/* Search Suggestions */}
-                  {/* ✅ FIX: Show when searching OR has suggestions */}
                   {(showSearchDropdown || isSearching) && searchQuery.trim().length >= 2 && (
                     <div className="absolute top-full left-0 right-0 mt-2 bg-[#242526] rounded-xl border border-[#3a3b3c] shadow-2xl overflow-hidden z-50 max-h-80 overflow-y-auto">
                       {isSearching ? (
@@ -383,7 +487,7 @@ const Header = () => {
               </div>
             </div>
 
-            {/* Right: Navigation + Profile */}
+            {/* Right: Navigation + Profile / Get Started */}
             <div className="flex items-center gap-3">
               <nav className="flex items-center justify-center space-x-1 lg:space-x-2">
                 {navItems.map((item) => {
@@ -420,149 +524,193 @@ const Header = () => {
 
               <NotificationDropdown isAuthenticated={isAuthenticated} socket={socket} user={user} />
 
-              {/* Profile */}
-              <div className="relative" ref={profileMenuRef}>
+              {/* Get Started Button for Unauthenticated Users */}
+              {!isAuthenticated ? (
                 <button
-                  onClick={handleProfileClick}
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 group"
+                  onClick={handleGetStarted}
+                  onMouseEnter={() => setCtaHover(true)}
+                  onMouseLeave={() => setCtaHover(false)}
+                  className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold text-white transition-all duration-200"
+                  style={{
+                    background: ctaHover 
+                      ? "linear-gradient(135deg, #8b5cf6, #3b82f6)" 
+                      : "linear-gradient(135deg, #7c3aed, #2563eb)",
+                    boxShadow: ctaHover 
+                      ? "0 8px 20px rgba(124,58,237,0.4)" 
+                      : "0 4px 12px rgba(124,58,237,0.25)",
+                    transform: ctaHover ? "translateY(-1px)" : "translateY(0)",
+                  }}
                 >
-                  {user?.profilePicture?.url ? (
-                    <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-purple-500/50 group-hover:border-purple-500 transition-all">
-                      <Image src={user.profilePicture.url} alt={user?.fullName || "User"} fill className="object-cover" />
-                    </div>
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
-                      <UserCircleIcon className="h-6 w-6 text-white" />
-                    </div>
-                  )}
-                  <span className="text-white font-medium text-sm">
-                    {user?.fullName?.split(" ")[0] || "User"}
-                  </span>
+                  <span>Get Started</span>
+                  <ArrowRightOnRectangleIcon className="h-4 w-4" />
                 </button>
-
-                {isProfileMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40 md:hidden bg-black/50 backdrop-blur-sm" onClick={() => setIsProfileMenuOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-56 rounded-xl backdrop-blur-xl bg-black/90 border border-white/20 shadow-2xl overflow-hidden animate-fadeInDown z-50">
-                      <div className="py-2">
-                        <div className="px-4 py-3 border-b border-white/10">
-                          <p className="text-white font-semibold text-sm">{user?.fullName || user?.name || "User"}</p>
-                          <p className="text-white/50 text-xs mt-1 truncate">{user?.email || ""}</p>
-                        </div>
-                        <button onClick={() => { setIsProfileMenuOpen(false); handleProfileNavigate(); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group">
-                          <UserCircleIcon className="h-5 w-5 group-hover:text-purple-400" />
-                          <span className="text-sm">Profile</span>
-                        </button>
-                        <Link href="/community" className="flex items-center gap-3 px-4 py-2.5 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group" onClick={() => setIsProfileMenuOpen(false)}>
-                          <UserGroupIcon className="h-5 w-5 group-hover:text-purple-400" />
-                          <span className="text-sm">Friends</span>
-                        </Link>
-                        <Link href="/settings" className="flex items-center gap-3 px-4 py-2.5 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group" onClick={() => setIsProfileMenuOpen(false)}>
-                          <Cog6ToothIcon className="h-5 w-5 group-hover:text-purple-400" />
-                          <span className="text-sm">Settings</span>
-                        </Link>
-                        <div className="border-t border-white/10 my-1"></div>
-                        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 group">
-                          <ArrowRightOnRectangleIcon className="h-5 w-5 group-hover:rotate-180 transition-transform duration-300" />
-                          <span className="text-sm">Log out</span>
-                        </button>
+              ) : (
+                /* Profile Button for Authenticated Users */
+                <div className="relative" ref={profileMenuRef}>
+                  <button
+                    onClick={handleProfileClick}
+                    className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 group"
+                  >
+                    {user?.profilePicture?.url ? (
+                      <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-purple-500/50 group-hover:border-purple-500 transition-all">
+                        <Image src={user.profilePicture.url} alt={user?.fullName || "User"} fill className="object-cover" />
                       </div>
-                    </div>
-                  </>
-                )}
-              </div>
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
+                        <UserCircleIcon className="h-6 w-6 text-white" />
+                      </div>
+                    )}
+                    <span className="text-white font-medium text-sm">
+                      {user?.fullName?.split(" ")[0] || "User"}
+                    </span>
+                  </button>
+
+                  {isProfileMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40 md:hidden bg-black/50 backdrop-blur-sm" onClick={() => setIsProfileMenuOpen(false)} />
+                      <div className="absolute right-0 mt-2 w-56 rounded-xl backdrop-blur-xl bg-black/90 border border-white/20 shadow-2xl overflow-hidden animate-fadeInDown z-50">
+                        <div className="py-2">
+                          <div className="px-4 py-3 border-b border-white/10">
+                            <p className="text-white font-semibold text-sm">{user?.fullName || user?.name || "User"}</p>
+                            <p className="text-white/50 text-xs mt-1 truncate">{user?.email || ""}</p>
+                          </div>
+                          <button onClick={() => { setIsProfileMenuOpen(false); handleProfileNavigate(); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group">
+                            <UserCircleIcon className="h-5 w-5 group-hover:text-purple-400" />
+                            <span className="text-sm">Profile</span>
+                          </button>
+                          <Link href="/community" className="flex items-center gap-3 px-4 py-2.5 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group" onClick={() => setIsProfileMenuOpen(false)}>
+                            <UserGroupIcon className="h-5 w-5 group-hover:text-purple-400" />
+                            <span className="text-sm">Friends</span>
+                          </Link>
+                          <Link href="/settings" className="flex items-center gap-3 px-4 py-2.5 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group" onClick={() => setIsProfileMenuOpen(false)}>
+                            <Cog6ToothIcon className="h-5 w-5 group-hover:text-purple-400" />
+                            <span className="text-sm">Settings</span>
+                          </Link>
+                          <div className="border-t border-white/10 my-1"></div>
+                          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 group">
+                            <ArrowRightOnRectangleIcon className="h-5 w-5 group-hover:rotate-180 transition-transform duration-300" />
+                            <span className="text-sm">Log out</span>
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </header>
 
-      {/* ==================== MOBILE HEADER ==================== */}
-      <header className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#242526] border-b border-white/10">
-        <div className="px-4 h-16 flex items-center justify-between">
-          {/* Left: BD Logo */}
-          {Logo}
+      {/* ==================== MOBILE HEADER WITH SWIPE CONTAINER ==================== */}
+      <div 
+        ref={swipeContainerRef}
+        className="md:hidden relative"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <header className="fixed top-0 left-0 right-0 z-50 bg-[#242526] border-b border-white/10">
+          <div className="px-4 h-16 flex items-center justify-between">
+            {/* Left: Logo */}
+            {Logo}
 
-          {/* Right: Search + Profile + Menu */}
-          <div className="flex items-center gap-1">
-            {/* Search Icon */}
-            <button
-              onClick={openMobileSearch}
-              className="p-2 rounded-full hover:bg-white/10 transition"
-              aria-label="Search"
-            >
-              <MagnifyingGlassIcon className="h-6 w-6 text-white" />
-            </button>
+            {/* Center: Spacer */}
+            <div className="flex-1"></div>
 
-            {/* ✅ FIX: Mobile Profile Icon */}
-            {isAuthenticated && user && (
-              <div className="relative" ref={mobileProfileRef}>
+            {/* Right: Icons Group - Search + Notifications + Profile/Menu */}
+            <div className="flex items-center gap-2">
+              {/* Search Icon */}
+              <button
+                onClick={openMobileSearch}
+                className="p-2 rounded-full hover:bg-white/10 transition"
+                aria-label="Search"
+              >
+                <MagnifyingGlassIcon className="h-5 w-5 text-white" />
+              </button>
+
+              {/* Notification Icon */}
+              {isAuthenticated && (
+                <NotificationDropdown isAuthenticated={isAuthenticated} socket={socket} user={user} />
+              )}
+
+              {/* Get Started Button for Unauthenticated Users */}
+              {!isAuthenticated ? (
                 <button
-                  onClick={toggleMobileProfileMenu}
-                  className="p-1 rounded-full hover:bg-white/10 transition"
-                  aria-label="Profile"
+                  onClick={handleGetStarted}
+                  className="px-4 py-1.5 rounded-full text-xs font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg"
                 >
-                  {user?.profilePicture?.url ? (
-                    <div className="relative w-8 h-8 rounded-full overflow-hidden border border-purple-500/50">
-                      <Image src={user.profilePicture.url} alt={user?.fullName || "User"} fill className="object-cover" />
-                    </div>
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
-                      <UserCircleIcon className="h-5 w-5 text-white" />
-                    </div>
-                  )}
+                  Get Started
                 </button>
-
-                {/* Mobile Profile Dropdown */}
-                {showMobileProfileMenu && (
-                  <>
-                    <div className="fixed inset-0 z-[55] bg-black/50" onClick={() => setShowMobileProfileMenu(false)} />
-                    <div className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-[#242526] border border-white/10 shadow-2xl overflow-hidden z-[60] animate-fadeInDown">
-                      <div className="py-2">
-                        <button onClick={() => { setShowMobileProfileMenu(false); handleProfileNavigate(); }} className="w-full flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition text-left">
-                          <UserCircleIcon className="h-5 w-5" />
-                          <span className="text-sm">Profile</span>
-                        </button>
-                        <Link href="/community" className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition" onClick={() => setShowMobileProfileMenu(false)}>
-                          <UserGroupIcon className="h-5 w-5" />
-                          <span className="text-sm">Friends</span>
-                        </Link>
-                        <Link href="/settings" className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition" onClick={() => setShowMobileProfileMenu(false)}>
-                          <Cog6ToothIcon className="h-5 w-5" />
-                          <span className="text-sm">Settings</span>
-                        </Link>
-                        <div className="border-t border-white/10 my-1"></div>
-                        <button onClick={() => { setShowMobileProfileMenu(false); handleLogout(); }} className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition text-left">
-                          <ArrowRightOnRectangleIcon className="h-5 w-5" />
-                          <span className="text-sm">Log out</span>
-                        </button>
+              ) : (
+                /* Profile / Menu for Authenticated Users */
+                <div className="relative" ref={mobileProfileRef}>
+                  <button
+                    onClick={toggleMobileProfileMenu}
+                    className="p-1 rounded-full hover:bg-white/10 transition"
+                    aria-label="Profile"
+                  >
+                    {user?.profilePicture?.url ? (
+                      <div className="relative w-8 h-8 rounded-full overflow-hidden border border-purple-500/50">
+                        <Image src={user.profilePicture.url} alt={user?.fullName || "User"} fill className="object-cover" />
                       </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
+                        <UserCircleIcon className="h-5 w-5 text-white" />
+                      </div>
+                    )}
+                  </button>
 
-            {/* Menu Button */}
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 rounded-full hover:bg-white/10 transition mobile-menu-button"
-              aria-label="Menu"
-            >
-              {isMenuOpen ? <XMarkIcon className="h-6 w-6 text-white" /> : <Bars3Icon className="h-6 w-6 text-white" />}
-            </button>
+                  {showMobileProfileMenu && (
+                    <>
+                      <div className="fixed inset-0 z-[55] bg-black/50" onClick={() => setShowMobileProfileMenu(false)} />
+                      <div className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-[#242526] border border-white/10 shadow-2xl overflow-hidden z-[60] animate-fadeInDown">
+                        <div className="py-2">
+                          <button onClick={() => { setShowMobileProfileMenu(false); handleProfileNavigate(); }} className="w-full flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition text-left">
+                            <UserCircleIcon className="h-5 w-5" />
+                            <span className="text-sm">Profile</span>
+                          </button>
+                          <Link href="/community" className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition" onClick={() => setShowMobileProfileMenu(false)}>
+                            <UserGroupIcon className="h-5 w-5" />
+                            <span className="text-sm">Friends</span>
+                          </Link>
+                          <Link href="/settings" className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition" onClick={() => setShowMobileProfileMenu(false)}>
+                            <Cog6ToothIcon className="h-5 w-5" />
+                            <span className="text-sm">Settings</span>
+                          </Link>
+                          <div className="border-t border-white/10 my-1"></div>
+                          <button onClick={() => { setShowMobileProfileMenu(false); handleLogout(); }} className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition text-left">
+                            <ArrowRightOnRectangleIcon className="h-5 w-5" />
+                            <span className="text-sm">Log out</span>
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Menu Button (Hamburger) */}
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="p-2 rounded-full hover:bg-white/10 transition mobile-menu-button"
+                aria-label="Menu"
+              >
+                {isMenuOpen ? <XMarkIcon className="h-5 w-5 text-white" /> : <Bars3Icon className="h-5 w-5 text-white" />}
+              </button>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
+
+      {/* Swipe Indicator for first-time users */}
+      <SwipeIndicator />
 
       {/* ==================== MOBILE SEARCH OVERLAY ==================== */}
       {showMobileSearch && (
         <div className="md:hidden fixed inset-0 z-[60] bg-[#242526]">
-          {/* Search Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
-            <button
-              onClick={closeMobileSearch}
-              className="p-2 -ml-2 rounded-full hover:bg-white/10 transition"
-            >
+            <button onClick={closeMobileSearch} className="p-2 -ml-2 rounded-full hover:bg-white/10 transition">
               <ArrowLeftIcon className="h-5 w-5 text-white" />
             </button>
             <div className="flex-1 relative">
@@ -577,18 +725,13 @@ const Header = () => {
                 autoFocus
               />
               {searchQuery && (
-                <button
-                  type="button"
-                  onClick={clearSearch}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full"
-                >
+                <button type="button" onClick={clearSearch} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full">
                   <XMarkIcon className="h-4 w-4 text-white/60" />
                 </button>
               )}
             </div>
           </div>
 
-          {/* Search Results */}
           <div className="overflow-y-auto max-h-[calc(100vh-80px)]">
             {isSearching ? (
               <SearchSuggestionSkeleton />
@@ -598,21 +741,12 @@ const Header = () => {
                   <span className="text-white/40 text-xs">Quick Search</span>
                 </div>
                 {suggestions.map((suggestion, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition text-left"
-                  >
+                  <button key={idx} type="button" onClick={() => handleSuggestionClick(suggestion)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition text-left">
                     <MagnifyingGlassIcon className="h-4 w-4 text-white/40 flex-shrink-0" />
                     <span className="text-white text-sm">{suggestion}</span>
                   </button>
                 ))}
-                <button
-                  type="button"
-                  onClick={() => handleSearchSubmit({ preventDefault: () => {} })}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-purple-600/20 hover:bg-purple-600/30 transition text-left border-t border-white/10"
-                >
+                <button type="button" onClick={() => handleSearchSubmit({ preventDefault: () => {} })} className="w-full flex items-center gap-3 px-4 py-3 bg-purple-600/20 hover:bg-purple-600/30 transition text-left border-t border-white/10">
                   <MagnifyingGlassIcon className="h-4 w-4 text-purple-400 flex-shrink-0" />
                   <span className="text-purple-300 text-sm font-medium">
                     Search for "{searchQuery}" in all posts & people
@@ -711,6 +845,20 @@ const Header = () => {
                     <span className="font-medium">Log out</span>
                   </button>
                 </>
+              )}
+              {!isAuthenticated && (
+                <div className="border-t border-white/10 mt-2 pt-2">
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      handleGetStarted();
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 transition-all duration-200"
+                  >
+                    <ArrowRightOnRectangleIcon className="h-5 w-5" />
+                    <span className="font-medium">Get Started</span>
+                  </button>
+                </div>
               )}
             </div>
           </div>

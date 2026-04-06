@@ -309,7 +309,7 @@ export const NotificationDropdown = ({ isAuthenticated, socket, user }) => {
             className="fixed inset-0 z-40 md:hidden bg-black/50 backdrop-blur-sm"
             onClick={() => setIsNotificationsOpen(false)}
           />
-          <div className="absolute -right-29 md:right-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 md:w-80 lg:w-96 rounded-xl backdrop-blur-xl bg-black/90 border border-white/20 shadow-2xl overflow-hidden animate-fadeInDown z-50">
+          <div className="absolute -right-23 md:right-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 md:w-80 lg:w-96 rounded-xl backdrop-blur-xl bg-black/90 border border-white/20 shadow-2xl overflow-hidden animate-fadeInDown z-50">
             <div className="flex items-center justify-between p-4 border-b border-white/10">
               <h3 className="text-white font-semibold">Notifications</h3>
               {unreadCount > 0 && (
