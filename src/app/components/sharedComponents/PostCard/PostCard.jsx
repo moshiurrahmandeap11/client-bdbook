@@ -635,46 +635,63 @@ const PostCard = memo(({ post, onPostUpdate, hideMenu = false }) => {
   });
 
   // Share mutations
-  const shareToFeedMutation = useMutation({
-    mutationFn: async () => {
-      const res = await axiosInstance.post(`/posts/${post._id}/share`);
-      return res.data;
-    },
-    onSuccess: () => {
-      toast.success("Post shared to your feed!");
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
-      setShowShareModal(false);
-      onPostUpdate?.();
-    },
-    onError: (err) => toast.error(err.response?.data?.message || "Failed to share post"),
-  });
+const shareToFeedMutation = useMutation({
+  mutationFn: async () => {
+    // ✅ FIX: Ensure postId is a clean string
+    const postId = String(post._id)?.trim();
+    
+    // Optional: Log for debugging
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Sharing post with ID:', postId, 'Type:', typeof postId);
+    }
+    
+    const res = await axiosInstance.post(`/posts/${postId}/share`);
+    return res.data;
+  },
+  onSuccess: () => {
+    toast.success("Post shared to your feed!");
+    queryClient.invalidateQueries({ queryKey: ["posts"] });
+    setShowShareModal(false);
+    onPostUpdate?.();
+  },
+  onError: (err) => {
+    console.error('Share error:', err.response?.data);
+    toast.error(err.response?.data?.message || "Failed to share post");
+  },
+});
 
-  const shareToMessageMutation = useMutation({
-    mutationFn: async (friendId) => {
-      const res = await axiosInstance.post(`/users/send-message/${friendId}`, {
-        message: JSON.stringify({
-          type: "post_share",
-          postId: post._id,
-          postUrl: sharePreview.postUrl,
-          postText: post.description,
-          postAuthor: post.userName,
-          postAuthorProfilePic: post.userProfilePicture,
-          hasMedia: !!post.media?.url,
-          mediaType: post.media?.resourceType,
-          mediaUrl: post.media?.url,
-          sharedBy: user?.fullName,
-          sharedByProfilePic: user?.profilePicture?.url,
-        }),
-        messageType: "share",
-      });
-      return res.data;
-    },
-    onSuccess: () => {
-      toast.success("Post shared via message!");
-      setShowShareModal(false);
-    },
-    onError: () => toast.error("Failed to share via message"),
-  });
+const shareToMessageMutation = useMutation({
+  mutationFn: async (friendId) => {
+    // ✅ FIX: Ensure postId is a clean string
+    const postId = String(post._id)?.trim();
+    
+    const res = await axiosInstance.post(`/users/send-message/${friendId}`, {
+      message: JSON.stringify({
+        type: "post_share",
+        postId: postId, // ✅ Use cleaned postId
+        postUrl: sharePreview.postUrl,
+        postText: post.description,
+        postAuthor: post.userName,
+        postAuthorProfilePic: post.userProfilePicture,
+        hasMedia: !!post.media?.url,
+        mediaType: post.media?.resourceType,
+        mediaUrl: post.media?.url,
+        sharedBy: user?.fullName,
+        sharedByProfilePic: user?.profilePicture?.url,
+      }),
+      messageType: "share",
+    });
+    return res.data;
+  },
+  onSuccess: () => {
+    toast.success("Post shared via message!");
+    setShowShareModal(false);
+  },
+  onError: (err) => {
+    console.error('Share message error:', err.response?.data);
+    toast.error("Failed to share via message");
+  },
+});
 
   // Edit mutation
   const editMutation = useMutation({
