@@ -175,7 +175,7 @@ export const ShareModal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-50 bottom-18 flex items-end sm:items-center justify-center"
       style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
       onClick={onClose}
     >
