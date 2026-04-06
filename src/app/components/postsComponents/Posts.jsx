@@ -179,9 +179,9 @@ const Posts = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-teal-800 pt-16 pb-24">
+    <div className="min-h-screen bg-linear-to-br from-purple-900 via-blue-900 to-teal-800 pt-2 pb-24">
       {/* Wider container - max-w-7xl for larger posts */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6">
+      <div className="max-w-7xl mx-auto px-1 sm:px-4 md:px-6">
         
         {/* Create Post Card - Mobile Optimized */}
         {isAuthenticated && (
@@ -192,7 +192,7 @@ const Posts = () => {
                 onClick={handleProfileClick}
                 className="flex-shrink-0 focus:outline-none"
               >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center overflow-hidden">
+                <div className="w-10 h-10 rounded-full cursor-pointer bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center overflow-hidden">
                   {user?.profilePicture?.url ? (
                     <Image 
                       src={user.profilePicture.url} 
@@ -211,7 +211,7 @@ const Posts = () => {
                 onClick={() => setShowCreateModal(true)}
                 className="flex-1 text-left px-4 py-2.5 bg-white/10 rounded-full text-white/70 hover:bg-white/20 active:bg-white/30 transition-colors text-sm"
               >
-                What&asop;s on your mind?
+                What&apos;s on your mind?
               </button>
             </div>
             <div className="flex gap-2 mt-3 pt-3 border-t border-white/10">

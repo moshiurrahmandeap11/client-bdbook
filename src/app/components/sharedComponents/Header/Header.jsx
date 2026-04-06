@@ -16,7 +16,7 @@ import {
   VideoCameraSlashIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -54,6 +54,17 @@ const Header = () => {
   
   const pathname = usePathname();
   const router = useRouter();
+
+  const queryClient = useQueryClient();
+
+  const handleHomeClick = () => {
+    if(pathname === "/") {
+      queryClient.refetchQueries({ queryKey: ["home-posts"] });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      router.push("/");
+    }
+  }
 
   // Hide swipe hint after 5 seconds
   useEffect(() => {
@@ -402,16 +413,13 @@ const Header = () => {
   }, [router, user]);
 
   // Logo component
-  const Logo = useMemo(
-    () => (
-      <Link href="/" className="group">
-        <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center transform group-hover:scale-105 transition-all duration-300 shadow-lg">
-          <span className="text-white font-bold text-xl">BD</span>
-        </div>
-      </Link>
-    ),
-    []
-  );
+const Logo = (
+  <button onClick={handleHomeClick} className="group">
+    <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center transform group-hover:scale-105 transition-all duration-300 shadow-lg">
+      <span className="text-white font-bold text-xl">BD</span>
+    </div>
+  </button>
+);
 
   if (!initialLoadDone) {
     return (
