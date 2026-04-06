@@ -723,7 +723,7 @@ const VideosPage = () => {
           )}
         </div>
         {commentModal.isOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setCommentModal({ isOpen: false, video: null, index: null })}>
+          <div className="fixed inset-0 bottom-22 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setCommentModal({ isOpen: false, video: null, index: null })}>
             <div className="relative w-full sm:max-w-lg bg-gradient-to-br from-purple-900 via-blue-900 to-teal-800 rounded-t-2xl sm:rounded-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between p-4 border-b border-white/10">
                 <h3 className="text-lg font-semibold text-white">Comments</h3>
