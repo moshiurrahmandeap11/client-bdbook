@@ -1,11 +1,14 @@
-// VideosPage.jsx - Fixed version with working share functionality
+// VideosPage.jsx - Complete Optimized Version
 
 "use client";
 
 import { useAuth } from "@/app/hooks/useAuth";
 import axiosInstance from "@/app/lib/axiosInstance";
 import {
+  ArrowPathIcon,
+  BookmarkIcon,
   ChatBubbleLeftIcon,
+  EllipsisHorizontalIcon,
   HeartIcon,
   PaperAirplaneIcon,
   PauseIcon,
@@ -13,8 +16,11 @@ import {
   ShareIcon,
   SpeakerWaveIcon,
   SpeakerXMarkIcon,
+  StarIcon,
+  TrashIcon,
   UserIcon,
   VideoCameraIcon,
+  XCircleIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
@@ -75,6 +81,102 @@ const VideoAction = ({ icon, count, onClick, onLongPress }) => {
   );
 };
 
+// Three Dot Menu Component
+const ThreeDotMenu = ({ video, index, onSave, onInterested, onNotInterested, onDelete, isOwner, isSaved, isInterested, isNotInterested }) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const menuItems = [
+    { 
+      label: isSaved ? "Saved" : "Save", 
+      icon: <BookmarkIcon className={`h-4 w-4 ${isSaved ? 'text-purple-400' : ''}`} />, 
+      action: onSave 
+    },
+    { 
+      label: isInterested ? "Interested ✓" : "Interested", 
+      icon: <StarIcon className={`h-4 w-4 ${isInterested ? 'text-yellow-400' : ''}`} />, 
+      action: onInterested 
+    },
+    { 
+      label: isNotInterested ? "Not Interested ✓" : "Not Interested", 
+      icon: <XCircleIcon className={`h-4 w-4 ${isNotInterested ? 'text-red-400' : ''}`} />, 
+      action: onNotInterested 
+    },
+  ];
+
+  if (isOwner) {
+    menuItems.push({ 
+      label: "Delete", 
+      icon: <TrashIcon className="h-4 w-4" />, 
+      action: onDelete, 
+      danger: true 
+    });
+  }
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setShowMenu(!showMenu)}
+        className="flex flex-col items-center gap-1 group select-none active:scale-90 transition-transform"
+      >
+        <div className="drop-shadow-lg">
+          <EllipsisHorizontalIcon className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
+        </div>
+        <span className="text-white text-xs font-medium drop-shadow">Menu</span>
+      </button>
+
+      {showMenu && (
+        <div className="absolute right-0 bottom-full mb-2 w-48 bg-gradient-to-br from-purple-900 via-blue-900 to-teal-800 rounded-xl overflow-hidden shadow-xl z-50 border border-white/20">
+          {menuItems.map((item, idx) => (
+            <button
+              key={idx}
+              onClick={() => {
+                item.action();
+                setShowMenu(false);
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-all duration-150 text-left ${
+                item.danger ? 'text-red-400 hover:text-red-300' : 'text-white/80 hover:text-white'
+              } hover:bg-white/10`}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Repost Button Component
+const RepostButton = ({ count, onClick, isReposted }) => {
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center gap-1 group select-none active:scale-90 transition-transform"
+    >
+      <div className="drop-shadow-lg">
+        {isReposted ? (
+          <ArrowPathIcon className="h-7 w-7 sm:h-8 sm:w-8 text-green-500" />
+        ) : (
+          <ArrowPathIcon className="h-7 w-7 sm:h-8 sm:w-8 text-white group-hover:text-green-400 transition-colors" />
+        )}
+      </div>
+      <span className="text-white text-xs font-medium drop-shadow">{count || 0}</span>
+    </button>
+  );
+};
+
 // Optimized Floating Heart
 const FloatingHeart = ({ onDone }) => {
   useEffect(() => {
@@ -106,11 +208,50 @@ const LikesModal = ({ video, onClose }) => {
     gcTime: 5 * 60 * 1000,
   });
 
-  const likes = fetchedLikes ?? (video.likes || []).map((id) => ({
-    _id: id,
-    name: id === video.userId ? video.userName : "User",
-    profilePicture: id === video.userId ? video.userProfilePicture : null,
-  }));
+  const [likesWithDetails, setLikesWithDetails] = useState([]);
+
+  useEffect(() => {
+    const fetchLikesDetails = async () => {
+      if (fetchedLikes && fetchedLikes.length > 0) {
+        const users = await Promise.all(
+          fetchedLikes.map(async (like) => {
+            if (like._id && like.fullName) return like;
+            try {
+              const res = await axiosInstance.get(`/users/id/${like.userId || like._id}`);
+              return res.data.data;
+            } catch {
+              return {
+                _id: like.userId || like._id,
+                fullName: like.userName || like.name || "User",
+                profilePicture: like.userProfilePicture || like.profilePicture
+              };
+            }
+          })
+        );
+        setLikesWithDetails(users);
+      } else if (video.likes && video.likes.length > 0) {
+        const users = await Promise.all(
+          video.likes.map(async (userId) => {
+            try {
+              const res = await axiosInstance.get(`/users/id/${userId}`);
+              return res.data.data;
+            } catch {
+              return {
+                _id: userId,
+                fullName: userId === video.userId ? video.userName : "User",
+                profilePicture: userId === video.userId ? video.userProfilePicture : null
+              };
+            }
+          })
+        );
+        setLikesWithDetails(users);
+      }
+    };
+    
+    fetchLikesDetails();
+  }, [fetchedLikes, video]);
+
+  const displayLikes = likesWithDetails.length > 0 ? likesWithDetails : fetchedLikes || [];
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
@@ -118,7 +259,7 @@ const LikesModal = ({ video, onClose }) => {
         <div className="flex items-center justify-between p-4 border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-2">
             <HeartSolidIcon className="h-5 w-5 text-red-500" />
-            <h3 className="text-lg font-semibold text-white">Reactions <span className="text-white/50 text-base">({video.likesCount || likes.length})</span></h3>
+            <h3 className="text-lg font-semibold text-white">Reactions <span className="text-white/50 text-base">({video.likesCount || displayLikes.length})</span></h3>
           </div>
           <button onClick={onClose} className="p-1 rounded-full bg-white/10 active:bg-white/20 transition">
             <XMarkIcon className="h-5 w-5 text-white" />
@@ -127,21 +268,21 @@ const LikesModal = ({ video, onClose }) => {
         <div className="overflow-y-auto flex-1 p-2">
           {isLoading ? (
             <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>
-          ) : likes.length === 0 ? (
+          ) : displayLikes.length === 0 ? (
             <div className="text-center py-12">
               <HeartIcon className="h-12 w-12 text-white/20 mx-auto mb-2" />
               <p className="text-white/40 text-sm">No reactions yet</p>
             </div>
           ) : (
-            likes.map((person, i) => (
+            displayLikes.map((person, i) => (
               <div key={person._id || i} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center overflow-hidden flex-shrink-0">
-                  {person.profilePicture ? (
-                    <Image src={person.profilePicture} alt={person.name || "User"} width={40} height={40} className="object-cover" />
+                  {person.profilePicture?.url || person.profilePicture ? (
+                    <Image src={person.profilePicture?.url || person.profilePicture} alt={person.fullName || person.name || "User"} width={40} height={40} className="object-cover" />
                   ) : (<UserIcon className="h-5 w-5 text-white" />)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-white font-medium text-sm truncate">{person.name || person.userName || "User"}</p>
+                  <p className="text-white font-medium text-sm truncate">{person.fullName || person.name || "User"}</p>
                 </div>
                 <HeartSolidIcon className="h-4 w-4 text-red-500 flex-shrink-0" />
               </div>
@@ -239,7 +380,7 @@ const VideoPlayer = ({ video, isMuted, isActive, onDoubleTap, onVideoRef }) => {
 
   return (
     <div className="absolute inset-0 w-full h-full group" onMouseMove={handleMouseMove} onTouchStart={handleMouseMove}>
-      <video ref={videoRef} src={video.media?.url} className="w-full h-full object-contain" poster={video.media?.thumbnail || ""} muted={isMuted} playsInline preload="auto" onClick={handleTap} />
+      <video ref={videoRef} src={video.media?.url} className="w-full h-full object-contain" poster={video.media?.thumbnail || ""} muted={isMuted} playsInline preload="metadata" onClick={handleTap} />
       {!isPlaying && (<div className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer transition-opacity duration-300" onClick={handleTap}><PlayIcon className="h-20 w-20 text-white drop-shadow-2xl animate-scaleIn" /></div>)}
       {(showControls || !isPlaying) && (
         <div className="absolute bottom-16 md:bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 pb-3 transition-opacity duration-300">
@@ -294,6 +435,12 @@ const VideosPage = () => {
   const [shareModal, setShareModal] = useState({ isOpen: false, video: null });
   const [commentText, setCommentText] = useState("");
   const [floatingHearts, setFloatingHearts] = useState({});
+  
+  // State for new features
+  const [savedPosts, setSavedPosts] = useState({});
+  const [interestedPosts, setInterestedPosts] = useState({});
+  const [notInterestedPosts, setNotInterestedPosts] = useState({});
+  const [repostedPosts, setRepostedPosts] = useState({});
 
   const containerRef = useRef(null);
   const activeIndexRef = useRef(0);
@@ -372,26 +519,26 @@ const VideosPage = () => {
     onError: () => toast.error("Failed to add comment"),
   });
 
-  // ✅ FIXED: Share mutation with proper post ID
+  // Share mutations
   const shareMutation = useMutation({
     mutationFn: async ({ videoId }) => {
       const postId = String(videoId)?.trim();
-      console.log("Sharing video with ID:", postId);
       const res = await axiosInstance.post(`/posts/${postId}/share`);
       return res.data;
     },
-    onSuccess: (_, { video }) => {
+    onSuccess: (_, { video, index }) => {
       toast.success("Video shared to your feed!");
-      queryClient.invalidateQueries({ queryKey: ["videos"] });
+      queryClient.setQueryData(["videos"], (old) => {
+        if (!old) return old;
+        return { ...old, pages: old.pages.map((page, pi) => ({ ...page, data: page.data.map((videoItem, vi) => { if (pi === Math.floor(index / 8) && vi === index % 8) { return { ...videoItem, sharesCount: (videoItem.sharesCount || 0) + 1 }; } return videoItem; }) })) };
+      });
       setShareModal({ isOpen: false, video: null });
     },
     onError: (err) => {
-      console.error('Share error details:', err.response?.data);
       toast.error(err.response?.data?.message || "Failed to share video");
     },
   });
 
-  // ✅ FIXED: Share to message mutation
   const shareToMessageMutation = useMutation({
     mutationFn: async ({ friendId, video }) => {
       const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -418,10 +565,115 @@ const VideosPage = () => {
       toast.success("Video shared via message!");
       setShareModal({ isOpen: false, video: null });
     },
-    onError: (err) => {
-      console.error('Share message error:', err.response?.data);
-      toast.error("Failed to share via message");
+    onError: () => toast.error("Failed to share via message"),
+  });
+
+  // Save mutation
+  const saveMutation = useMutation({
+    mutationFn: async ({ postId }) => {
+      const res = await axiosInstance.post(`/posts/${postId}/save`);
+      return res.data;
     },
+    onSuccess: (data, { postId, index }) => {
+      setSavedPosts(prev => ({ ...prev, [postId]: data.data.isSaved }));
+      toast.success(data.message);
+      queryClient.setQueryData(["videos"], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page, pi) => ({
+            ...page,
+            data: page.data.map((video, vi) => {
+              if (pi === Math.floor(index / 8) && vi === index % 8) {
+                return { ...video, isSaved: data.data.isSaved };
+              }
+              return video;
+            })
+          }))
+        };
+      });
+    },
+    onError: () => toast.error("Failed to save post"),
+  });
+
+  // Interested mutation
+  const interestedMutation = useMutation({
+    mutationFn: async ({ postId }) => {
+      const res = await axiosInstance.post(`/posts/${postId}/interested`);
+      return res.data;
+    },
+    onSuccess: (data, { postId }) => {
+      setInterestedPosts(prev => ({ ...prev, [postId]: data.data.isInterested }));
+      toast.success(data.message);
+    },
+    onError: () => toast.error("Failed to mark interest"),
+  });
+
+  // Not interested mutation
+  const notInterestedMutation = useMutation({
+    mutationFn: async ({ postId }) => {
+      const res = await axiosInstance.post(`/posts/${postId}/not-interested`);
+      return res.data;
+    },
+    onSuccess: (data, { postId }) => {
+      setNotInterestedPosts(prev => ({ ...prev, [postId]: data.data.isNotInterested }));
+      toast.success(data.message);
+    },
+    onError: () => toast.error("Failed to mark as not interested"),
+  });
+
+  // Repost mutation
+  const repostMutation = useMutation({
+    mutationFn: async ({ postId }) => {
+      const res = await axiosInstance.post(`/posts/${postId}/repost`);
+      return res.data;
+    },
+    onSuccess: (_, { postId, index }) => {
+      setRepostedPosts(prev => ({ ...prev, [postId]: true }));
+      toast.success("Post reposted to your profile!");
+      queryClient.setQueryData(["videos"], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page, pi) => ({
+            ...page,
+            data: page.data.map((video, vi) => {
+              if (pi === Math.floor(index / 8) && vi === index % 8) {
+                return { ...video, repostsCount: (video.repostsCount || 0) + 1, isReposted: true };
+              }
+              return video;
+            })
+          }))
+        };
+      });
+    },
+    onError: () => toast.error("Failed to repost"),
+  });
+
+  // Delete video mutation
+  const deleteVideoMutation = useMutation({
+    mutationFn: async ({ postId }) => {
+      const res = await axiosInstance.delete(`/posts/${postId}`);
+      return res.data;
+    },
+    onSuccess: (_, { index }) => {
+      toast.success("Video deleted");
+      queryClient.setQueryData(["videos"], (old) => {
+        if (!old) return old;
+        const newPages = old.pages.map((page, pi) => ({
+          ...page,
+          data: page.data.filter((_, vi) => {
+            const globalIndex = pi * 8 + vi;
+            return globalIndex !== index;
+          })
+        }));
+        return { ...old, pages: newPages };
+      });
+      if (index === activeIndex && allVideos.length > 1) {
+        setTimeout(() => snapToIndex(Math.max(0, activeIndex - 1)), 100);
+      }
+    },
+    onError: () => toast.error("Failed to delete video"),
   });
 
   const handleDoubleTap = (video, index) => {
@@ -442,13 +694,11 @@ const VideosPage = () => {
     commentMutation.mutate({ videoId: commentModal.video._id, text: commentText, index: commentModal.index });
   };
 
-  // ✅ FIXED: Share handlers with proper data
-  const handleShareClick = useCallback((video) => {
+  const handleShareClick = useCallback((video, index) => {
     if (!isAuthenticated) { toast.error("Please login to share"); return; }
-    setShareModal({ isOpen: true, video });
+    setShareModal({ isOpen: true, video, index });
   }, [isAuthenticated]);
 
-  // ✅ FIXED: Generate share preview with proper video data
   const getSharePreview = useCallback((video) => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const postUrl = `${origin}/post/details/${video._id}`;
@@ -458,17 +708,26 @@ const VideosPage = () => {
 
   const handleShareToFeed = useCallback(() => {
     if (!shareModal.video) return;
-    shareMutation.mutate({ videoId: shareModal.video._id, video: shareModal.video });
-  }, [shareModal.video, shareMutation]);
+    shareMutation.mutate({ videoId: shareModal.video._id, video: shareModal.video, index: shareModal.index });
+  }, [shareModal.video, shareModal.index, shareMutation]);
 
   const handleShareToMessage = useCallback((friendId) => {
     if (!shareModal.video) return;
     shareToMessageMutation.mutate({ friendId, video: shareModal.video });
   }, [shareModal.video, shareToMessageMutation]);
 
-  const handleCopyLink = useCallback((url) => {
+  const handleCopyLink = useCallback(() => {
     toast.success("Link copied!");
   }, []);
+
+  const handleRepost = useCallback((video, index) => {
+    if (!isAuthenticated) { toast.error("Please login to repost"); return; }
+    if (repostedPosts[video._id]) {
+      toast.error("You already reposted this");
+      return;
+    }
+    repostMutation.mutate({ postId: video._id, index });
+  }, [isAuthenticated, repostedPosts, repostMutation]);
 
   const getTimeAgo = (date) => {
     if (!date) return "recently";
@@ -502,10 +761,14 @@ const VideosPage = () => {
 
   return (
     <>
-      <style>{`
+      <style jsx global>{`
         @keyframes floatHeart { 0% { opacity: 0; transform: scale(0.2); } 25% { opacity: 1; transform: scale(1.4); } 65% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0; transform: scale(1.3) translateY(-40px); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .animate-fadeIn { animation: fadeIn 0.2s ease-out; }
+        .will-change-transform { will-change: transform; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
       `}</style>
       
       <div id="video-wrapper" className="fixed inset-0 bg-black overflow-hidden touch-none select-none">
@@ -517,6 +780,11 @@ const VideosPage = () => {
           {allVideos.map((video, index) => {
             const isLiked = video.likes?.includes(user?._id) || false;
             const isActive = index === activeIndex;
+            const isVideoSaved = savedPosts[video._id] || video.isSaved || false;
+            const isVideoInterested = interestedPosts[video._id] || false;
+            const isVideoNotInterested = notInterestedPosts[video._id] || false;
+            const isVideoReposted = repostedPosts[video._id] || video.isReposted || false;
+            
             return (
               <div key={video._id} className="relative bg-black" style={{ height: "100vh", width: "100vw" }}>
                 <VideoPlayer video={video} isMuted={isMuted} isActive={isActive} onDoubleTap={() => handleDoubleTap(video, index)} onVideoRef={(ref) => videoRefsMap.current.set(video._id, ref)} />
@@ -536,10 +804,36 @@ const VideosPage = () => {
                     count={video.commentsCount || 0}
                     onClick={() => setCommentModal({ isOpen: true, video, index })}
                   />
+                  
+                  {/* Repost Button */}
+                  <RepostButton
+                    count={video.repostsCount || 0}
+                    isReposted={isVideoReposted}
+                    onClick={() => handleRepost(video, index)}
+                  />
+                  
                   <VideoAction
                     icon={<ShareIcon className="h-7 w-7 sm:h-8 sm:w-8 text-white" />}
                     count={video.sharesCount || 0}
-                    onClick={() => handleShareClick(video)}
+                    onClick={() => handleShareClick(video, index)}
+                  />
+                  
+                  {/* Three Dot Menu */}
+                  <ThreeDotMenu
+                    video={video}
+                    index={index}
+                    isOwner={video.userId === user?._id}
+                    isSaved={isVideoSaved}
+                    isInterested={isVideoInterested}
+                    isNotInterested={isVideoNotInterested}
+                    onSave={() => saveMutation.mutate({ postId: video._id, index })}
+                    onInterested={() => interestedMutation.mutate({ postId: video._id })}
+                    onNotInterested={() => notInterestedMutation.mutate({ postId: video._id })}
+                    onDelete={() => {
+                      if (confirm("Are you sure you want to delete this video?")) {
+                        deleteVideoMutation.mutate({ postId: video._id, index });
+                      }
+                    }}
                   />
                 </div>
                 
@@ -549,7 +843,7 @@ const VideosPage = () => {
                     <div className="flex items-center gap-2.5 mb-2">
                       <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center overflow-hidden ring-2 ring-white/20 flex-shrink-0">
                         {video.userProfilePicture ? (
-                          <Image src={video.userProfilePicture} alt={video.userName} width={40} height={40} className="object-cover" />
+                          <Image src={video.userProfilePicture} alt={video.userName} width={40} height={40} className="object-cover" loading="lazy" />
                         ) : (<UserIcon className="h-5 w-5 text-white" />)}
                       </div>
                       <span className="font-semibold text-white text-sm sm:text-base drop-shadow">{video.userName}</span>
@@ -591,7 +885,7 @@ const VideosPage = () => {
               <div className="p-4 border-b border-white/10 flex gap-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center overflow-hidden flex-shrink-0">
                   {commentModal.video?.userProfilePicture ? (
-                    <Image src={commentModal.video.userProfilePicture} alt={commentModal.video.userName} width={48} height={48} className="object-cover" />
+                    <Image src={commentModal.video.userProfilePicture} alt={commentModal.video.userName} width={48} height={48} className="object-cover" loading="lazy" />
                   ) : (<UserIcon className="h-6 w-6 text-white" />)}
                 </div>
                 <div className="flex-1">
@@ -619,13 +913,13 @@ const VideosPage = () => {
         {/* Likes Modal */}
         {likesModal.isOpen && likesModal.video && <LikesModal video={likesModal.video} onClose={() => setLikesModal({ isOpen: false, video: null })} />}
         
-        {/*  FIXED: Share Modal - Now properly working */}
+        {/* Share Modal */}
         {shareModal.isOpen && shareModal.video && (
           <ShareModal
             post={shareModal.video}
             user={user}
             sharePreview={getSharePreview(shareModal.video)}
-            onClose={() => setShareModal({ isOpen: false, video: null })}
+            onClose={() => setShareModal({ isOpen: false, video: null, index: null })}
             onShareToFeed={handleShareToFeed}
             onShareToMessage={handleShareToMessage}
             onCopyLink={handleCopyLink}
