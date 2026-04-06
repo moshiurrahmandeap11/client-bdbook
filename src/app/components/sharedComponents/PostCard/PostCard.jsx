@@ -1,3 +1,4 @@
+// PostCard.jsx (or .tsx) - Fixed exports
 "use client";
 
 import { useAuth } from "@/app/hooks/useAuth";
@@ -16,22 +17,26 @@ import {
 } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Send } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import { BsInstagram } from "react-icons/bs";
+import { FaAppStore, FaFacebook, FaTelegram, FaTwitter, FaWhatsapp } from "react-icons/fa";
+import { FaSignalMessenger } from "react-icons/fa6";
 
 // ── Share platforms ───────────────────────────────────────────────────────────
 const SHARE_PLATFORMS = [
-  { name: "WhatsApp",  icon: "💚", color: "#25D366", url: (t, l) => `https://wa.me/?text=${encodeURIComponent(t + "\n\n" + l)}` },
-  { name: "Twitter",   icon: "🐦", color: "#1DA1F2", url: (t, l) => `https://twitter.com/intent/tweet?text=${encodeURIComponent(t)}&url=${encodeURIComponent(l)}` },
-  { name: "Facebook",  icon: "📘", color: "#1877F2", url: (t, l) => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(l)}&quote=${encodeURIComponent(t)}` },
-  { name: "Telegram",  icon: "✈️", color: "#26A5E4", url: (t, l) => `https://t.me/share/url?url=${encodeURIComponent(l)}&text=${encodeURIComponent(t)}` },
-  { name: "Messenger", icon: "💬", color: "#0084FF", url: (t, l) => `fb-messenger://share?link=${encodeURIComponent(l)}`, requiresMobile: true },
-  { name: "Instagram", icon: "📸", color: "#E4405F", url: (t, l) => `instagram://library?AssetPath=${encodeURIComponent(l)}`, requiresMobile: true },
+  { name: "WhatsApp",  icon: FaWhatsapp, color: "#25D366", url: (t, l) => `https://wa.me/?text=${encodeURIComponent(t + "\n\n" + l)}` },
+  { name: "Twitter",   icon: FaTwitter, color: "#1DA1F2", url: (t, l) => `https://twitter.com/intent/tweet?text=${encodeURIComponent(t)}&url=${encodeURIComponent(l)}` },
+  { name: "Facebook",  icon: FaFacebook, color: "#1877F2", url: (t, l) => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(l)}&quote=${encodeURIComponent(t)}` },
+  { name: "Telegram",  icon: FaTelegram, color: "#26A5E4", url: (t, l) => `https://t.me/share/url?url=${encodeURIComponent(l)}&text=${encodeURIComponent(t)}` },
+  { name: "Messenger", icon: FaSignalMessenger, color: "#0084FF", url: (t, l) => `fb-messenger://share?link=${encodeURIComponent(l)}`, requiresMobile: true },
+  { name: "Instagram", icon: BsInstagram, color: "#E4405F", url: (t, l) => `instagram://library?AssetPath=${encodeURIComponent(l)}`, requiresMobile: true },
 ];
 
-// ── Liquid Glass style tokens (same as Header) ────────────────────────────────
+// ── Liquid Glass style tokens ────────────────────────────────────────────────
 const BDF = "blur(40px) saturate(180%)";
 const BDF_LIGHT = "blur(20px) saturate(160%)";
 
@@ -67,8 +72,8 @@ const glassModal = {
   boxShadow: "0 32px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)",
 };
 
-// ── Avatar helper ─────────────────────────────────────────────────────────────
-const Avatar = ({ src, name, size = 40 }) => (
+// ── Avatar helper (memoized) ─────────────────────────────────────────────────
+const Avatar = memo(({ src, name, size = 40 }) => (
   <div
     className="rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
     style={{
@@ -78,19 +83,25 @@ const Avatar = ({ src, name, size = 40 }) => (
     }}
   >
     {src ? (
-      <Image src={src} alt={name || ""} width={size} height={size} className="object-cover w-full h-full" />
+      <Image 
+        src={src} 
+        alt={name || ""} 
+        width={size} 
+        height={size} 
+        className="object-cover w-full h-full"
+        loading="lazy"
+      />
     ) : (
       <UserIcon style={{ width: size * 0.5, height: size * 0.5, color: "#fff" }} />
     )}
   </div>
-);
+));
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ── SharedPostPreview — Facebook-style embedded original post ─────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
-const SharedPostPreview = ({ originalPost, postUrl, onClick }) => {
+Avatar.displayName = 'Avatar';
+
+// ── SharedPostPreview ────────────────────────────────────────────────────────
+const SharedPostPreview = memo(({ originalPost, postUrl, onClick }) => {
   if (!originalPost) {
-    // Fallback — minimal link preview when originalPost data missing
     return (
       <button
         onClick={onClick}
@@ -123,16 +134,11 @@ const SharedPostPreview = ({ originalPost, postUrl, onClick }) => {
       className="w-full text-left mt-3 rounded-xl overflow-hidden transition-all duration-200 active:scale-[0.99]"
       style={{ ...glassInner, borderRadius: 12 }}
     >
-      {/* Original post author header */}
       <div
         className="flex items-center gap-2.5 px-3 pt-3 pb-2"
         style={{ borderBottom: "0.5px solid rgba(255,255,255,0.08)" }}
       >
-        <Avatar
-          src={originalPost.userProfilePicture}
-          name={originalPost.userName}
-          size={32}
-        />
+        <Avatar src={originalPost.userProfilePicture} name={originalPost.userName} size={32} />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold leading-tight" style={{ color: "rgba(255,255,255,0.9)" }}>
             {originalPost.userName || "Unknown User"}
@@ -141,7 +147,6 @@ const SharedPostPreview = ({ originalPost, postUrl, onClick }) => {
             Original post
           </p>
         </div>
-        {/* "Original" badge */}
         <span
           className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
           style={{
@@ -154,7 +159,6 @@ const SharedPostPreview = ({ originalPost, postUrl, onClick }) => {
         </span>
       </div>
 
-      {/* Description */}
       {originalPost.description && (
         <p
           className="text-sm px-3 py-2 line-clamp-3 leading-relaxed"
@@ -164,7 +168,6 @@ const SharedPostPreview = ({ originalPost, postUrl, onClick }) => {
         </p>
       )}
 
-      {/* Media */}
       {originalPost.media?.url && (
         <div className="w-full overflow-hidden" style={{ maxHeight: 280 }}>
           {originalPost.media.resourceType === "video" ? (
@@ -185,13 +188,13 @@ const SharedPostPreview = ({ originalPost, postUrl, onClick }) => {
                 height={300}
                 className="w-full object-cover"
                 style={{ maxHeight: 280 }}
+                loading="lazy"
               />
             </div>
           )}
         </div>
       )}
 
-      {/* Footer tap hint */}
       <div
         className="flex items-center gap-1.5 px-3 py-2"
         style={{
@@ -204,11 +207,11 @@ const SharedPostPreview = ({ originalPost, postUrl, onClick }) => {
       </div>
     </button>
   );
-};
+});
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ── ShareModal ────────────────────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
+SharedPostPreview.displayName = 'SharedPostPreview';
+
+// ── ShareModal ───────────────────────────────────────────────────────────────
 const ShareModal = ({
   post, user, sharePreview,
   shareToFeedMutation, shareToMessageMutation,
@@ -233,6 +236,9 @@ const ShareModal = ({
     },
     enabled: isAuthenticated && shareTab === "message",
     staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const { data: searchedFriends, isLoading: isSearchingFriends } = useQuery({
@@ -244,6 +250,8 @@ const ShareModal = ({
     },
     enabled: isAuthenticated && searchFriend.trim().length >= 2 && shareTab === "message",
     staleTime: 30_000,
+    gcTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const copyLink = async () => {
@@ -271,12 +279,12 @@ const ShareModal = ({
   };
 
   const TABS = [
-    { id: "feed",     label: "Feed",    icon: "📱" },
-    { id: "message",  label: "Message", icon: "💬" },
-    { id: "external", label: "Apps",    icon: "🌐" },
+    { id: "feed", label: "Feed", icon: "" },
+    { id: "message", label: "Message", icon: "" },
+    { id: "external", label: "Apps", icon: FaAppStore },
   ];
 
-  const FriendRow = ({ id, picture, name, onSend }) => (
+  const FriendRow = memo(({ id, picture, name, onSend }) => (
     <button
       onClick={() => onSend(id)}
       disabled={shareToMessageMutation.isPending}
@@ -287,9 +295,11 @@ const ShareModal = ({
     >
       <Avatar src={picture} name={name} size={40} />
       <p className="flex-1 text-sm font-medium">{name}</p>
-      <ShareIcon className="h-4 w-4 flex-shrink-0" style={{ color: "rgba(255,255,255,0.35)" }} />
+      <Send className="h-4 w-4 flex-shrink-0" style={{ color: "rgba(255,255,255,0.35)" }} />
     </button>
-  );
+  ));
+
+  FriendRow.displayName = 'FriendRow';
 
   return (
     <div
@@ -343,7 +353,7 @@ const ShareModal = ({
                 {post.media.resourceType === "video" ? (
                   <video src={post.media.url} className="w-full h-full object-cover" />
                 ) : (
-                  <Image src={post.media.url} alt="" width={48} height={48} className="object-cover w-full h-full" />
+                  <Image src={post.media.url} alt="" width={48} height={48} className="object-cover w-full h-full" loading="lazy" />
                 )}
               </div>
             )}
@@ -370,8 +380,6 @@ const ShareModal = ({
 
         {/* Tab content */}
         <div className="overflow-y-auto p-4" style={{ maxHeight: "50vh" }}>
-
-          {/* ── Feed tab ── */}
           {shareTab === "feed" && (
             <div className="space-y-3">
               <div className="flex items-center gap-3 p-3 rounded-xl" style={glassInner}>
@@ -395,7 +403,6 @@ const ShareModal = ({
             </div>
           )}
 
-          {/* ── Message tab ── */}
           {shareTab === "message" && (
             <div className="space-y-3">
               <input
@@ -456,7 +463,6 @@ const ShareModal = ({
             </div>
           )}
 
-          {/* ── External tab ── */}
           {shareTab === "external" && (
             <div className="space-y-3">
               <button
@@ -504,9 +510,9 @@ const ShareModal = ({
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ── PostCard ──────────────────────────────────────────────────────────────────
+// ── MAIN POST CARD COMPONENT (Fixed Export) ───────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
-const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
+const PostCard = memo(({ post, onPostUpdate, hideMenu = false }) => {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -525,7 +531,6 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
   const commentCount = post.commentsCount || 0;
   const shareCount = post.sharesCount || 0;
 
-  // Detect if this is a shared post (has originalPost or sharedPost or isShare)
   const isSharedPost = !!(
     post.isShare ||
     post.originalPost ||
@@ -534,7 +539,6 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
     post.type === "share"
   );
 
-  // Resolve the embedded original post object
   const originalPost = useMemo(
     () => post.originalPost || post.sharedPost || null,
     [post]
@@ -578,7 +582,7 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
     return true;
   }, [isAuthenticated, router]);
 
-  // ── Like mutation ──────────────────────────────────────────────────────────
+  // Like mutation
   const likeMutation = useMutation({
     mutationFn: async () => {
       const res = await axiosInstance.post(`/posts/${post._id}/like`);
@@ -586,7 +590,8 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
     },
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ["posts"] });
-      const prev = queryClient.getQueryData(["posts"]);
+      const previousPosts = queryClient.getQueryData(["posts"]);
+      
       queryClient.setQueryData(["posts"], (old) => {
         if (!old) return old;
         return {
@@ -607,19 +612,29 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
           })),
         };
       });
-      setIsLiked((p) => !p);
-      setLikeCount((p) => (isLiked ? p - 1 : p + 1));
-      return { prev };
+      
+      setIsLiked((prev) => !prev);
+      setLikeCount((prev) => (isLiked ? prev - 1 : prev + 1));
+      
+      return { previousPosts };
     },
-    onError: (err, vars, ctx) => {
-      queryClient.setQueryData(["posts"], ctx.prev);
-      setIsLiked((p) => !p);
-      setLikeCount((p) => (isLiked ? p + 1 : p - 1));
+    onError: (err, vars, context) => {
+      if (context?.previousPosts) {
+        queryClient.setQueryData(["posts"], context.previousPosts);
+      }
+      setIsLiked((prev) => !prev);
+      setLikeCount((prev) => (isLiked ? prev + 1 : prev - 1));
       toast.error("Failed to like post");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ 
+        queryKey: ["posts"],
+        refetchType: 'inactive',
+      });
     },
   });
 
-  // ── Share to feed mutation ─────────────────────────────────────────────────
+  // Share mutations
   const shareToFeedMutation = useMutation({
     mutationFn: async () => {
       const res = await axiosInstance.post(`/posts/${post._id}/share`);
@@ -634,7 +649,6 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
     onError: (err) => toast.error(err.response?.data?.message || "Failed to share post"),
   });
 
-  // ── Share to message mutation ──────────────────────────────────────────────
   const shareToMessageMutation = useMutation({
     mutationFn: async (friendId) => {
       const res = await axiosInstance.post(`/users/send-message/${friendId}`, {
@@ -662,7 +676,7 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
     onError: () => toast.error("Failed to share via message"),
   });
 
-  // ── Edit mutation ──────────────────────────────────────────────────────────
+  // Edit mutation
   const editMutation = useMutation({
     mutationFn: async (description) => {
       const res = await axiosInstance.patch(`/posts/${post._id}`, { description });
@@ -677,7 +691,7 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
     onError: (err) => toast.error(err.response?.data?.message || "Failed to update post"),
   });
 
-  // ── Delete mutation ────────────────────────────────────────────────────────
+  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async () => {
       const res = await axiosInstance.delete(`/posts/${post._id}`);
@@ -723,14 +737,12 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
 
   return (
     <>
-      {/* ── Card ── */}
       <div
-        className="rounded-2xl overflow-hidden transition-all duration-200"
+        className="rounded-2xl overflow-hidden transition-all duration-200 will-change-transform"
         style={{ ...glassCard, borderRadius: 16 }}
       >
         <div className="p-4">
-
-          {/* ── Header ── */}
+          {/* Header */}
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-3 flex-1">
               <button onClick={() => router.push(`/profile/${post.userId}`)} className="flex-shrink-0">
@@ -748,7 +760,6 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
                     {post.userName}
                   </button>
 
-                  {/* "shared a post" label */}
                   {isSharedPost && (
                     <span className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
                       shared a post
@@ -827,7 +838,7 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
             )}
           </div>
 
-          {/* ── Sharer's own caption (if any) ── */}
+          {/* Description */}
           {post.description && (
             <p
               className="mt-3 text-sm leading-relaxed break-words cursor-pointer"
@@ -838,9 +849,7 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
             </p>
           )}
 
-          {/* ══════════════════════════════════════════════════════════
-              CASE A — Shared post: show embedded original post preview
-              ══════════════════════════════════════════════════════════ */}
+          {/* Media or Shared Post Preview */}
           {isSharedPost ? (
             <SharedPostPreview
               originalPost={originalPost}
@@ -851,9 +860,6 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
               }}
             />
           ) : (
-            /* ══════════════════════════════════════════════════════════
-               CASE B — Regular post: show media directly
-               ══════════════════════════════════════════════════════════ */
             post.media?.url && (
               <div
                 className="rounded-xl overflow-hidden -mx-4 mt-3 cursor-pointer"
@@ -884,7 +890,7 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
             )
           )}
 
-          {/* ── Action buttons ── */}
+          {/* Action buttons */}
           <div
             className="flex items-center justify-around mt-4 pt-3"
             style={{ borderTop: "0.5px solid rgba(255,255,255,0.1)" }}
@@ -935,7 +941,7 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
         </div>
       </div>
 
-      {/* ── Share modal ── */}
+      {/* Share Modal */}
       {showShareModal && (
         <ShareModal
           post={post}
@@ -947,7 +953,7 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
         />
       )}
 
-      {/* ── Edit modal ── */}
+      {/* Edit Modal */}
       {showEditModal && (
         <div
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
@@ -1001,9 +1007,13 @@ const PostCard = ({ post, onPostUpdate, hideMenu = false }) => {
         }
         textarea::placeholder { color: rgba(255,255,255,0.35) !important; }
         input::placeholder    { color: rgba(255,255,255,0.35) !important; }
+        .will-change-transform { will-change: transform; }
       `}</style>
     </>
   );
-};
+});
 
+PostCard.displayName = 'PostCard';
+
+// ✅ FIXED: Proper default export
 export default PostCard;
