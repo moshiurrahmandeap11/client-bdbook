@@ -42,6 +42,8 @@ const Header = () => {
   const [touchStart, setTouchStart] = useState({ x: 0, y: 0 });
   const [touchEnd, setTouchEnd] = useState({ x: 0, y: 0 });
   const [isSwiping, setIsSwiping] = useState(false);
+  const [swipeDirection, setSwipeDirection] = useState(null);
+  const [showSwipeHint, setShowSwipeHint] = useState(true);
 
   const profileMenuRef = useRef(null);
   const mobileMenuRef = useRef(null);
@@ -49,10 +51,17 @@ const Header = () => {
   const mobileProfileRef = useRef(null);
   const searchTimeoutRef = useRef(null);
   const mobileSearchInputRef = useRef(null);
-  const swipeContainerRef = useRef(null);
   
   const pathname = usePathname();
   const router = useRouter();
+
+  // Hide swipe hint after 5 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSwipeHint(false);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Navigation items in order for swipe navigation
   const navItemsInOrder = useMemo(() => {
@@ -86,62 +95,103 @@ const Header = () => {
     return navItemsInOrder.findIndex(item => item.href === pathname);
   }, [pathname, navItemsInOrder]);
 
-  // Handle swipe navigation
-  const handleTouchStart = useCallback((e) => {
-    setTouchStart({
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY
-    });
-    setTouchEnd({
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY
-    });
-    setIsSwiping(true);
-  }, []);
-
-  const handleTouchMove = useCallback((e) => {
-    if (!isSwiping) return;
-    setTouchEnd({
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY
-    });
-  }, [isSwiping]);
-
-  const handleTouchEnd = useCallback(() => {
-    setIsSwiping(false);
+  // Handle swipe navigation on the entire page
+  useEffect(() => {
+    // Only add swipe listeners on mobile devices
+    if (typeof window === 'undefined') return;
     
-    const deltaX = touchEnd.x - touchStart.x;
-    const deltaY = touchEnd.y - touchStart.y;
-    
-    // Only trigger horizontal swipe if horizontal movement is greater than vertical
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
-      if (deltaX > 0) {
-        // Right swipe - go to previous
-        if (currentIndex > 0) {
-          const prevItem = navItemsInOrder[currentIndex - 1];
-          if (prevItem) {
-            router.push(prevItem.href);
-            // Haptic feedback (vibration) if supported
-            if (navigator.vibrate) navigator.vibrate(50);
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (!isMobile) return;
+
+    const handleTouchStartGlobal = (e) => {
+      // Don't trigger swipe if touching interactive elements
+      const target = e.target;
+      const isInteractive = 
+        target.closest('button') || 
+        target.closest('a') || 
+        target.closest('input') || 
+        target.closest('textarea') ||
+        target.closest('[role="button"]') ||
+        target.closest('.no-swipe');
+      
+      if (!isInteractive) {
+        setTouchStart({
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY
+        });
+        setTouchEnd({
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY
+        });
+        setIsSwiping(true);
+      }
+    };
+
+    const handleTouchMoveGlobal = (e) => {
+      if (!isSwiping) return;
+      setTouchEnd({
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY
+      });
+      
+      // Show direction indicator
+      const deltaX = e.touches[0].clientX - touchStart.x;
+      if (Math.abs(deltaX) > 30) {
+        setSwipeDirection(deltaX > 0 ? 'right' : 'left');
+      }
+    };
+
+    const handleTouchEndGlobal = () => {
+      if (!isSwiping) {
+        setSwipeDirection(null);
+        return;
+      }
+      
+      const deltaX = touchEnd.x - touchStart.x;
+      const deltaY = touchEnd.y - touchStart.y;
+      
+      // Only trigger horizontal swipe if horizontal movement is greater than vertical
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+        if (deltaX > 0) {
+          // Right swipe - go to previous
+          if (currentIndex > 0) {
+            const prevItem = navItemsInOrder[currentIndex - 1];
+            if (prevItem) {
+              router.push(prevItem.href);
+              // Haptic feedback (vibration) if supported
+              if (navigator.vibrate) navigator.vibrate(50);
+            }
           }
-        }
-      } else if (deltaX < 0) {
-        // Left swipe - go to next
-        if (currentIndex < navItemsInOrder.length - 1) {
-          const nextItem = navItemsInOrder[currentIndex + 1];
-          if (nextItem) {
-            router.push(nextItem.href);
-            // Haptic feedback (vibration) if supported
-            if (navigator.vibrate) navigator.vibrate(50);
+        } else if (deltaX < 0) {
+          // Left swipe - go to next
+          if (currentIndex < navItemsInOrder.length - 1) {
+            const nextItem = navItemsInOrder[currentIndex + 1];
+            if (nextItem) {
+              router.push(nextItem.href);
+              // Haptic feedback (vibration) if supported
+              if (navigator.vibrate) navigator.vibrate(50);
+            }
           }
         }
       }
-    }
-    
-    // Reset touch positions
-    setTouchStart({ x: 0, y: 0 });
-    setTouchEnd({ x: 0, y: 0 });
-  }, [touchStart, touchEnd, currentIndex, navItemsInOrder, router]);
+      
+      // Reset states
+      setIsSwiping(false);
+      setSwipeDirection(null);
+      setTouchStart({ x: 0, y: 0 });
+      setTouchEnd({ x: 0, y: 0 });
+    };
+
+    document.addEventListener('touchstart', handleTouchStartGlobal, { passive: false });
+    document.addEventListener('touchmove', handleTouchMoveGlobal, { passive: false });
+    document.addEventListener('touchend', handleTouchEndGlobal);
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStartGlobal);
+      document.removeEventListener('touchmove', handleTouchMoveGlobal);
+      document.removeEventListener('touchend', handleTouchEndGlobal);
+    };
+  }, [isSwiping, touchStart.x, touchEnd.x, currentIndex, navItemsInOrder, router]);
 
   // Search suggestions using TanStack Query
   const { data: suggestionsData, isLoading: isSuggestionsLoading } = useQuery({
@@ -378,27 +428,16 @@ const Header = () => {
   const suggestions = suggestionsData || [];
   const isSearching = isSuggestionsLoading;
 
-  // Swipe indicator component
-  const SwipeIndicator = () => {
-    if (currentIndex === -1) return null;
-    const showLeft = currentIndex > 0;
-    const showRight = currentIndex < navItemsInOrder.length - 1;
-    
-    if (!showLeft && !showRight) return null;
+  // Swipe direction indicator overlay
+  const SwipeDirectionOverlay = () => {
+    if (!swipeDirection || !showSwipeHint) return null;
     
     return (
-      <div className="md:hidden fixed inset-x-0 bottom-20 z-30 pointer-events-none">
-        <div className="flex justify-between px-4">
-          {showLeft && (
-            <div className="bg-black/50 backdrop-blur-sm rounded-full p-2 animate-pulse">
-              <span className="text-white text-xs">← Swipe right</span>
-            </div>
-          )}
-          {showRight && (
-            <div className="bg-black/50 backdrop-blur-sm rounded-full p-2 ml-auto animate-pulse">
-              <span className="text-white text-xs">Swipe left →</span>
-            </div>
-          )}
+      <div className="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center">
+        <div className={`bg-black/50 backdrop-blur-sm rounded-full p-4 transition-all duration-200 ${swipeDirection === 'left' ? 'animate-swipe-left' : 'animate-swipe-right'}`}>
+          <span className="text-white text-4xl">
+            {swipeDirection === 'left' ? '←' : '→'}
+          </span>
         </div>
       </div>
     );
@@ -406,6 +445,9 @@ const Header = () => {
 
   return (
     <>
+      {/* Swipe direction indicator */}
+      <SwipeDirectionOverlay />
+
       {/* ==================== DESKTOP HEADER ==================== */}
       <header
         className={`hidden md:block fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -602,109 +644,98 @@ const Header = () => {
         </div>
       </header>
 
-      {/* ==================== MOBILE HEADER WITH SWIPE CONTAINER ==================== */}
-      <div 
-        ref={swipeContainerRef}
-        className="md:hidden relative"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        <header className="fixed top-0 left-0 right-0 z-50 bg-[#242526] border-b border-white/10">
-          <div className="px-4 h-16 flex items-center justify-between">
-            {/* Left: Logo */}
-            {Logo}
+      {/* ==================== MOBILE HEADER ==================== */}
+      <header className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#242526] border-b border-white/10">
+        <div className="px-4 h-16 flex items-center justify-between">
+          {/* Left: Logo */}
+          {Logo}
 
-            {/* Center: Spacer */}
-            <div className="flex-1"></div>
+          {/* Center: Spacer */}
+          <div className="flex-1"></div>
 
-            {/* Right: Icons Group - Search + Notifications + Profile/Menu */}
-            <div className="flex items-center gap-2">
-              {/* Search Icon */}
+          {/* Right: Icons Group - Search + Notifications + Profile/Menu */}
+          <div className="flex items-center gap-2">
+            {/* Search Icon */}
+            <button
+              onClick={openMobileSearch}
+              className="p-2 rounded-full hover:bg-white/10 transition"
+              aria-label="Search"
+            >
+              <MagnifyingGlassIcon className="h-5 w-5 text-white" />
+            </button>
+
+            {/* Notification Icon */}
+            {isAuthenticated && (
+              <NotificationDropdown isAuthenticated={isAuthenticated} socket={socket} user={user} />
+            )}
+
+            {/* Get Started Button for Unauthenticated Users */}
+            {!isAuthenticated ? (
               <button
-                onClick={openMobileSearch}
-                className="p-2 rounded-full hover:bg-white/10 transition"
-                aria-label="Search"
+                onClick={handleGetStarted}
+                className="px-4 py-1.5 rounded-full text-xs font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg"
               >
-                <MagnifyingGlassIcon className="h-5 w-5 text-white" />
+                Get Started
               </button>
-
-              {/* Notification Icon */}
-              {isAuthenticated && (
-                <NotificationDropdown isAuthenticated={isAuthenticated} socket={socket} user={user} />
-              )}
-
-              {/* Get Started Button for Unauthenticated Users */}
-              {!isAuthenticated ? (
+            ) : (
+              /* Profile / Menu for Authenticated Users */
+              <div className="relative" ref={mobileProfileRef}>
                 <button
-                  onClick={handleGetStarted}
-                  className="px-4 py-1.5 rounded-full text-xs font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg"
+                  onClick={toggleMobileProfileMenu}
+                  className="p-1 rounded-full hover:bg-white/10 transition"
+                  aria-label="Profile"
                 >
-                  Get Started
-                </button>
-              ) : (
-                /* Profile / Menu for Authenticated Users */
-                <div className="relative" ref={mobileProfileRef}>
-                  <button
-                    onClick={toggleMobileProfileMenu}
-                    className="p-1 rounded-full hover:bg-white/10 transition"
-                    aria-label="Profile"
-                  >
-                    {user?.profilePicture?.url ? (
-                      <div className="relative w-8 h-8 rounded-full overflow-hidden border border-purple-500/50">
-                        <Image src={user.profilePicture.url} alt={user?.fullName || "User"} fill className="object-cover" />
-                      </div>
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
-                        <UserCircleIcon className="h-5 w-5 text-white" />
-                      </div>
-                    )}
-                  </button>
-
-                  {showMobileProfileMenu && (
-                    <>
-                      <div className="fixed inset-0 z-[55] bg-black/50" onClick={() => setShowMobileProfileMenu(false)} />
-                      <div className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-[#242526] border border-white/10 shadow-2xl overflow-hidden z-[60] animate-fadeInDown">
-                        <div className="py-2">
-                          <button onClick={() => { setShowMobileProfileMenu(false); handleProfileNavigate(); }} className="w-full flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition text-left">
-                            <UserCircleIcon className="h-5 w-5" />
-                            <span className="text-sm">Profile</span>
-                          </button>
-                          <Link href="/community" className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition" onClick={() => setShowMobileProfileMenu(false)}>
-                            <UserGroupIcon className="h-5 w-5" />
-                            <span className="text-sm">Friends</span>
-                          </Link>
-                          <Link href="/settings" className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition" onClick={() => setShowMobileProfileMenu(false)}>
-                            <Cog6ToothIcon className="h-5 w-5" />
-                            <span className="text-sm">Settings</span>
-                          </Link>
-                          <div className="border-t border-white/10 my-1"></div>
-                          <button onClick={() => { setShowMobileProfileMenu(false); handleLogout(); }} className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition text-left">
-                            <ArrowRightOnRectangleIcon className="h-5 w-5" />
-                            <span className="text-sm">Log out</span>
-                          </button>
-                        </div>
-                      </div>
-                    </>
+                  {user?.profilePicture?.url ? (
+                    <div className="relative w-8 h-8 rounded-full overflow-hidden border border-purple-500/50">
+                      <Image src={user.profilePicture.url} alt={user?.fullName || "User"} fill className="object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
+                      <UserCircleIcon className="h-5 w-5 text-white" />
+                    </div>
                   )}
-                </div>
-              )}
+                </button>
 
-              {/* Menu Button (Hamburger) */}
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-2 rounded-full hover:bg-white/10 transition mobile-menu-button"
-                aria-label="Menu"
-              >
-                {isMenuOpen ? <XMarkIcon className="h-5 w-5 text-white" /> : <Bars3Icon className="h-5 w-5 text-white" />}
-              </button>
-            </div>
+                {showMobileProfileMenu && (
+                  <>
+                    <div className="fixed inset-0 z-[55] bg-black/50" onClick={() => setShowMobileProfileMenu(false)} />
+                    <div className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-[#242526] border border-white/10 shadow-2xl overflow-hidden z-[60] animate-fadeInDown">
+                      <div className="py-2">
+                        <button onClick={() => { setShowMobileProfileMenu(false); handleProfileNavigate(); }} className="w-full flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition text-left">
+                          <UserCircleIcon className="h-5 w-5" />
+                          <span className="text-sm">Profile</span>
+                        </button>
+                        <Link href="/community" className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition" onClick={() => setShowMobileProfileMenu(false)}>
+                          <UserGroupIcon className="h-5 w-5" />
+                          <span className="text-sm">Friends</span>
+                        </Link>
+                        <Link href="/settings" className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition" onClick={() => setShowMobileProfileMenu(false)}>
+                          <Cog6ToothIcon className="h-5 w-5" />
+                          <span className="text-sm">Settings</span>
+                        </Link>
+                        <div className="border-t border-white/10 my-1"></div>
+                        <button onClick={() => { setShowMobileProfileMenu(false); handleLogout(); }} className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition text-left">
+                          <ArrowRightOnRectangleIcon className="h-5 w-5" />
+                          <span className="text-sm">Log out</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Menu Button (Hamburger) */}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="p-2 rounded-full hover:bg-white/10 transition mobile-menu-button"
+              aria-label="Menu"
+            >
+              {isMenuOpen ? <XMarkIcon className="h-5 w-5 text-white" /> : <Bars3Icon className="h-5 w-5 text-white" />}
+            </button>
           </div>
-        </header>
-      </div>
-
-      {/* Swipe Indicator for first-time users */}
-      <SwipeIndicator />
+        </div>
+      </header>
 
       {/* ==================== MOBILE SEARCH OVERLAY ==================== */}
       {showMobileSearch && (
@@ -869,12 +900,26 @@ const Header = () => {
         body { padding-top: 64px; padding-bottom: 0px; }
         @media (min-width: 768px) { body { padding-top: 80px; } }
         @media (max-width: 768px) { body { padding-bottom: 64px; } }
+        
         @keyframes fadeInDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        @keyframes swipeLeft {
+          0% { opacity: 0; transform: translateX(20px); }
+          50% { opacity: 1; transform: translateX(-10px); }
+          100% { opacity: 0; transform: translateX(-40px); }
+        }
+        @keyframes swipeRight {
+          0% { opacity: 0; transform: translateX(-20px); }
+          50% { opacity: 1; transform: translateX(10px); }
+          100% { opacity: 0; transform: translateX(40px); }
+        }
+        
         .animate-fadeInDown { animation: fadeInDown 0.2s ease-out; }
         .animate-slideDown { animation: slideDown 0.3s ease-out; }
         .animate-pulse { animation: pulse 2s infinite; }
+        .animate-swipe-left { animation: swipeLeft 0.3s ease-out forwards; }
+        .animate-swipe-right { animation: swipeRight 0.3s ease-out forwards; }
       `}</style>
     </>
   );
