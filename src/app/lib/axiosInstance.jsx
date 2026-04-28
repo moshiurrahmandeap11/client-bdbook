@@ -2,7 +2,7 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://server-bdbook.onrender.com/v1/api";
+const BASE_URL = "https://bdbook-server.onrender.com/v1/api" || "https://server-bdbook.onrender.com/v1/api";
 
 // "https://server-bdbook.onrender.com/v1/api" ||
 
