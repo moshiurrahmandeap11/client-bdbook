@@ -30,3 +30,4 @@ export interface UpdateUserPayload {
   avatar?: string;
   coverImage?: string;
 }
+
