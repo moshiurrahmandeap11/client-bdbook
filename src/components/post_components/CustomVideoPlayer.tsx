@@ -235,3 +235,4 @@ export const CustomVideoPlayer = memo(({ src, poster, className = "", style = {}
 CustomVideoPlayer.displayName = 'CustomVideoPlayer';
 export default CustomVideoPlayer;
 
+
