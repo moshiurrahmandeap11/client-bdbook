@@ -22,3 +22,4 @@ export const handleApiError = (error: unknown): never => {
   throw new Error("An unexpected error occurred.");
 };
 
+
