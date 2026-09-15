@@ -80,3 +80,4 @@ export interface CreateCommentPayload {
   text: string;
   parentId?: string;
 }
+
