@@ -22,8 +22,12 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     // ✅ token না থাকলেও connect করো (guest support)
+    const socketHost = (process.env.NEXT_PUBLIC_API_URL || "https://bdbook-server.onrender.com")
+      .replace(/\/v1\/api\/?$/, "")
+      .replace(/\/+$/, "");
+
     const newSocket = io(
-      process.env.NEXT_PUBLIC_API_URL || "https://server-bdbook.onrender.com",
+      socketHost,
       {
         auth: { token: token || null }, // token না থাকলে null পাঠাও
         transports: ["websocket"],

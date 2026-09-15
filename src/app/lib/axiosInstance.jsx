@@ -2,9 +2,10 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 
-const BASE_URL = "https://bdbook-server.onrender.com/v1/api" || "https://server-bdbook.onrender.com/v1/api";
-
-// "https://server-bdbook.onrender.com/v1/api" ||
+const API_HOST = process.env.NEXT_PUBLIC_API_URL || "https://bdbook-server.onrender.com";
+const BASE_URL = API_HOST.endsWith("/v1/api")
+  ? API_HOST
+  : `${API_HOST.replace(/\/+$/, "")}/v1/api`;
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
@@ -32,9 +33,9 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Unauthorized - login page এ পাঠিয়ে দেয়
-      if (typeof window !== "undefined") {
-        window.location.href = "/login";
+      // Unauthorized - redirect to /auth/login
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/auth/")) {
+        window.location.href = "/auth/login";
       }
     }
     return Promise.reject(error);

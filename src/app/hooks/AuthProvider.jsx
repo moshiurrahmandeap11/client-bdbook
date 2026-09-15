@@ -208,13 +208,13 @@ const signup = async (userData) => {
     const updateUser = async (userId, updateData) => {
         try {
             setLoading(true);
-            const response = await axiosInstance.put(`/users/${userId}`, updateData);
+            const response = await axiosInstance.patch(`/users/${userId}`, updateData);
             
             if(response.data.success) {
                 setUser(response.data.data);
                 if(typeof window !== 'undefined') {
                     localStorage.setItem("user", JSON.stringify(response.data.data));
-                    localStorage.setItem("userName", response.data.data.name);
+                    localStorage.setItem("userName", response.data.data.fullName || response.data.data.name);
                     localStorage.setItem("userEmail", response.data.data.email);
                     localStorage.setItem("userRole", response.data.data.role);
                 }
@@ -235,18 +235,19 @@ const signup = async (userData) => {
         try {
             setLoading(true);
             const formData = new FormData();
-            formData.append('profilePicture', file);
+            formData.append('profilePic', file);
             
-            const response = await axiosInstance.post('/users/upload-profile-picture', formData, {
+            const response = await axiosInstance.post('/users/upload-profile-pic', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
             });
             
             if(response.data.success) {
-                setUser(prev => ({...prev, profilePicture: response.data.data.profilePicture}));
+                const newProfilePic = response.data.data;
+                setUser(prev => ({...prev, profilePicture: newProfilePic}));
                 if(typeof window !== 'undefined') {
-                    const updatedUser = {...user, profilePicture: response.data.data.profilePicture};
+                    const updatedUser = {...user, profilePicture: newProfilePic};
                     localStorage.setItem("user", JSON.stringify(updatedUser));
                 }
                 toast.success("Profile picture uploaded successfully!");
@@ -265,7 +266,7 @@ const signup = async (userData) => {
     const deleteProfilePicture = async () => {
         try {
             setLoading(true);
-            const response = await axiosInstance.delete('/users/profile-picture');
+            const response = await axiosInstance.delete('/users/remove-profile-pic');
             
             if(response.data.success) {
                 setUser(prev => ({...prev, profilePicture: null}));
@@ -299,9 +300,10 @@ const signup = async (userData) => {
             });
             
             if(response.data.success) {
-                setUser(prev => ({...prev, coverPhoto: response.data.data.coverPhoto}));
+                const newCoverPhoto = response.data.data;
+                setUser(prev => ({...prev, coverPhoto: newCoverPhoto}));
                 if(typeof window !== 'undefined') {
-                    const updatedUser = {...user, coverPhoto: response.data.data.coverPhoto};
+                    const updatedUser = {...user, coverPhoto: newCoverPhoto};
                     localStorage.setItem("user", JSON.stringify(updatedUser));
                 }
                 toast.success("Cover photo uploaded successfully!");
@@ -320,7 +322,7 @@ const signup = async (userData) => {
     const deleteCoverPhoto = async () => {
         try {
             setLoading(true);
-            const response = await axiosInstance.delete('/users/cover-photo');
+            const response = await axiosInstance.delete('/users/remove-cover-photo');
             
             if(response.data.success) {
                 setUser(prev => ({...prev, coverPhoto: null}));
@@ -366,7 +368,7 @@ const signup = async (userData) => {
     // get user by id
     const getUserById = async (userId) => {
         try {
-            const response = await axiosInstance.get(`/users/${userId}`);
+            const response = await axiosInstance.get(`/users/id/${userId}`);
             if(response.data.success) {
                 return {success: true, data: response.data.data};
             }

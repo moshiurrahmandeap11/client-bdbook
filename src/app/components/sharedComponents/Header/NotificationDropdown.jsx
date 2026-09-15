@@ -1,5 +1,6 @@
 "use client";
 
+import axiosInstance from "@/app/lib/axiosInstance";
 import { BellIcon } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -60,12 +61,9 @@ export const NotificationDropdown = ({ isAuthenticated, socket, user }) => {
   const fetchUnreadNotificationsCount = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
-      const response = await fetch("/api/notifications/unread/count", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      const data = await response.json();
-      if (data.success) {
-        setUnreadCount(data.unreadCount);
+      const response = await axiosInstance.get("/notifications/unread/count");
+      if (response.data?.success) {
+        setUnreadCount(response.data.unreadCount);
       }
     } catch (error) {
       console.error("Failed to fetch unread notifications count:", error);
@@ -79,16 +77,9 @@ export const NotificationDropdown = ({ isAuthenticated, socket, user }) => {
       fetchInProgress.current = true;
       setLoadingNotifications(true);
       try {
-        const response = await fetch(
-          `/api/notifications?page=${pageNum}&limit=20`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          },
-        );
-        const data = await response.json();
-        if (data.success) {
+        const response = await axiosInstance.get(`/notifications?page=${pageNum}&limit=20`);
+        const data = response.data;
+        if (data?.success) {
           if (append) {
             setNotifications((prev) => {
               const newNotifications = [...prev, ...data.data];
@@ -115,10 +106,7 @@ export const NotificationDropdown = ({ isAuthenticated, socket, user }) => {
 
   const markAsRead = useCallback(async (notificationId) => {
     try {
-      await fetch(`/api/notifications/${notificationId}/read`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
+      await axiosInstance.patch(`/notifications/${notificationId}/read`);
       setNotifications((prev) =>
         prev.map((n) =>
           n._id === notificationId ? { ...n, isRead: true } : n,
@@ -132,10 +120,7 @@ export const NotificationDropdown = ({ isAuthenticated, socket, user }) => {
 
   const markAllAsRead = useCallback(async () => {
     try {
-      await fetch("/api/notifications/read-all", {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
+      await axiosInstance.patch("/notifications/read-all");
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
       toast.success("All notifications marked as read");
@@ -153,11 +138,11 @@ export const NotificationDropdown = ({ isAuthenticated, socket, user }) => {
         notification.type === "post_like" ||
         notification.type === "post_comment"
       ) {
-        router.push(`/post/details/${notification.data.postId}`);
+        router.push(`/post/details/${notification.data?.postId}`);
       } else if (notification.type === "friend_request") {
-        router.push("/friends/requests");
+        router.push("/community");
       } else if (notification.type === "friend_accept") {
-        router.push(`/profile/${notification.data.senderId}`);
+        router.push(`/profile/${notification.data?.senderId || notification.data?.receiverId}`);
       } else if (notification.type === "message") {
         router.push("/message");
       }
