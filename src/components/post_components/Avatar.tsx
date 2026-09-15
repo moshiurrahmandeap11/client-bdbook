@@ -38,3 +38,4 @@ export const Avatar = memo(({ src, name, size = 40 }: AvatarProps) => (
 Avatar.displayName = 'Avatar';
 export default Avatar;
 
+
