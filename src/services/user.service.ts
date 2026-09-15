@@ -41,3 +41,4 @@ export const uploadAvatar = async (formData: FormData): Promise<{ avatar: string
   }
 };
 
+
