@@ -41,4 +41,14 @@ function GoogleCallbackContent() {
         const data = await googleAuth({ code, redirectUri });
 
         Cookies.set("token", data.accessToken, { expires: 7 });
-// [wip step 4/8]
+        localStorage.setItem("token", data.accessToken);
+        setUser(data.user);
+
+        toast.success("Signed in with Google!");
+        router.replace("/");
+      } catch (err: any) {
+        toast.error(err.message || "Failed to complete Google sign-in");
+        router.replace("/auth/login");
+      }
+    };
+// [wip step 5/8]
