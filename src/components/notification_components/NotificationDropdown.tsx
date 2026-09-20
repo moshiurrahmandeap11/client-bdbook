@@ -41,13 +41,13 @@ export const NotificationDropdown = ({ onClose }: NotificationDropdownProps = {}
 
   const getNotificationBg = useCallback((type: string) => {
     const bgColors: Record<string, string> = {
-      post_like: "bg-red-500/20",
-      post_comment: "bg-blue-500/20",
-      friend_request: "bg-yellow-500/20",
-      friend_accept: "bg-green-500/20",
-      message: "bg-purple-500/20",
+      post_like: "bg-red-100 text-red-600",
+      post_comment: "bg-blue-100 text-blue-600",
+      friend_request: "bg-amber-100 text-amber-600",
+      friend_accept: "bg-emerald-100 text-emerald-600",
+      message: "bg-indigo-100 text-indigo-600",
     };
-    return bgColors[type] || "bg-white/10";
+    return bgColors[type] || "bg-slate-100 text-slate-600";
   }, []);
 
   const formatNotificationTime = useCallback((date: string | Date) => {
@@ -188,7 +188,7 @@ export const NotificationDropdown = ({ onClose }: NotificationDropdownProps = {}
       toast.custom(
         (t) => (
           <div
-            className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-xl p-3 shadow-2xl cursor-pointer max-w-sm"
+            className="bg-white/95 backdrop-blur-xl border border-slate-200 rounded-xl p-3 shadow-2xl cursor-pointer max-w-sm"
             onClick={() => {
               toast.dismiss(t.id);
               handleNotificationClick(notification);
@@ -202,15 +202,15 @@ export const NotificationDropdown = ({ onClose }: NotificationDropdownProps = {}
                   className="w-10 h-10 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 flex items-center justify-center">
                   <BellIcon className="h-5 w-5 text-white" />
                 </div>
               )}
               <div className="flex-1">
-                <p className="text-white text-sm font-medium">
+                <p className="text-slate-900 text-sm font-medium">
                   {notification.data?.message || "New notification"}
                 </p>
-                <p className="text-white/40 text-xs">Just now</p>
+                <p className="text-slate-500 text-xs">Just now</p>
               </div>
             </div>
           </div>
@@ -263,10 +263,10 @@ export const NotificationDropdown = ({ onClose }: NotificationDropdownProps = {}
     <div className="relative" ref={notificationsRef}>
       <button
         onClick={() => setIsNotificationsOpen((prev) => !prev)}
-        className="relative p-2 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 group"
+        className="relative p-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-600 hover:text-slate-900 transition-all duration-200 cursor-pointer"
         aria-label="Notifications"
       >
-        <BellIcon className="h-5 w-5 text-white/70 group-hover:text-white transition-colors" />
+        <BellIcon className="h-5 w-5" />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold text-white animate-pulse px-1">
             {unreadCount > 99 ? "99+" : unreadCount}
@@ -277,16 +277,16 @@ export const NotificationDropdown = ({ onClose }: NotificationDropdownProps = {}
       {isNotificationsOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 md:hidden bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-40 md:hidden bg-slate-900/40 backdrop-blur-xs"
             onClick={() => setIsNotificationsOpen(false)}
           />
-          <div className="absolute -right-23 md:right-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 md:w-80 lg:w-96 rounded-xl backdrop-blur-xl bg-black/90 border border-white/20 shadow-2xl overflow-hidden animate-fadeInDown z-50">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <h3 className="text-white font-semibold">Notifications</h3>
+          <div className="absolute -right-23 md:right-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 md:w-80 lg:w-96 rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden animate-fadeInDown z-50">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="text-slate-900 font-bold text-sm">Notifications</h3>
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                  className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer"
                 >
                   Mark all as read
                 </button>
@@ -295,12 +295,12 @@ export const NotificationDropdown = ({ onClose }: NotificationDropdownProps = {}
             <div
               ref={notificationsContainerRef}
               onScroll={handleScroll}
-              className="max-h-96 overflow-y-auto"
+              className="max-h-96 overflow-y-auto divide-y divide-slate-100"
             >
               {notifications.length === 0 ? (
                 <div className="text-center py-8">
-                  <BellIcon className="h-12 w-12 text-white/20 mx-auto mb-2" />
-                  <p className="text-white/40 text-sm">No notifications yet</p>
+                  <BellIcon className="h-10 w-10 text-slate-300 mx-auto mb-2" />
+                  <p className="text-slate-400 text-sm">No notifications yet</p>
                 </div>
               ) : (
                 <>
@@ -308,34 +308,34 @@ export const NotificationDropdown = ({ onClose }: NotificationDropdownProps = {}
                     <button
                       key={notification._id}
                       onClick={() => handleNotificationClick(notification)}
-                      className={`w-full flex items-start gap-3 p-4 hover:bg-white/5 transition-all duration-200 text-left ${
-                        !notification.isRead ? "bg-white/5" : ""
+                      className={`w-full flex items-start gap-3 p-3.5 hover:bg-slate-50 transition-all duration-150 text-left cursor-pointer ${
+                        !notification.isRead ? "bg-indigo-50/30" : ""
                       }`}
                     >
                       <div
-                        className={`w-10 h-10 rounded-full ${getNotificationBg(notification.type)} flex items-center justify-center text-xl flex-shrink-0`}
+                        className={`w-9 h-9 rounded-full ${getNotificationBg(notification.type)} flex items-center justify-center text-lg flex-shrink-0`}
                       >
                         {getNotificationIcon(notification.type)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-sm ${!notification.isRead ? "text-white font-medium" : "text-white/70"}`}
+                          className={`text-sm ${!notification.isRead ? "text-slate-900 font-semibold" : "text-slate-600"}`}
                         >
                           {notification.data?.message ||
                             `${notification.type} notification`}
                         </p>
-                        <p className="text-xs text-white/40 mt-1">
+                        <p className="text-xs text-slate-400 mt-1">
                           {formatNotificationTime(notification.createdAt)}
                         </p>
                       </div>
                       {!notification.isRead && (
-                        <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="w-2 h-2 bg-indigo-600 rounded-full mt-2 flex-shrink-0"></div>
                       )}
                     </button>
                   ))}
                   {loadingNotifications && (
                     <div className="flex justify-center py-4">
-                      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-purple-500"></div>
+                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-indigo-200 border-t-indigo-600"></div>
                     </div>
                   )}
                 </>

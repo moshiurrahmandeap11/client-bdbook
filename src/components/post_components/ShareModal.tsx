@@ -2,11 +2,11 @@
 
 import { useAuth } from "@/components/providers/AuthProvider";
 import axiosInstance from "@/lib/axios";
-import { CheckIcon, LinkIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { CheckIcon, LinkIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
-import { Send } from "lucide-react";
+import { Send, Search } from "lucide-react";
 import Image from "next/image";
-import React, { memo, useMemo, useRef, useState } from "react";
+import React, { memo, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { BsInstagram } from "react-icons/bs";
 import { FaAppStore, FaFacebook, FaTelegram, FaTwitter, FaWhatsapp } from "react-icons/fa";
@@ -14,6 +14,10 @@ import { FaSignalMessenger } from "react-icons/fa6";
 import Avatar from "./Avatar";
 import { IPost } from "@/types/post.types";
 import { IUser } from "@/types/user.types";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { cn } from "@/lib/utils";
 
 export interface SharePlatform {
   name: string;
@@ -32,23 +36,6 @@ export const SHARE_PLATFORMS: SharePlatform[] = [
   { name: "Instagram", icon: BsInstagram, color: "#E4405F", url: (t, l) => `instagram://library?AssetPath=${encodeURIComponent(l)}`, requiresMobile: true },
 ];
 
-const BDF = "blur(40px) saturate(180%)";
-const glassModal: React.CSSProperties = {
-  background: "rgba(10,10,22,0.92)",
-  backdropFilter: BDF,
-  WebkitBackdropFilter: BDF,
-  border: "0.5px solid rgba(255,255,255,0.18)",
-  boxShadow: "0 32px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)",
-};
-
-const glassInner: React.CSSProperties = {
-  background: "rgba(255,255,255,0.04)",
-  backdropFilter: "blur(20px) saturate(160%)",
-  WebkitBackdropFilter: "blur(20px) saturate(160%)",
-  border: "0.5px solid rgba(255,255,255,0.12)",
-  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
-};
-
 interface FriendRowProps {
   id: string;
   picture?: string | null;
@@ -61,17 +48,14 @@ const FriendRow = memo(({ id, picture, name, onSend, disabled }: FriendRowProps)
   <button
     onClick={() => onSend(id)}
     disabled={disabled}
-    className="w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-150 text-left"
-    style={{ color: "rgba(255,255,255,0.85)" }}
-    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.08)")}
-    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+    className="w-full flex items-center gap-3 p-2.5 rounded-xl transition-all duration-150 text-left hover:bg-slate-100 text-slate-800 disabled:opacity-50 cursor-pointer"
   >
-    <Avatar src={picture} name={name} size={40} />
-    <p className="flex-1 text-sm font-medium">{name}</p>
-    <Send className="h-4 w-4 flex-shrink-0" style={{ color: "rgba(255,255,255,0.35)" }} />
+    <Avatar src={picture} name={name} size={38} />
+    <p className="flex-1 text-sm font-medium text-slate-800 truncate">{name}</p>
+    <Send className="h-4 w-4 flex-shrink-0 text-slate-400 hover:text-indigo-600 transition-colors" />
   </button>
 ));
-FriendRow.displayName = 'FriendRow';
+FriendRow.displayName = "FriendRow";
 
 interface ShareModalProps {
   post: IPost | any;
@@ -100,12 +84,11 @@ export const ShareModal = ({
   const [searchFriend, setSearchFriend] = useState("");
   const [copied, setCopied] = useState(false);
   const { isAuthenticated } = useAuth();
-  const modalRef = useRef<HTMLDivElement | null>(null);
 
   const preview = useMemo(() => {
     if (sharePreview) return sharePreview;
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const postUrl = `${origin}/post/details/${post._id}`;
+    const postUrl = `${origin}/post/details/${post._id || post.id}`;
     const text = post.description || "Check out this post";
     return { postUrl, text };
   }, [sharePreview, post]);
@@ -186,51 +169,28 @@ export const ShareModal = ({
   const mediaType = post.mediaType || post.media?.resourceType || "image";
 
   return (
-    <div
-      className="fixed inset-0 z-50 bottom-18 flex items-end sm:items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
-      onClick={onClose}
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title="Share Post"
+      maxWidth="md"
+      className="p-0 overflow-hidden"
     >
-      <div
-        ref={modalRef}
-        className="relative w-full max-w-md rounded-t-2xl sm:rounded-2xl overflow-hidden"
-        style={{ ...glassModal, maxHeight: "88vh" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div
-          className="sticky top-0 flex items-center justify-between px-5 py-4 z-10"
-          style={{
-            background: "rgba(10,10,22,0.92)",
-            borderBottom: "0.5px solid rgba(255,255,255,0.12)",
-          }}
-        >
-          <h2 className="text-base font-bold text-white">Share Post</h2>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition"
-            style={{ background: "rgba(255,255,255,0.1)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.18)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
-          >
-            <XMarkIcon className="h-5 w-5 text-white" />
-          </button>
-        </div>
-
-        {/* Mini post preview */}
-        <div className="px-4 py-3" style={{ borderBottom: "0.5px solid rgba(255,255,255,0.1)" }}>
-          <div className="flex items-center gap-2.5 p-3 rounded-xl" style={glassInner}>
-            <Avatar src={postAuthorPic} name={postAuthorName} size={36} />
+      <div className="-m-5">
+        {/* Post Preview Snippet */}
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200/80 shadow-xs">
+            <Avatar src={postAuthorPic} name={postAuthorName} size={40} />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white">{postAuthorName}</p>
+              <p className="text-sm font-semibold text-slate-900 truncate">{postAuthorName}</p>
               {post.description && (
-                <p className="text-xs line-clamp-1" style={{ color: "rgba(255,255,255,0.5)" }}>
+                <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
                   {post.description}
                 </p>
               )}
             </div>
             {mediaUrl && (
-              <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+              <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 border border-slate-200 bg-slate-100">
                 {mediaType === "video" ? (
                   <video src={mediaUrl} className="w-full h-full object-cover" />
                 ) : (
@@ -241,19 +201,21 @@ export const ShareModal = ({
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex" style={{ borderBottom: "0.5px solid rgba(255,255,255,0.1)" }}>
+        {/* Tab Navigation */}
+        <div className="flex border-b border-slate-200 bg-white">
           {TABS.map((tab) => {
             const IconComp = tab.icon;
+            const isSelected = shareTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setShareTab(tab.id)}
-                className="flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-all duration-150"
-                style={{
-                  color: shareTab === tab.id ? "#c4b5fd" : "rgba(255,255,255,0.5)",
-                  borderBottom: shareTab === tab.id ? "2px solid #7c3aed" : "2px solid transparent",
-                }}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-all duration-150 border-b-2 cursor-pointer",
+                  isSelected
+                    ? "text-indigo-600 border-indigo-600 font-semibold"
+                    : "text-slate-500 border-transparent hover:text-slate-800"
+                )}
               >
                 {IconComp && <IconComp className="h-4 w-4" />}
                 <span>{tab.label}</span>
@@ -262,84 +224,89 @@ export const ShareModal = ({
           })}
         </div>
 
-        {/* Tab content */}
-        <div className="overflow-y-auto p-4" style={{ maxHeight: "50vh" }}>
+        {/* Tab Contents */}
+        <div className="p-5 max-h-[50vh] overflow-y-auto space-y-4">
           {/* Feed Tab */}
           {shareTab === "feed" && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 rounded-xl" style={glassInner}>
-                <Avatar src={typeof user?.profilePicture === "object" ? user?.profilePicture?.url : user?.profilePicture || user?.avatar} name={user?.fullName || user?.name} size={40} />
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                <Avatar
+                  src={typeof user?.profilePicture === "object" ? user?.profilePicture?.url : user?.profilePicture || user?.avatar}
+                  name={user?.fullName || user?.name}
+                  size={42}
+                />
                 <div>
-                  <p className="text-sm font-semibold text-white">{user?.fullName || "You"}</p>
-                  <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>Share to your timeline</p>
+                  <p className="text-sm font-semibold text-slate-900">{user?.fullName || "You"}</p>
+                  <p className="text-xs text-slate-500">Share immediately to your public timeline</p>
                 </div>
               </div>
-              <button
+              <Button
+                variant="primary"
+                fullWidth
+                size="lg"
                 onClick={handleShareToFeed}
-                disabled={isSharingToFeed}
-                className="w-full py-3 rounded-xl text-white text-sm font-bold transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
-                style={{
-                  background: "linear-gradient(135deg,#7c3aed,#2563eb)",
-                  boxShadow: "0 4px 20px rgba(124,58,237,0.35)",
-                }}
+                loading={isSharingToFeed}
               >
-                {isSharingToFeed ? "Sharing…" : "Share to Feed"}
-              </button>
+                Share to Feed
+              </Button>
             </div>
           )}
 
           {/* Message Tab */}
           {shareTab === "message" && (
             <div className="space-y-3">
-              <input
+              <Input
                 type="text"
                 value={searchFriend}
                 onChange={(e) => setSearchFriend(e.target.value)}
-                placeholder="Search friends…"
-                className="w-full rounded-xl py-2.5 px-4 text-sm text-white outline-none"
-                style={{ ...glassInner, borderRadius: 12, color: "#fff" }}
+                placeholder="Search friends..."
+                leftIcon={<Search className="h-4 w-4" />}
               />
 
               {(isLoadingFriends || isSearchingFriends) && (
                 <div className="flex justify-center py-6">
-                  <div className="w-7 h-7 rounded-full border-2 animate-spin" style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "#7c3aed" }} />
+                  <div className="w-7 h-7 rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin" />
                 </div>
               )}
 
               {!searchFriend && topFriends && topFriends.length > 0 && (
                 <div>
-                  <p className="text-[11px] mb-2 px-1" style={{ color: "rgba(255,255,255,0.35)", letterSpacing: "0.05em" }}>RECENT CHATS</p>
-                  {topFriends.map((f: any) => (
-                    <FriendRow
-                      key={f.friendId}
-                      id={f.friendId}
-                      picture={f.friendProfilePicture}
-                      name={f.friendName}
-                      onSend={handleShareToMessage}
-                      disabled={isSharingToMessage}
-                    />
-                  ))}
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">Recent Chats</p>
+                  <div className="space-y-1">
+                    {topFriends.map((f: any) => (
+                      <FriendRow
+                        key={f.friendId}
+                        id={f.friendId}
+                        picture={f.friendProfilePicture}
+                        name={f.friendName}
+                        onSend={handleShareToMessage}
+                        disabled={isSharingToMessage}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
 
               {searchFriend && searchedFriends && searchedFriends.length > 0 && (
                 <div>
-                  <p className="text-[11px] mb-2 px-1" style={{ color: "rgba(255,255,255,0.35)", letterSpacing: "0.05em" }}>RESULTS</p>
-                  {searchedFriends.map((f: any) => (
-                    <FriendRow
-                      key={f._id}
-                      id={f._id}
-                      picture={f.profilePicture?.url || f.profilePicture}
-                      name={f.fullName}
-                      onSend={handleShareToMessage}
-                      disabled={isSharingToMessage}
-                    />
-                  ))}
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">Search Results</p>
+                  <div className="space-y-1">
+                    {searchedFriends.map((f: any) => (
+                      <FriendRow
+                        key={f._id}
+                        id={f._id}
+                        picture={f.profilePicture?.url || f.profilePicture}
+                        name={f.fullName}
+                        onSend={handleShareToMessage}
+                        disabled={isSharingToMessage}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
 
               {searchFriend && !isSearchingFriends && (!searchedFriends || searchedFriends.length === 0) && (
-                <p className="text-center py-8 text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>No friends found</p>
+                <p className="text-center py-8 text-sm text-slate-400">No friends found</p>
               )}
             </div>
           )}
@@ -349,36 +316,35 @@ export const ShareModal = ({
             <div className="space-y-3">
               <button
                 onClick={handleCopyLink}
-                className="w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-150"
-                style={{ ...glassInner, borderRadius: 12 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.08)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}
+                className="w-full flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100 transition-colors text-left cursor-pointer"
               >
-                <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: copied ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.1)" }}>
-                  {copied ? <CheckIcon className="h-5 w-5" style={{ color: "#4ade80" }} /> : <LinkIcon className="h-5 w-5 text-white" />}
+                <div
+                  className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors",
+                    copied ? "bg-green-100 text-green-600" : "bg-indigo-50 text-indigo-600"
+                  )}
+                >
+                  {copied ? <CheckIcon className="h-5 w-5" /> : <LinkIcon className="h-5 w-5" />}
                 </div>
-                <div className="flex-1 text-left">
-                  <p className="text-sm font-medium text-white">{copied ? "Copied!" : "Copy Link"}</p>
-                  <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>Copy post link to clipboard</p>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-slate-900">{copied ? "Copied to clipboard!" : "Copy Link"}</p>
+                  <p className="text-xs text-slate-500">Share via custom link</p>
                 </div>
               </button>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5 pt-1">
                 {SHARE_PLATFORMS.map((platform) => {
                   const PlatformIcon = platform.icon;
                   return (
                     <button
                       key={platform.name}
                       onClick={() => handleShareExternal(platform)}
-                      className="flex items-center gap-2.5 p-3 rounded-xl transition-all duration-150"
-                      style={{ ...glassInner, borderRadius: 12 }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.08)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100 hover:border-slate-300 transition-all text-left cursor-pointer"
                     >
-                      <span style={{ fontSize: 20, color: platform.color }}>
+                      <span style={{ fontSize: 22, color: platform.color }}>
                         <PlatformIcon />
                       </span>
-                      <p className="text-sm font-medium text-white">{platform.name}</p>
+                      <p className="text-sm font-semibold text-slate-800">{platform.name}</p>
                     </button>
                   );
                 })}
@@ -387,10 +353,9 @@ export const ShareModal = ({
           )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 
-ShareModal.displayName = 'ShareModal';
+ShareModal.displayName = "ShareModal";
 export default ShareModal;
-

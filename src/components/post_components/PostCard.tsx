@@ -12,50 +12,35 @@ import {
   PencilIcon,
   ShareIcon,
   TrashIcon,
-  XMarkIcon
 } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
 import Avatar from "./Avatar";
 import CustomVideoPlayer from "./CustomVideoPlayer";
 import SharedPostPreview from "./SharedPostPreview";
 import ShareModal from "./ShareModal";
-
-const GLASS_CARD: React.CSSProperties = {
-  background: "rgba(255,255,255,0.06)",
-  backdropFilter: "blur(20px) saturate(160%)",
-  WebkitBackdropFilter: "blur(20px) saturate(160%)",
-  border: "0.5px solid rgba(255,255,255,0.14)",
-  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1)",
-  borderRadius: 16,
-  transition: "opacity 0.2s ease, transform 0.2s ease",
-};
-
-const GLASS_MODAL: React.CSSProperties = {
-  background: "rgba(255,255,255,0.04)",
-  backdropFilter: "blur(20px) saturate(160%)",
-  WebkitBackdropFilter: "blur(20px) saturate(160%)",
-  border: "0.5px solid rgba(255,255,255,0.12)",
-};
-
-const GLASS_DROPDOWN: React.CSSProperties = {
-  background: "rgba(15,15,28,0.90)",
-  backdropFilter: "blur(40px) saturate(180%)",
-  WebkitBackdropFilter: "blur(40px) saturate(180%)",
-  border: "0.5px solid rgba(255,255,255,0.18)",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.1)",
-  animation: "lgFadeDown 0.15s ease-out",
-};
+import { Dropdown } from "@/components/ui/Dropdown";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
+import { TextArea } from "@/components/ui/TextArea";
+import { cn } from "@/lib/utils";
 
 const getTimeAgo = (date?: string | Date) => {
   if (!date) return "recently";
   const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
-  const intervals: Record<string, number> = { year: 31536000, month: 2592000, week: 604800, day: 86400, hour: 3600, minute: 60 };
+  const intervals: Record<string, number> = {
+    year: 31536000,
+    month: 2592000,
+    week: 604800,
+    day: 86400,
+    hour: 3600,
+    minute: 60,
+  };
   for (const [unit, s] of Object.entries(intervals)) {
     const n = Math.floor(seconds / s);
     if (n >= 1) return `${n} ${unit}${n === 1 ? "" : "s"} ago`;
@@ -88,20 +73,18 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
 
   const [isLiked, setIsLiked] = useState(initialLikeState.isLiked);
   const [likeCount, setLikeCount] = useState(initialLikeState.likeCount);
-  const [showMenu, setShowMenu] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editDescription, setEditDescription] = useState(post.description || "");
   const [showShareModal, setShowShareModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const menuRef = useRef<HTMLDivElement | null>(null);
   const postUserId = post.userId || post.user?._id || post.user?.id;
   const isOwner = postUserId === currentUserId;
   const commentCount = post.commentsCount || post.comments?.length || 0;
   const shareCount = post.sharesCount || 0;
 
-  const isSharedPost = useMemo(() => 
-    !!(post.isShare || post.originalPost || post.sharedPost || post.sharedPostId || post.type === "share"), 
+  const isSharedPost = useMemo(
+    () => !!(post.isShare || post.originalPost || post.sharedPost || post.sharedPostId || post.type === "share"),
     [post.isShare, post.originalPost, post.sharedPost, post.sharedPostId, post.type]
   );
 
@@ -115,17 +98,6 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
       text: post.description || originalPost?.description || "Shared a post",
     };
   }, [post.description, originalPost?.description, originalPost?._id, originalPost?.id, post._id, post.id]);
-
-  useEffect(() => {
-    if (!showMenu) return;
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handler, { passive: true });
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showMenu]);
 
   useEffect(() => {
     setIsLiked(initialLikeState.isLiked);
@@ -146,7 +118,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ["posts"] });
       const previous = queryClient.getQueryData(["posts"]);
-      
+
       queryClient.setQueryData(["posts"], (old: any) => {
         if (!old?.pages) return old;
         return {
@@ -160,8 +132,8 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
               const wasLiked = p.likes?.includes(currentUserId);
               return {
                 ...p,
-                likes: wasLiked 
-                  ? p.likes?.filter((id: string) => id !== currentUserId) 
+                likes: wasLiked
+                  ? p.likes?.filter((id: string) => id !== currentUserId)
                   : [...(p.likes || []), currentUserId],
                 likesCount: wasLiked ? (p.likesCount || 1) - 1 : (p.likesCount || 0) + 1,
               };
@@ -178,9 +150,9 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
       toast.error("Failed to like post");
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: ["posts", post._id || post.id], 
-        refetchType: "none"
+      queryClient.invalidateQueries({
+        queryKey: ["posts", post._id || post.id],
+        refetchType: "none",
       });
     },
   });
@@ -200,22 +172,27 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
   const shareToMessageMutation = useMutation({
     mutationFn: (friendId: string) => {
       const postId = String(post._id || post.id)?.trim();
-      return axiosInstance.post(`/users/send-message/${friendId}`, {
-        message: JSON.stringify({
-          type: "post_share",
-          postId,
-          postUrl: sharePreview.postUrl,
-          postText: post.description,
-          postAuthor: post.userName || post.user?.fullName,
-          postAuthorProfilePic: post.userProfilePicture || post.user?.profilePicture?.url,
-          hasMedia: !!(post.mediaUrl || post.media?.url),
-          mediaType: post.mediaType || post.media?.resourceType,
-          mediaUrl: post.mediaUrl || post.media?.url,
-          sharedBy: user?.fullName || user?.name,
-          sharedByProfilePic: typeof user?.profilePicture === "object" ? user?.profilePicture?.url : user?.profilePicture || user?.avatar,
-        }),
-        messageType: "share",
-      }).then(res => res.data);
+      return axiosInstance
+        .post(`/users/send-message/${friendId}`, {
+          message: JSON.stringify({
+            type: "post_share",
+            postId,
+            postUrl: sharePreview.postUrl,
+            postText: post.description,
+            postAuthor: post.userName || post.user?.fullName,
+            postAuthorProfilePic: post.userProfilePicture || post.user?.profilePicture?.url,
+            hasMedia: !!(post.mediaUrl || post.media?.url),
+            mediaType: post.mediaType || post.media?.resourceType,
+            mediaUrl: post.mediaUrl || post.media?.url,
+            sharedBy: user?.fullName || user?.name,
+            sharedByProfilePic:
+              typeof user?.profilePicture === "object"
+                ? user?.profilePicture?.url
+                : user?.profilePicture || user?.avatar,
+          }),
+          messageType: "share",
+        })
+        .then((res) => res.data);
     },
     onSuccess: () => {
       toast.success("Post shared via message!");
@@ -225,13 +202,15 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
   });
 
   const editMutation = useMutation({
-    mutationFn: (description: string) => postService.updatePost(post._id || post.id, { description }),
+    mutationFn: (description: string) =>
+      postService.updatePost(post._id || post.id, { description }),
     onSuccess: () => {
       toast.success("Post updated!");
       setShowEditModal(false);
       onPostUpdate?.();
     },
-    onError: (err: any) => toast.error(err.response?.data?.message || "Failed to update post"),
+    onError: (err: any) =>
+      toast.error(err.response?.data?.message || "Failed to update post"),
   });
 
   const deleteMutation = useMutation({
@@ -240,7 +219,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
       setIsDeleting(true);
       await queryClient.cancelQueries({ queryKey: ["posts"] });
       const previous = queryClient.getQueryData(["posts"]);
-      
+
       queryClient.setQueryData(["posts"], (old: any) => {
         if (!old?.pages) return old;
         return {
@@ -285,7 +264,6 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
   const handleSharePost = useCallback(() => {
     if (!checkAuth()) return;
     setShowShareModal(true);
-    setShowMenu(false);
   }, [checkAuth]);
 
   const handleDeletePost = useCallback(() => {
@@ -301,41 +279,30 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
     editMutation.mutate(editDescription);
   }, [editDescription, editMutation]);
 
-  const toggleMenu = useCallback(() => setShowMenu(prev => !prev), []);
-  const closeMenu = useCallback(() => setShowMenu(false), []);
-
-  const actionButtons = useMemo(() => [
-    {
-      icon: isLiked 
-        ? <HeartSolidIcon className="h-5 w-5 text-red-500" /> 
-        : <HeartIcon className="h-5 w-5" />,
-      count: likeCount,
-      onClick: handleLike,
-      className: "action-btn like",
-      disabled: likeMutation.isPending,
-      label: "Like",
-    },
-    {
-      icon: <ChatBubbleLeftIcon className="h-5 w-5" />,
-      count: commentCount,
-      onClick: handleComment,
-      className: "action-btn comment",
-      label: "Comment",
-    },
-    {
-      icon: <ShareIcon className="h-5 w-5" />,
-      count: shareCount,
-      onClick: handleSharePost,
-      className: "action-btn share",
+  const dropdownItems = useMemo(() => {
+    const items = [];
+    if (isOwner || user?.role === "ADMIN" || (user?.role as string) === "admin") {
+      items.push({
+        label: "Edit Post",
+        icon: <PencilIcon className="h-4 w-4" />,
+        onClick: () => setShowEditModal(true),
+      });
+    }
+    items.push({
       label: "Share",
-    },
-  ], [isLiked, likeCount, commentCount, shareCount, handleLike, handleComment, handleSharePost, likeMutation.isPending]);
-
-  const menuItems = useMemo(() => [
-    { label: "Edit Post", Icon: PencilIcon, onClick: () => { setShowEditModal(true); closeMenu(); }, color: "text-white/75", hover: "hover:bg-white/10 hover:text-white" },
-    { label: "Share", Icon: ShareIcon, onClick: handleSharePost, color: "text-white/75", hover: "hover:bg-white/10 hover:text-white" },
-    { label: "Delete Post", Icon: TrashIcon, onClick: handleDeletePost, color: "text-red-400", hover: "hover:bg-red-500/15 hover:text-red-300" },
-  ], [closeMenu, handleSharePost, handleDeletePost]);
+      icon: <ShareIcon className="h-4 w-4" />,
+      onClick: handleSharePost,
+    });
+    if (isOwner || user?.role === "ADMIN" || (user?.role as string) === "admin") {
+      items.push({
+        label: "Delete Post",
+        icon: <TrashIcon className="h-4 w-4" />,
+        onClick: handleDeletePost,
+        danger: true,
+      });
+    }
+    return items;
+  }, [isOwner, user?.role, handleSharePost, handleDeletePost]);
 
   const authorName = post.userName || post.user?.fullName || "User";
   const authorPic = post.userProfilePicture || post.user?.profilePicture?.url;
@@ -344,83 +311,65 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
 
   return (
     <>
-      <div 
-        className={`rounded-2xl overflow-hidden will-change-transform ${isDeleting ? 'animate-exit' : ''}`}
-        style={{ ...GLASS_CARD, opacity: isDeleting ? 0.5 : 1, transform: isDeleting ? 'scale(0.98)' : 'scale(1)' }}
+      <div
+        className={cn(
+          "bg-white border border-slate-200/90 rounded-2xl shadow-xs hover:shadow-sm transition-all duration-200 overflow-hidden",
+          isDeleting && "opacity-50 scale-[0.98]"
+        )}
       >
-        <div className="p-4">
+        <div className="p-4 sm:p-5">
           {/* Header */}
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-3 flex-1 min-w-0">
-              <button 
-                onClick={() => router.push(`/profile/${postUserId}`)} 
-                className="flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-violet-500/50 rounded-full"
+              <button
+                onClick={() => router.push(`/profile/${postUserId}`)}
+                className="flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 rounded-full cursor-pointer"
                 aria-label={`View ${authorName}'s profile`}
               >
                 <Avatar src={authorPic} name={authorName} size={44} />
               </button>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <button 
-                    onClick={() => router.push(`/profile/${postUserId}`)} 
-                    className="font-semibold text-sm leading-tight transition-colors username hover:text-violet-300"
-                    style={{ color: "rgba(255,255,255,0.95)" }}
+                  <button
+                    onClick={() => router.push(`/profile/${postUserId}`)}
+                    className="font-semibold text-sm leading-tight text-slate-900 hover:text-indigo-600 transition-colors cursor-pointer"
                     aria-label={`View ${authorName}'s profile`}
                   >
                     {authorName}
                   </button>
                   {isSharedPost && (
-                    <span className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+                    <span className="text-xs text-slate-400">
                       shared a post
                     </span>
                   )}
                 </div>
-                <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>
+                <p className="text-xs text-slate-500 mt-0.5">
                   {getTimeAgo(post.createdAt)}
                 </p>
               </div>
             </div>
-            
-            {/* Menu Dropdown */}
-            {!hideMenu && (isOwner || user?.role === "ADMIN" || (user?.role as string) === "admin") && (
-              <div className="relative" ref={menuRef}>
-                <button 
-                  onClick={toggleMenu}
-                  className="w-8 h-8 rounded-full flex items-center justify-center transition-colors text-white/55 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-                  aria-label="Post options"
-                  aria-expanded={showMenu}
-                >
-                  <EllipsisHorizontalIcon className="h-5 w-5" />
-                </button>
-                
-                {showMenu && (
-                  <div 
-                    className="absolute right-0 mt-1.5 w-44 rounded-2xl overflow-hidden z-50"
-                    style={GLASS_DROPDOWN}
-                    role="menu"
+
+            {/* Menu Dropdown using reusable Dropdown */}
+            {!hideMenu && dropdownItems.length > 0 && (
+              <Dropdown
+                align="right"
+                trigger={
+                  <button
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none"
+                    aria-label="Post options"
                   >
-                    {menuItems.map(({ label, Icon, onClick, color, hover }) => (
-                      <button
-                        key={label}
-                        onClick={onClick}
-                        className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-all duration-150 text-left ${color} ${hover}`}
-                        role="menuitem"
-                      >
-                        <Icon className="h-4 w-4 flex-shrink-0" />
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                    <EllipsisHorizontalIcon className="h-5 w-5" />
+                  </button>
+                }
+                items={dropdownItems}
+              />
             )}
           </div>
 
           {/* Description */}
           {post.description && (
-            <p 
-              className="mt-3 text-sm leading-relaxed break-words cursor-pointer hover:text-white/95 transition-colors"
-              style={{ color: "rgba(255,255,255,0.82)" }}
+            <p
+              className="mt-3 text-sm text-slate-800 leading-relaxed break-words cursor-pointer hover:text-slate-950 transition-colors"
               onClick={goToPostDetails}
             >
               {post.description}
@@ -428,35 +377,35 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
           )}
 
           {/* Media or Shared Post Preview */}
-          <div className="-mx-4 mt-3">
+          <div className="-mx-4 sm:-mx-5 mt-3">
             {isSharedPost ? (
-              <SharedPostPreview 
-                originalPost={originalPost} 
-                postUrl={sharePreview.postUrl} 
+              <SharedPostPreview
+                originalPost={originalPost}
+                postUrl={sharePreview.postUrl}
                 onClick={() => {
                   const targetId = originalPost?._id || originalPost?.id || post._id || post.id;
                   if (targetId) router.push(`/post/details/${targetId}`);
-                }} 
+                }}
               />
             ) : mediaUrl ? (
-              <div 
-                className="rounded-xl overflow-hidden cursor-pointer group"
+              <div
+                className="overflow-hidden cursor-pointer group bg-slate-100 border-y border-slate-100"
                 onClick={goToPostDetails}
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && goToPostDetails()}
+                onKeyDown={(e) => e.key === "Enter" && goToPostDetails()}
               >
                 {mediaType === "video" ? (
                   <CustomVideoPlayer src={mediaUrl} poster={post.mediaThumbnail || post.media?.thumbnailUrl} />
                 ) : (
-                  <Image 
-                    src={mediaUrl} 
-                    alt={post.description || "Post media"} 
-                    width={800} 
-                    height={600} 
+                  <Image
+                    src={mediaUrl}
+                    alt={post.description || "Post media"}
+                    width={800}
+                    height={600}
                     loading="lazy"
-                    className="w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                    style={{ maxHeight: 500 }}
+                    className="w-full object-cover transition-transform duration-300 group-hover:scale-[1.01]"
+                    style={{ maxHeight: 520 }}
                   />
                 )}
               </div>
@@ -464,23 +413,40 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
           </div>
 
           {/* Action Buttons */}
-          <div 
-            className="flex items-center justify-around mt-4 pt-3"
-            style={{ borderTop: "0.5px solid rgba(255,255,255,0.1)" }}
-          >
-            {actionButtons.map((btn) => (
-              <button
-                key={btn.label}
-                onClick={btn.onClick}
-                disabled={btn.disabled}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-150 ${btn.className} ${btn.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                style={{ color: "rgba(255,255,255,0.5)" }}
-                aria-label={`${btn.label} ${btn.count}`}
-              >
-                {btn.icon}
-                <span className="text-sm font-medium">{btn.count}</span>
-              </button>
-            ))}
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+            <button
+              onClick={handleLike}
+              disabled={likeMutation.isPending}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer",
+                isLiked
+                  ? "text-red-500 bg-red-50 hover:bg-red-100/80"
+                  : "text-slate-600 hover:text-red-500 hover:bg-slate-50"
+              )}
+            >
+              {isLiked ? (
+                <HeartSolidIcon className="h-5 w-5 text-red-500 animate-scale" />
+              ) : (
+                <HeartIcon className="h-5 w-5" />
+              )}
+              <span>{likeCount}</span>
+            </button>
+
+            <button
+              onClick={handleComment}
+              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition-all cursor-pointer"
+            >
+              <ChatBubbleLeftIcon className="h-5 w-5" />
+              <span>{commentCount}</span>
+            </button>
+
+            <button
+              onClick={handleSharePost}
+              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 transition-all cursor-pointer"
+            >
+              <ShareIcon className="h-5 w-5" />
+              <span>{shareCount}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -499,60 +465,48 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
         />
       )}
 
-      {/* Edit Modal */}
-      {showEditModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
-          onClick={() => setShowEditModal(false)}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div 
-            className="w-full max-w-lg rounded-t-2xl sm:rounded-2xl overflow-hidden"
-            style={GLASS_MODAL}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "0.5px solid rgba(255,255,255,0.12)" }}>
-              <h2 className="text-base font-bold text-white">Edit Post</h2>
-              <button 
-                onClick={() => { setShowEditModal(false); setEditDescription(post.description || ""); }}
-                className="w-8 h-8 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 transition-colors"
-              >
-                <XMarkIcon className="h-5 w-5 text-white" />
-              </button>
-            </div>
-            <div className="p-5">
-              <textarea 
-                value={editDescription} 
-                onChange={(e) => setEditDescription(e.target.value)} 
-                placeholder="What's on your mind?" 
-                rows={4} 
-                className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none resize-none focus:ring-2 focus:ring-violet-500/50 transition-all"
-                style={{ ...GLASS_MODAL, borderRadius: 12 }}
-                autoFocus
-              />
-            </div>
-            <div className="px-5 pb-5">
-              <button 
-                onClick={handleEditPost} 
-                disabled={editMutation.isPending || !editDescription.trim()}
-                className="w-full py-3 rounded-xl text-white text-sm font-bold transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
-                style={{ 
-                  background: "linear-gradient(135deg,#7c3aed,#2563eb)", 
-                  boxShadow: "0 4px 20px rgba(124,58,237,0.35)" 
-                }}
-              >
-                {editMutation.isPending ? "Saving…" : "Save Changes"}
-              </button>
-            </div>
+      {/* Edit Modal using reusable Modal & TextArea & Button */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditDescription(post.description || "");
+        }}
+        title="Edit Post"
+        maxWidth="md"
+        footer={
+          <div className="flex items-center justify-end gap-2.5 w-full">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowEditModal(false);
+                setEditDescription(post.description || "");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleEditPost}
+              loading={editMutation.isPending}
+              disabled={!editDescription.trim()}
+            >
+              Save Changes
+            </Button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <TextArea
+          value={editDescription}
+          onChange={(e) => setEditDescription(e.target.value)}
+          placeholder="What's on your mind?"
+          rows={4}
+          autoFocus
+        />
+      </Modal>
     </>
   );
 });
 
-PostCard.displayName = 'PostCard';
+PostCard.displayName = "PostCard";
 export default PostCard;
-

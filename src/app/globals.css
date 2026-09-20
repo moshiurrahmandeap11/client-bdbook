@@ -1,8 +1,36 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Light Theme Foundation */
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  
+  /* Primary & Accent Colors */
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+  --color-primary-light: #eef2ff;
+
+  /* Card & Surface Tokens */
+  --color-card-bg: #ffffff;
+  --color-card-border: #e2e8f0;
+  --color-card-hover: #f1f5f9;
+
+  /* Centralized Spacing Tokens (Padding & Margin) */
+  --padding-page-x: 1rem;
+  --padding-page-y: 1.5rem;
+  --padding-card: 1.25rem;
+  --padding-card-sm: 0.875rem;
+  --margin-card: 1rem;
+  --padding-modal: 1.25rem;
+  --padding-modal-header: 1.25rem;
+  --padding-dropdown: 0.5rem;
+  --padding-dropdown-item: 0.625rem 0.875rem;
+
+  /* Radius Tokens */
+  --radius-card: 1rem;
+  --radius-button: 0.75rem;
+  --radius-modal: 1.25rem;
+  --radius-input: 0.75rem;
 }
 
 @theme inline {
@@ -12,19 +40,62 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
 }
 
+/* Centralized Spacing Utilities controlled via variables */
+.p-page-x {
+  padding-left: var(--padding-page-x);
+  padding-right: var(--padding-page-x);
+}
+
+.p-page-y {
+  padding-top: var(--padding-page-y);
+  padding-bottom: var(--padding-page-y);
+}
+
+.p-page {
+  padding: var(--padding-page-y) var(--padding-page-x);
+}
+
+.p-card {
+  padding: var(--padding-card);
+}
+
+.p-card-sm {
+  padding: var(--padding-card-sm);
+}
+
+.m-card-b {
+  margin-bottom: var(--margin-card);
+}
+
+.p-modal {
+  padding: var(--padding-modal);
+}
+
+/* Light Theme Surface Cards */
+.card-light {
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+}
+
+.card-glass {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: var(--radius-card);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Animations */
 @keyframes fadeInDown {
   from {
     opacity: 0;
@@ -39,11 +110,20 @@ body {
 @keyframes slideDown {
   from {
     opacity: 0;
-    transform: translateY(-20px);
+    transform: translateY(-16px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
@@ -52,5 +132,9 @@ body {
 }
 
 .animate-slideDown {
-  animation: slideDown 0.3s ease-out;
+  animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
 }

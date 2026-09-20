@@ -13,116 +13,114 @@ interface SharedPostPreviewProps {
   className?: string;
 }
 
-const glassInner: React.CSSProperties = {
-  background: "rgba(255,255,255,0.04)",
-  backdropFilter: "blur(20px) saturate(160%)",
-  WebkitBackdropFilter: "blur(20px) saturate(160%)",
-  border: "0.5px solid rgba(255,255,255,0.12)",
-  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
-};
+export const SharedPostPreview = memo(
+  ({ originalPost, postUrl, onClick, className = "" }: SharedPostPreviewProps) => {
+    if (!originalPost) {
+      return (
+        <button
+          onClick={onClick}
+          className={`w-full text-left mt-3 rounded-xl overflow-hidden transition-all duration-200 bg-slate-50 border border-slate-200/80 hover:bg-slate-100/70 cursor-pointer ${className}`}
+        >
+          <div className="flex items-center gap-3 p-3">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-indigo-50 text-indigo-600">
+              <LinkIcon className="h-5 w-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-slate-900">
+                View Original Post
+              </p>
+              {postUrl && (
+                <p className="text-xs text-slate-500 truncate mt-0.5">
+                  {postUrl}
+                </p>
+              )}
+            </div>
+          </div>
+        </button>
+      );
+    }
 
-export const SharedPostPreview = memo(({ originalPost, postUrl, onClick, className = "" }: SharedPostPreviewProps) => {
-  if (!originalPost) {
+    const mediaUrl = originalPost.mediaUrl || originalPost.media?.url;
+    const mediaType = originalPost.mediaType || originalPost.media?.resourceType || "image";
+
     return (
       <button
         onClick={onClick}
-        className={`w-full text-left mt-3 rounded-xl overflow-hidden transition-all duration-200 hover:opacity-80 ${className}`}
-        style={{ ...glassInner, borderRadius: 12 }}
+        className={`w-full text-left mt-3 rounded-xl overflow-hidden transition-all duration-200 bg-slate-50 border border-slate-200/80 hover:border-slate-300 active:scale-[0.99] cursor-pointer ${className}`}
       >
-        <div className="flex items-center gap-3 p-3">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(124,58,237,0.25)" }}>
-            <LinkIcon className="h-5 w-5" style={{ color: "#a78bfa" }} />
-          </div>
+        {/* Header */}
+        <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2.5 border-b border-slate-200/60 bg-white/60">
+          <Avatar
+            src={
+              originalPost.userProfilePicture ||
+              (typeof originalPost.user?.profilePicture === "object"
+                ? originalPost.user?.profilePicture?.url
+                : originalPost.user?.profilePicture || originalPost.user?.avatar)
+            }
+            name={
+              originalPost.userName ||
+              originalPost.user?.fullName ||
+              originalPost.user?.name
+            }
+            size={32}
+          />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.85)" }}>
-              View Original Post
+            <p className="text-sm font-semibold text-slate-900 leading-tight truncate">
+              {originalPost.userName || originalPost.user?.fullName || "Unknown User"}
             </p>
-            {postUrl && (
-              <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.4)" }}>
-                {postUrl}
-              </p>
+            <p className="text-[11px] text-slate-500">
+              Original post
+            </p>
+          </div>
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 bg-indigo-50 text-indigo-700 border border-indigo-100">
+            Original
+          </span>
+        </div>
+
+        {/* Description */}
+        {originalPost.description && (
+          <p className="text-sm px-3.5 py-2.5 line-clamp-3 leading-relaxed text-slate-800">
+            {originalPost.description}
+          </p>
+        )}
+
+        {/* Media */}
+        {mediaUrl && (
+          <div className="w-full overflow-hidden bg-slate-100 border-y border-slate-200/60" style={{ maxHeight: 280 }}>
+            {mediaType === "video" ? (
+              <video
+                src={mediaUrl}
+                className="w-full object-cover"
+                style={{ maxHeight: 280 }}
+                preload="metadata"
+                onClick={(e) => e.stopPropagation()}
+                controls
+              />
+            ) : (
+              <div className="relative w-full" style={{ minHeight: 140 }}>
+                <Image
+                  src={mediaUrl}
+                  alt="Original post media"
+                  width={600}
+                  height={300}
+                  className="w-full object-cover"
+                  style={{ maxHeight: 280 }}
+                  loading="lazy"
+                />
+              </div>
             )}
           </div>
+        )}
+
+        {/* Footer */}
+        <div className="flex items-center gap-1.5 px-3.5 py-2 text-slate-500 bg-white/40">
+          <LinkIcon className="h-3.5 w-3.5 flex-shrink-0" />
+          <span className="text-xs font-medium">Tap to view full post</span>
         </div>
       </button>
     );
   }
+);
 
-  const mediaUrl = originalPost.mediaUrl || originalPost.media?.url;
-  const mediaType = originalPost.mediaType || originalPost.media?.resourceType || "image";
-
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full text-left mt-3 rounded-xl overflow-hidden transition-all duration-200 active:scale-[0.99] ${className}`}
-      style={{ ...glassInner, borderRadius: 12 }}
-    >
-      {/* Header */}
-      <div className="flex items-center gap-2.5 px-3 pt-3 pb-2" style={{ borderBottom: "0.5px solid rgba(255,255,255,0.08)" }}>
-        <Avatar src={originalPost.userProfilePicture || (typeof originalPost.user?.profilePicture === "object" ? originalPost.user?.profilePicture?.url : originalPost.user?.profilePicture || originalPost.user?.avatar)} name={originalPost.userName || originalPost.user?.fullName || originalPost.user?.name} size={32} />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold leading-tight" style={{ color: "rgba(255,255,255,0.9)" }}>
-            {originalPost.userName || originalPost.user?.fullName || "Unknown User"}
-          </p>
-          <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.4)" }}>
-            Original post
-          </p>
-        </div>
-        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0" style={{
-          background: "rgba(124,58,237,0.25)",
-          color: "#c4b5fd",
-          border: "0.5px solid rgba(124,58,237,0.4)",
-        }}>
-          Original
-        </span>
-      </div>
-
-      {/* Description */}
-      {originalPost.description && (
-        <p className="text-sm px-3 py-2 line-clamp-3 leading-relaxed" style={{ color: "rgba(255,255,255,0.75)" }}>
-          {originalPost.description}
-        </p>
-      )}
-
-      {/* Media */}
-      {mediaUrl && (
-        <div className="w-full overflow-hidden" style={{ maxHeight: 280 }}>
-          {mediaType === "video" ? (
-            <video
-              src={mediaUrl}
-              className="w-full object-cover"
-              style={{ maxHeight: 280 }}
-              preload="metadata"
-              onClick={(e) => e.stopPropagation()}
-              controls
-            />
-          ) : (
-            <div className="relative w-full" style={{ minHeight: 140 }}>
-              <Image
-                src={mediaUrl}
-                alt="Original post media"
-                width={600}
-                height={300}
-                className="w-full object-cover"
-                style={{ maxHeight: 280 }}
-                loading="lazy"
-              />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Footer */}
-      <div className="flex items-center gap-1.5 px-3 py-2" style={{
-        borderTop: "0.5px solid rgba(255,255,255,0.07)",
-        color: "rgba(255,255,255,0.35)",
-      }}>
-        <LinkIcon className="h-3 w-3 flex-shrink-0" />
-        <span className="text-[11px]">Tap to view full post</span>
-      </div>
-    </button>
-  );
-});
-
-SharedPostPreview.displayName = 'SharedPostPreview';
+SharedPostPreview.displayName = "SharedPostPreview";
 export default SharedPostPreview;
