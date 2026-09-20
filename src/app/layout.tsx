@@ -14,32 +14,4 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Stalk - Modern Social Network",
   description: "Connect, Share and Discover on Stalk",
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="en">
-      <body className={`${inter.className} bg-white text-slate-900 min-h-screen flex flex-col`}>
-        <QueryProvider>
-          <AuthProvider>
-            <SocketProvider>
-              <Toaster position="top-right" />
-              <Header />
-              <div className="flex-1 flex w-full pt-14 sm:pt-16">
-                <Sidebar />
-                <main className="flex-1 min-w-0 bg-white">
-                  {children}
-                </main>
-                <RightSidebar />
-              </div>
-            </SocketProvider>
-          </AuthProvider>
-        </QueryProvider>
-      </body>
-    </html>
-  );
-}
+// [wip step 1/3]
