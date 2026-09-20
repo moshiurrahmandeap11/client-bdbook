@@ -257,7 +257,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
           <Avatar src={authorPic} name={authorName} size={24} />
           <button
             onClick={() => router.push(`/profile/${postUserId}`)}
-            className="font-bold text-xs text-slate-900 hover:text-[#4E4AFC] transition-colors truncate cursor-pointer"
+            className="font-normal text-xs text-slate-900 hover:text-[#4E4AFC] transition-colors truncate cursor-pointer"
           >
             {communityTag}
           </button>
@@ -272,7 +272,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
             <button
               onClick={handleFollow}
               className={cn(
-                "px-3 py-1 text-xs font-medium rounded-full transition-colors cursor-pointer",
+                "px-3 py-1 text-xs font-normal rounded-full transition-colors cursor-pointer",
                 isFollowing
                   ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   : "bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white shadow-xs"
@@ -303,7 +303,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
       <div className="mt-2.5">
         <h2
           onClick={goToPostDetails}
-          className="font-bold text-base text-slate-900 hover:text-[#4E4AFC] transition-colors cursor-pointer leading-snug"
+          className="font-normal text-base text-slate-900 hover:text-[#4E4AFC] transition-colors cursor-pointer leading-snug"
         >
           {post.title || post.description || "Untitled Post"}
         </h2>
@@ -354,13 +354,13 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
       {/* SlothUI / Reddit-Style Pill Actions Bar */}
       <div className="flex items-center gap-2 mt-3.5">
         {/* Upvote/Downvote Pill */}
-        <div className="inline-flex items-center bg-slate-100 hover:bg-slate-200/80 rounded-full px-3 py-1 text-xs font-semibold text-slate-700 transition-colors">
+        <div className="inline-flex items-center bg-slate-100 hover:bg-slate-200/80 rounded-full px-3 py-1 text-xs font-normal text-slate-700 transition-colors">
           <button
             onClick={handleLike}
             disabled={likeMutation.isPending}
             className={cn(
               "hover:text-[#4E4AFC] transition-colors p-0.5 cursor-pointer",
-              isLiked && "text-[#4E4AFC] font-bold"
+              isLiked && "text-[#4E4AFC] font-normal"
             )}
             aria-label="Upvote"
           >
@@ -379,7 +379,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
         {/* Comment Pill */}
         <button
           onClick={handleComment}
-          className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/80 rounded-full px-3 py-1 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/80 rounded-full px-3 py-1 text-xs font-normal text-slate-700 transition-colors cursor-pointer"
         >
           <ChatBubbleLeftIcon className="h-3.5 w-3.5 stroke-[2]" />
           <span>{commentCount}</span>
@@ -388,7 +388,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
         {/* Share Pill */}
         <button
           onClick={handleSharePost}
-          className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/80 rounded-full px-3 py-1 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/80 rounded-full px-3 py-1 text-xs font-normal text-slate-700 transition-colors cursor-pointer"
         >
           <ShareIcon className="h-3.5 w-3.5 stroke-[2]" />
           <span>Share</span>

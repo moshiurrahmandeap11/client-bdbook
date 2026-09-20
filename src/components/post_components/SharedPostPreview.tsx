@@ -26,7 +26,7 @@ export const SharedPostPreview = memo(
               <LinkIcon className="h-5 w-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-900">
+              <p className="text-sm font-normal text-slate-900">
                 View Original Post
               </p>
               {postUrl && (
@@ -65,14 +65,14 @@ export const SharedPostPreview = memo(
             size={32}
           />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-slate-900 leading-tight truncate">
+            <p className="text-sm font-normal text-slate-900 leading-tight truncate">
               {originalPost.userName || originalPost.user?.fullName || "Unknown User"}
             </p>
             <p className="text-[11px] text-slate-500">
               Original post
             </p>
           </div>
-          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 bg-[#EEEDFE] text-[#4E4AFC] border border-[#4E4AFC]/20">
+          <span className="text-[11px] font-normal px-2 py-0.5 rounded-full flex-shrink-0 bg-[#EEEDFE] text-[#4E4AFC] border border-[#4E4AFC]/20">
             Original
           </span>
         </div>
@@ -115,7 +115,7 @@ export const SharedPostPreview = memo(
         {/* Footer */}
         <div className="flex items-center gap-1.5 px-3.5 py-2 text-slate-500 bg-white/40">
           <LinkIcon className="h-3.5 w-3.5 flex-shrink-0" />
-          <span className="text-xs font-medium">Tap to view full post</span>
+          <span className="text-xs font-normal">Tap to view full post</span>
         </div>
       </button>
     );

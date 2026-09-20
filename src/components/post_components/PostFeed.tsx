@@ -218,7 +218,7 @@ export const PostFeed = () => {
           <div className="w-16 h-16 bg-[#EEEDFE] text-[#4E4AFC] rounded-2xl flex items-center justify-center mx-auto mb-4">
             <PhotoIcon className="h-8 w-8" />
           </div>
-          <h3 className="text-base font-bold text-slate-900 mb-1">No Posts Yet</h3>
+          <h3 className="text-base font-normal text-slate-900 mb-1">No Posts Yet</h3>
           <p className="text-slate-400 text-xs mb-5">Be the first to share something with the community!</p>
           {isAuthenticated ? (
             <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)}>
@@ -254,7 +254,7 @@ export const PostFeed = () => {
           {!hasNextPage && allPosts.length > 0 && (
             <div className="text-center py-10">
               <CheckCircleIcon className="h-8 w-8 text-[#4E4AFC] mx-auto mb-2" />
-              <p className="text-slate-400 text-xs font-medium">You&apos;ve reached the end! 🎉</p>
+              <p className="text-slate-400 text-xs font-normal">You&apos;ve reached the end! 🎉</p>
             </div>
           )}
         </div>
@@ -293,7 +293,7 @@ export const PostFeed = () => {
               )}
             </div>
             <div>
-              <p className="font-bold text-sm text-slate-900">{userName}</p>
+              <p className="font-normal text-sm text-slate-900">{userName}</p>
               <span className="text-xs text-slate-400">Posting to stalk feed</span>
             </div>
           </div>
@@ -326,18 +326,18 @@ export const PostFeed = () => {
           )}
 
           <div className="border border-slate-200/90 rounded-xl p-3 bg-slate-50/50">
-            <p className="text-xs font-semibold text-slate-600 mb-2">Add media</p>
+            <p className="text-xs font-normal text-slate-600 mb-2">Add media</p>
             <div className="flex gap-2">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-medium cursor-pointer"
+                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-normal cursor-pointer"
               >
                 <PhotoIcon className="h-4 w-4 text-emerald-500" />
                 <span>Photo</span>
               </button>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-medium cursor-pointer"
+                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-normal cursor-pointer"
               >
                 <VideoCameraIcon className="h-4 w-4 text-red-500" />
                 <span>Video</span>

@@ -43,7 +43,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         </div>
         <div className="p-6 relative pt-0">
           <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 -mt-16 sm:-mt-12 mb-4">
-            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-white dark:border-gray-800 bg-[#4E4AFC] text-white font-bold text-3xl flex items-center justify-center overflow-hidden shadow-lg">
+            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-white dark:border-gray-800 bg-[#4E4AFC] text-white font-normal text-3xl flex items-center justify-center overflow-hidden shadow-lg">
               {user.avatar ? (
                 <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
               ) : (
@@ -53,7 +53,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{user.name}</h1>
+            <h1 className="text-2xl font-normal text-gray-900 dark:text-white">{user.name}</h1>
             {user.bio && <p className="text-sm text-gray-600 dark:text-gray-300">{user.bio}</p>}
 
             <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400 pt-2">
@@ -82,7 +82,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
       {/* User Posts */}
       <div className="space-y-4">
-        <h3 className="font-bold text-lg text-gray-900 dark:text-white">Posts ({userPosts.length})</h3>
+        <h3 className="font-normal text-lg text-gray-900 dark:text-white">Posts ({userPosts.length})</h3>
         {userPosts.length === 0 ? (
           <div className="text-center py-8 text-sm text-gray-500 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700">
             No posts published by this user yet.

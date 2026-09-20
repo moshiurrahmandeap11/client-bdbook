@@ -207,7 +207,7 @@ export const NotificationDropdown = ({ onClose }: NotificationDropdownProps = {}
                 </div>
               )}
               <div className="flex-1">
-                <p className="text-slate-900 text-sm font-medium">
+                <p className="text-slate-900 text-sm font-normal">
                   {notification.data?.message || "New notification"}
                 </p>
                 <p className="text-slate-500 text-xs">Just now</p>
@@ -268,7 +268,7 @@ export const NotificationDropdown = ({ onClose }: NotificationDropdownProps = {}
       >
         <BellIcon className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold text-white animate-pulse px-1">
+          <span className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-red-500 rounded-full flex items-center justify-center text-xs font-normal text-white animate-pulse px-1">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -282,11 +282,11 @@ export const NotificationDropdown = ({ onClose }: NotificationDropdownProps = {}
           />
           <div className="absolute -right-23 md:right-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 md:w-80 lg:w-96 rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden animate-fadeInDown z-50">
             <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-slate-900 font-bold text-sm">Notifications</h3>
+              <h3 className="text-slate-900 font-normal text-sm">Notifications</h3>
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="text-xs text-[#4E4AFC] hover:text-[#3F3BE6] font-semibold cursor-pointer"
+                  className="text-xs text-[#4E4AFC] hover:text-[#3F3BE6] font-normal cursor-pointer"
                 >
                   Mark all as read
                 </button>
@@ -319,7 +319,7 @@ export const NotificationDropdown = ({ onClose }: NotificationDropdownProps = {}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-sm ${!notification.isRead ? "text-slate-900 font-semibold" : "text-slate-600"}`}
+                          className={`text-sm ${!notification.isRead ? "text-slate-900 font-normal" : "text-slate-600"}`}
                         >
                           {notification.data?.message ||
                             `${notification.type} notification`}

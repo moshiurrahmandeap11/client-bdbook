@@ -62,7 +62,7 @@ export default function MessagePage() {
     <div className="max-w-6xl mx-auto py-6 px-4 h-[calc(100vh-5rem)] flex gap-4">
       {/* Conversations sidebar */}
       <div className="w-1/3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col">
-        <div className="p-4 border-b border-gray-100 dark:border-gray-700 font-bold text-lg">
+        <div className="p-4 border-b border-gray-100 dark:border-gray-700 font-normal text-lg">
           Messages
         </div>
         <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
@@ -82,7 +82,7 @@ export default function MessagePage() {
                     isSelected ? "bg-[#EEEDFE] dark:bg-[#4E4AFC]/20" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"
                   }`}
                 >
-                  <div className="w-10 h-10 rounded-full bg-[#4E4AFC] text-white font-bold flex items-center justify-center overflow-hidden">
+                  <div className="w-10 h-10 rounded-full bg-[#4E4AFC] text-white font-normal flex items-center justify-center overflow-hidden">
                     {partner?.avatar ? (
                       <img src={partner.avatar} alt={partner.name} className="w-full h-full object-cover" />
                     ) : (
@@ -90,7 +90,7 @@ export default function MessagePage() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-sm truncate">{partner?.name || "User"}</h4>
+                    <h4 className="font-normal text-sm truncate">{partner?.name || "User"}</h4>
                     <p className="text-xs text-gray-400 truncate">{conv.lastMessage?.text || "Started conversation"}</p>
                   </div>
                 </button>

@@ -54,9 +54,9 @@ export const Sidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="hidden lg:block w-[260px] shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-5 px-3 border-r border-slate-200/80 bg-white select-none">
+    <aside className="hidden lg:block w-[260px] shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-3.5 px-3 border-r border-slate-200/80 bg-white select-none">
       {/* Feeds Section */}
-      <div className="space-y-1">
+      <div className="space-y-0.5">
         {mainNav.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
@@ -65,16 +65,16 @@ export const Sidebar: React.FC = () => {
               key={item.name}
               href={item.href}
               className={cn(
-                "flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
+                "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-normal transition-all duration-150",
                 isActive
-                  ? "bg-[#EEEDFE] text-[#4E4AFC] font-semibold"
+                  ? "bg-slate-100 text-slate-900 font-normal"
                   : "text-slate-700 hover:text-slate-950 hover:bg-slate-50"
               )}
             >
               <Icon
                 className={cn(
-                  "h-5 w-5 transition-colors",
-                  isActive ? "text-[#4E4AFC]" : "text-slate-500"
+                  "h-4.5 w-4.5 transition-colors",
+                  isActive ? "text-slate-900" : "text-slate-500"
                 )}
               />
               <span>{item.name}</span>
@@ -84,10 +84,10 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Moderation Section */}
-      <div className="mt-6">
+      <div className="mt-3.5">
         <button
           onClick={() => setModOpen(!modOpen)}
-          className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-wider cursor-pointer"
+          className="w-full flex items-center justify-between px-3 py-1 text-xs font-normal text-slate-500 hover:text-slate-700 cursor-pointer"
         >
           <span>Moderation</span>
           <ChevronDownIcon
@@ -99,7 +99,7 @@ export const Sidebar: React.FC = () => {
         </button>
 
         {modOpen && (
-          <div className="mt-1 space-y-1">
+          <div className="mt-0.5 space-y-0.5">
             {moderationNav.map((item) => {
               const isActive = pathname === item.href;
               const Icon = item.icon;
@@ -108,16 +108,16 @@ export const Sidebar: React.FC = () => {
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-3.5 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150",
+                    "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-normal transition-all duration-150",
                     isActive
-                      ? "bg-[#EEEDFE] text-[#4E4AFC] font-semibold"
+                      ? "bg-slate-100 text-slate-900 font-normal"
                       : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                   )}
                 >
                   <Icon
                     className={cn(
                       "h-4 w-4 transition-colors",
-                      isActive ? "text-[#4E4AFC]" : "text-slate-400"
+                      isActive ? "text-slate-900" : "text-slate-400"
                     )}
                   />
                   <span>{item.name}</span>
@@ -129,10 +129,10 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Recent Communities Section */}
-      <div className="mt-6">
+      <div className="mt-3.5">
         <button
           onClick={() => setRecentOpen(!recentOpen)}
-          className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-wider cursor-pointer"
+          className="w-full flex items-center justify-between px-3 py-1 text-xs font-normal text-slate-500 hover:text-slate-700 cursor-pointer"
         >
           <span>Recent</span>
           <ChevronDownIcon
@@ -144,17 +144,17 @@ export const Sidebar: React.FC = () => {
         </button>
 
         {recentOpen && (
-          <div className="mt-1 space-y-1">
+          <div className="mt-0.5 space-y-0.5">
             {recentCommunities.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:text-slate-950 hover:bg-slate-50 transition-colors"
+                  className="flex items-center gap-3 px-3 py-1.5 rounded-lg text-xs font-normal text-slate-700 hover:text-slate-950 hover:bg-slate-50 transition-colors"
                 >
-                  <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center shrink-0", item.color)}>
-                    <Icon className="h-3.5 w-3.5" />
+                  <div className={cn("w-5 h-5 rounded-md flex items-center justify-center shrink-0", item.color)}>
+                    <Icon className="h-3 w-3" />
                   </div>
                   <span className="truncate">{item.name}</span>
                 </Link>
@@ -166,12 +166,12 @@ export const Sidebar: React.FC = () => {
 
       {/* User Profile Quick Link */}
       {isAuthenticated && currentUserId && (
-        <div className="mt-8 pt-4 border-t border-slate-100">
+        <div className="mt-5 pt-3 border-t border-slate-100">
           <Link
             href={`/profile/${currentUserId}`}
-            className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+            className="flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-normal text-slate-700 hover:bg-slate-50 transition-colors"
           >
-            <UserCircleIcon className="h-5 w-5 text-slate-400" />
+            <UserCircleIcon className="h-4.5 w-4.5 text-slate-400" />
             <span>My Profile</span>
           </Link>
         </div>

@@ -208,7 +208,7 @@ export const CustomVideoPlayer = memo(({ src, poster, className = "", style = {}
               )}
             </button>
 
-            <span className="text-xs text-white/80 font-medium tabular-nums">
+            <span className="text-xs text-white/80 font-normal tabular-nums">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           </div>

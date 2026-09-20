@@ -51,7 +51,7 @@ const FriendRow = memo(({ id, picture, name, onSend, disabled }: FriendRowProps)
     className="w-full flex items-center gap-3 p-2.5 rounded-xl transition-all duration-150 text-left hover:bg-slate-100 text-slate-800 disabled:opacity-50 cursor-pointer"
   >
     <Avatar src={picture} name={name} size={38} />
-    <p className="flex-1 text-sm font-medium text-slate-800 truncate">{name}</p>
+    <p className="flex-1 text-sm font-normal text-slate-800 truncate">{name}</p>
     <Send className="h-4 w-4 flex-shrink-0 text-slate-400 hover:text-[#4E4AFC] transition-colors" />
   </button>
 ));
@@ -182,7 +182,7 @@ export const ShareModal = ({
           <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200/80 shadow-xs">
             <Avatar src={postAuthorPic} name={postAuthorName} size={40} />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-900 truncate">{postAuthorName}</p>
+              <p className="text-sm font-normal text-slate-900 truncate">{postAuthorName}</p>
               {post.description && (
                 <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
                   {post.description}
@@ -211,9 +211,9 @@ export const ShareModal = ({
                 key={tab.id}
                 onClick={() => setShareTab(tab.id)}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-all duration-150 border-b-2 cursor-pointer",
+                  "flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-normal transition-all duration-150 border-b-2 cursor-pointer",
                   isSelected
-                    ? "text-[#4E4AFC] border-[#4E4AFC] font-semibold"
+                    ? "text-[#4E4AFC] border-[#4E4AFC] font-normal"
                     : "text-slate-500 border-transparent hover:text-slate-800"
                 )}
               >
@@ -236,7 +236,7 @@ export const ShareModal = ({
                   size={42}
                 />
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">{user?.fullName || "You"}</p>
+                  <p className="text-sm font-normal text-slate-900">{user?.fullName || "You"}</p>
                   <p className="text-xs text-slate-500">Share immediately to your public timeline</p>
                 </div>
               </div>
@@ -271,7 +271,7 @@ export const ShareModal = ({
 
               {!searchFriend && topFriends && topFriends.length > 0 && (
                 <div>
-                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">Recent Chats</p>
+                  <p className="text-[11px] font-normal text-slate-400 uppercase tracking-wider mb-2 px-1">Recent Chats</p>
                   <div className="space-y-1">
                     {topFriends.map((f: any) => (
                       <FriendRow
@@ -289,7 +289,7 @@ export const ShareModal = ({
 
               {searchFriend && searchedFriends && searchedFriends.length > 0 && (
                 <div>
-                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">Search Results</p>
+                  <p className="text-[11px] font-normal text-slate-400 uppercase tracking-wider mb-2 px-1">Search Results</p>
                   <div className="space-y-1">
                     {searchedFriends.map((f: any) => (
                       <FriendRow
@@ -327,7 +327,7 @@ export const ShareModal = ({
                   {copied ? <CheckIcon className="h-5 w-5" /> : <LinkIcon className="h-5 w-5" />}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-slate-900">{copied ? "Copied to clipboard!" : "Copy Link"}</p>
+                  <p className="text-sm font-normal text-slate-900">{copied ? "Copied to clipboard!" : "Copy Link"}</p>
                   <p className="text-xs text-slate-500">Share via custom link</p>
                 </div>
               </button>
@@ -344,7 +344,7 @@ export const ShareModal = ({
                       <span style={{ fontSize: 22, color: platform.color }}>
                         <PlatformIcon />
                       </span>
-                      <p className="text-sm font-semibold text-slate-800">{platform.name}</p>
+                      <p className="text-sm font-normal text-slate-800">{platform.name}</p>
                     </button>
                   );
                 })}

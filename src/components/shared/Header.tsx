@@ -317,7 +317,7 @@ export const Header = () => {
                   </div>
                 )}
                 <div className="flex-1">
-                  <p className="text-slate-900 text-sm font-semibold">
+                  <p className="text-slate-900 text-sm font-normal">
                     {message.senderName || "Someone"}
                   </p>
                   <p className="text-slate-500 text-xs truncate">
@@ -392,7 +392,7 @@ export const Header = () => {
   if (!initialLoadDone) {
     return (
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-6">
           <div className="flex items-center justify-between h-14 sm:h-16">
             <div className="flex items-center shrink-0">{BrandLogo}</div>
           </div>
@@ -421,7 +421,7 @@ export const Header = () => {
             : "bg-white border-b border-slate-200/80"
         }`}
       >
-        <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-6">
           <div className="flex items-center justify-between h-14 sm:h-16 gap-6">
             {/* Left: Brand Logo & Name */}
             <div className="flex items-center shrink-0">
@@ -465,7 +465,7 @@ export const Header = () => {
                       ) : suggestions.length > 0 ? (
                         <>
                           <div className="px-4 py-2 border-b border-slate-100 bg-slate-50">
-                            <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                            <span className="text-slate-400 text-xs font-normal tracking-wider">
                               Quick Search
                             </span>
                           </div>
@@ -477,7 +477,7 @@ export const Header = () => {
                               className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition text-left cursor-pointer"
                             >
                               <MagnifyingGlassIcon className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                              <span className="text-slate-800 text-sm font-medium">
+                              <span className="text-slate-800 text-sm font-normal">
                                 {suggestion}
                               </span>
                             </button>
@@ -498,7 +498,7 @@ export const Header = () => {
               {/* + Create Button */}
               <button
                 onClick={handleOpenCreateModal}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium text-white bg-[#4E4AFC] hover:bg-[#3F3BE6] transition-colors shadow-xs cursor-pointer"
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-normal text-white bg-[#4E4AFC] hover:bg-[#3F3BE6] transition-colors shadow-xs cursor-pointer"
               >
                 <PlusIcon className="h-4 w-4 stroke-[2.5]" />
                 <span>Create</span>
@@ -512,7 +512,7 @@ export const Header = () => {
               >
                 <MessageCircle className="h-5 w-5" />
                 {unreadMessagesCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1 animate-pulse">
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-normal text-white px-1 animate-pulse">
                     {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
                   </span>
                 )}
@@ -525,7 +525,7 @@ export const Header = () => {
               {!isAuthenticated ? (
                 <button
                   onClick={handleGetStarted}
-                  className="flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium text-[#4E4AFC] bg-[#EEEDFE] hover:bg-[#E3E1FD] transition-colors cursor-pointer"
+                  className="flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-normal text-[#4E4AFC] bg-[#EEEDFE] hover:bg-[#E3E1FD] transition-colors cursor-pointer"
                 >
                   <span>Log in</span>
                 </button>
@@ -546,7 +546,7 @@ export const Header = () => {
                         />
                       </div>
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-[#EEEDFE] text-[#4E4AFC] flex items-center justify-center font-bold text-xs border border-[#4E4AFC]/20">
+                      <div className="w-8 h-8 rounded-full bg-[#EEEDFE] text-[#4E4AFC] flex items-center justify-center font-normal text-xs border border-[#4E4AFC]/20">
                         {userName.charAt(0).toUpperCase()}
                       </div>
                     )}
@@ -556,7 +556,7 @@ export const Header = () => {
                     <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white border border-slate-200 shadow-xl overflow-hidden animate-fadeInDown z-50">
                       <div className="py-2">
                         <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50">
-                          <p className="text-slate-900 font-bold text-sm">
+                          <p className="text-slate-900 font-normal text-sm">
                             {userName}
                           </p>
                           <p className="text-slate-500 text-xs mt-0.5 truncate">
@@ -629,7 +629,7 @@ export const Header = () => {
             >
               <MessageCircle className="h-5 w-5" />
               {unreadMessagesCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1 animate-pulse">
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-normal text-white px-1 animate-pulse">
                   {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
                 </span>
               )}
@@ -661,7 +661,7 @@ export const Header = () => {
           <div className="w-64 bg-white h-full p-4 flex flex-col justify-between border-l border-slate-200 animate-slideDown">
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
-                <span className="text-slate-900 font-bold text-lg">Menu</span>
+                <span className="text-slate-900 font-normal text-lg">Menu</span>
                 <button
                   onClick={() => setIsMenuOpen(false)}
                   className="p-1 rounded-full text-slate-400 hover:text-slate-700 cursor-pointer"
@@ -681,9 +681,9 @@ export const Header = () => {
                       key={item.name}
                       href={item.href}
                       onClick={() => setIsMenuOpen(false)}
-                      className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition ${
+                      className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-normal transition ${
                         isActive
-                          ? "bg-[#EEEDFE] text-[#4E4AFC] font-semibold"
+                          ? "bg-[#EEEDFE] text-[#4E4AFC] font-normal"
                           : "text-slate-700 hover:text-slate-900 hover:bg-slate-50"
                       }`}
                     >
@@ -692,7 +692,7 @@ export const Header = () => {
                         <span>{item.name}</span>
                       </div>
                       {hasUnread && (
-                        <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                        <span className="bg-red-500 text-white text-xs font-normal px-2 py-0.5 rounded-full">
                           {unreadMessagesCount}
                         </span>
                       )}
@@ -708,7 +708,7 @@ export const Header = () => {
                       setIsMenuOpen(false);
                       handleProfileNavigate();
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 text-left cursor-pointer"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-normal text-slate-700 hover:bg-slate-50 text-left cursor-pointer"
                   >
                     <UserCircleIcon className="h-5 w-5 text-slate-400" />
                     <span>Profile</span>
@@ -716,7 +716,7 @@ export const Header = () => {
                   <Link
                     href="/community"
                     onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-normal text-slate-700 hover:bg-slate-50"
                   >
                     <UserGroupIcon className="h-5 w-5 text-slate-400" />
                     <span>Friends</span>
@@ -729,7 +729,7 @@ export const Header = () => {
               <div className="pt-4 border-t border-slate-100">
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 text-left cursor-pointer"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-normal text-red-600 hover:bg-red-50 text-left cursor-pointer"
                 >
                   <ArrowRightOnRectangleIcon className="h-5 w-5" />
                   <span>Log out</span>
@@ -815,7 +815,7 @@ export const Header = () => {
               )}
             </div>
             <div>
-              <p className="font-bold text-sm text-slate-900">{userName}</p>
+              <p className="font-normal text-sm text-slate-900">{userName}</p>
               <span className="text-xs text-slate-500">Public</span>
             </div>
           </div>
@@ -854,25 +854,25 @@ export const Header = () => {
           )}
 
           <div className="border border-slate-200/90 rounded-xl p-3 bg-slate-50/50">
-            <p className="text-xs font-semibold text-slate-600 mb-2">Add to your post</p>
+            <p className="text-xs font-normal text-slate-600 mb-2">Add to your post</p>
             <div className="flex gap-2">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-medium cursor-pointer"
+                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-normal cursor-pointer"
               >
                 <PhotoIcon className="h-4 w-4 text-emerald-500" />
                 <span>Photo</span>
               </button>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-medium cursor-pointer"
+                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-normal cursor-pointer"
               >
                 <VideoCameraIcon className="h-4 w-4 text-red-500" />
                 <span>Video</span>
               </button>
               <button
                 type="button"
-                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-medium cursor-pointer"
+                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-normal cursor-pointer"
               >
                 <FaceSmileIcon className="h-4 w-4 text-amber-500" />
                 <span>Feeling</span>

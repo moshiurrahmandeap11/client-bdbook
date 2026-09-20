@@ -36,7 +36,7 @@ export const DropdownItem: React.FC<DropdownItemProps> = ({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium transition-colors text-left rounded-xl select-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
+        "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-normal transition-colors text-left rounded-xl select-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
         danger
           ? "text-red-600 hover:bg-red-50 hover:text-red-700"
           : "text-slate-700 hover:bg-slate-100 hover:text-slate-900",

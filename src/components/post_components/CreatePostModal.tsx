@@ -46,7 +46,7 @@ export default function CreatePostModal({
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4 border border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3">
-          <h3 className="font-bold text-lg text-gray-900 dark:text-white">Create Post</h3>
+          <h3 className="font-normal text-lg text-gray-900 dark:text-white">Create Post</h3>
           <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded-full">
             <X className="h-5 w-5" />
           </button>
@@ -76,14 +76,14 @@ export default function CreatePostModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              className="px-4 py-2 text-sm font-normal text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 text-sm font-medium bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white rounded-xl flex items-center gap-2 disabled:opacity-50 transition-colors cursor-pointer"
+              className="px-4 py-2 text-sm font-normal bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white rounded-xl flex items-center gap-2 disabled:opacity-50 transition-colors cursor-pointer"
             >
               <Send className="h-4 w-4" />
               {loading ? "Publishing..." : "Post"}

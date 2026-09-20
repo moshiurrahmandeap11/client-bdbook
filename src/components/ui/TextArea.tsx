@@ -20,7 +20,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
         {label && (
           <label
             htmlFor={textareaId}
-            className="block text-xs font-semibold text-slate-700 tracking-wide"
+            className="block text-xs font-normal text-slate-700 tracking-wide"
           >
             {label}
           </label>
@@ -41,7 +41,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
           {...props}
         />
 
-        {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
+        {error && <p className="text-xs text-red-500 font-normal">{error}</p>}
         {!error && helperText && (
           <p className="text-xs text-slate-500">{helperText}</p>
         )}

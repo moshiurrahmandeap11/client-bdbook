@@ -16,10 +16,10 @@ export interface LogoProps {
 }
 
 const sizeMap = {
-  sm: { height: 26, width: 76 },
-  md: { height: 32, width: 93 },
-  lg: { height: 38, width: 110 },
-  xl: { height: 46, width: 134 },
+  sm: { height: 26, width: 90 },
+  md: { height: 32, width: 111 },
+  lg: { height: 38, width: 132 },
+  xl: { height: 46, width: 160 },
 };
 
 export const Logo: React.FC<LogoProps> = ({

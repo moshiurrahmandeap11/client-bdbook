@@ -28,10 +28,10 @@ const variantStyles: Record<NonNullable<ButtonProps["variant"]>, string> = {
 };
 
 const sizeStyles: Record<NonNullable<ButtonProps["size"]>, string> = {
-  xs: "px-3 py-1 text-xs font-medium rounded-lg gap-1.5",
-  sm: "px-3.5 py-1.5 text-xs font-medium rounded-xl gap-1.5",
-  md: "px-4 py-2 text-sm font-medium rounded-xl gap-2",
-  lg: "px-5 py-2.5 text-sm font-medium rounded-xl gap-2.5",
+  xs: "px-3 py-1 text-xs font-normal rounded-lg gap-1.5",
+  sm: "px-3.5 py-1.5 text-xs font-normal rounded-xl gap-1.5",
+  md: "px-4 py-2 text-sm font-normal rounded-xl gap-2",
+  lg: "px-5 py-2.5 text-sm font-normal rounded-xl gap-2.5",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -57,7 +57,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={isDisabled}
         className={cn(
-          "inline-flex items-center justify-center font-medium select-none cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4E4AFC] focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none",
+          "inline-flex items-center justify-center font-normal select-none cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4E4AFC] focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none",
           variantStyles[variant],
           sizeStyles[size],
           fullWidth && "w-full",

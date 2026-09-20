@@ -45,6 +45,11 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
   min-height: 100vh;
+  font-weight: 400;
+}
+
+h1, h2, h3, h4, h5, h6, b, strong, button, input, textarea, select {
+  font-weight: 400;
 }
 
 /* Centralized Spacing Utilities controlled via variables */

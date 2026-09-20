@@ -24,9 +24,9 @@ export const RightSidebar: React.FC = () => {
 
   if (cleared || recentPosts.length === 0) {
     return (
-      <aside className="hidden xl:block w-80 shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-6 px-5 border-l border-slate-200/80 bg-white">
+      <aside className="hidden xl:block w-80 shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-6 px-6 border-l border-slate-200/80 bg-white">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-sm text-slate-900">Recent Posts</h3>
+          <h3 className="font-normal text-sm text-slate-900">Recent Posts</h3>
         </div>
         <p className="text-xs text-slate-400">No recent posts</p>
       </aside>
@@ -34,12 +34,12 @@ export const RightSidebar: React.FC = () => {
   }
 
   return (
-    <aside className="hidden xl:block w-80 shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-6 px-5 border-l border-slate-200/80 bg-white">
+    <aside className="hidden xl:block w-80 shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-6 px-6 border-l border-slate-200/80 bg-white">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-bold text-sm text-slate-900 tracking-tight">Recent Posts</h3>
+        <h3 className="font-normal text-sm text-slate-900 tracking-tight">Recent Posts</h3>
         <button
           onClick={() => setCleared(true)}
-          className="text-xs font-semibold text-slate-400 hover:text-slate-600 transition cursor-pointer"
+          className="text-xs font-normal text-slate-400 hover:text-slate-600 transition cursor-pointer"
         >
           Clear
         </button>
@@ -66,11 +66,11 @@ export const RightSidebar: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-1">
                     <Avatar src={authorPic} name={authorName} size={18} />
-                    <span className="text-xs font-semibold text-slate-700 truncate">
+                    <span className="text-xs font-normal text-slate-700 truncate">
                       s/{authorName.toLowerCase().replace(/\s+/g, "")}
                     </span>
                   </div>
-                  <p className="text-xs font-semibold text-slate-900 group-hover:text-[#4E4AFC] line-clamp-2 leading-snug transition-colors">
+                  <p className="text-xs font-normal text-slate-900 group-hover:text-[#4E4AFC] line-clamp-2 leading-snug transition-colors">
                     {post.description || "Shared a post"}
                   </p>
                   <p className="text-[11px] text-slate-400 mt-1 truncate">

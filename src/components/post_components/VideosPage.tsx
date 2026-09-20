@@ -82,7 +82,7 @@ const VideoAction = ({ icon, count, onClick, onLongPress }: VideoActionProps) =>
       className="flex flex-col items-center gap-1 group select-none transition-colors"
     >
       <div className="drop-shadow-lg">{icon}</div>
-      <span className="text-white text-xs font-medium drop-shadow">{count || 0}</span>
+      <span className="text-white text-xs font-normal drop-shadow">{count || 0}</span>
     </button>
   );
 };
@@ -150,7 +150,7 @@ const ThreeDotMenu = ({ video, index, onSave, onInterested, onNotInterested, onD
         <div className="drop-shadow-lg">
           <EllipsisHorizontalIcon className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
         </div>
-        <span className="text-white text-xs font-medium drop-shadow">Menu</span>
+        <span className="text-white text-xs font-normal drop-shadow">Menu</span>
       </button>
 
       {showMenu && (
@@ -189,7 +189,7 @@ const RepostButton = ({ count, onClick, isReposted }: { count?: number; onClick?
           <ArrowPathIcon className="h-7 w-7 sm:h-8 sm:w-8 text-white group-hover:text-green-400 transition-colors" />
         )}
       </div>
-      <span className="text-white text-xs font-medium drop-shadow">{count || 0}</span>
+      <span className="text-white text-xs font-normal drop-shadow">{count || 0}</span>
     </button>
   );
 };
@@ -278,7 +278,7 @@ const LikesModal = ({ video, onClose }: { video: IPost | any; onClose: () => voi
         <div className="flex items-center justify-between p-4 border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-2">
             <HeartSolidIcon className="h-5 w-5 text-red-500" />
-            <h3 className="text-lg font-semibold text-white">Reactions <span className="text-white/50 text-base">({video.likesCount || displayLikes.length})</span></h3>
+            <h3 className="text-lg font-normal text-white">Reactions <span className="text-white/50 text-base">({video.likesCount || displayLikes.length})</span></h3>
           </div>
           <button onClick={onClose} className="p-1 rounded-full bg-white/10 active:bg-white/20 transition">
             <XMarkIcon className="h-5 w-5 text-white" />
@@ -301,7 +301,7 @@ const LikesModal = ({ video, onClose }: { video: IPost | any; onClose: () => voi
                   ) : (<UserIcon className="h-5 w-5 text-white" />)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-white font-medium text-sm truncate">{person.fullName || person.name || "User"}</p>
+                  <p className="text-white font-normal text-sm truncate">{person.fullName || person.name || "User"}</p>
                 </div>
                 <HeartSolidIcon className="h-4 w-4 text-red-500 flex-shrink-0" />
               </div>
@@ -763,7 +763,7 @@ export const VideosPage = () => {
           <VideoCameraIcon className="h-20 w-20 text-white/30 mx-auto mb-4" />
           <p className="text-white/60 text-lg mb-4">No videos yet</p>
           {isAuthenticated && (
-            <Link href="/" className="inline-block px-6 py-2 bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white font-medium rounded-xl transition-colors">
+            <Link href="/" className="inline-block px-6 py-2 bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white font-normal rounded-xl transition-colors">
               Create First Video Post
             </Link>
           )}
@@ -851,7 +851,7 @@ export const VideosPage = () => {
                           <Image src={videoUserPic} alt={videoUserName} width={40} height={40} className="object-cover" loading="lazy" />
                         ) : (<UserIcon className="h-5 w-5 text-white" />)}
                       </div>
-                      <span className="font-semibold text-white text-sm sm:text-base drop-shadow">{videoUserName}</span>
+                      <span className="font-normal text-white text-sm sm:text-base drop-shadow">{videoUserName}</span>
                     </div>
                   </Link>
                   {video.description && (
@@ -871,7 +871,7 @@ export const VideosPage = () => {
               <div className="text-center px-6">
                 <VideoCameraIcon className="h-16 w-16 text-white/30 mx-auto mb-3" />
                 <p className="text-white/60 mb-4">You've seen all videos! 🎉</p>
-                <button onClick={() => window.location.reload()} className="px-6 py-2 bg-[#4E4AFC] hover:bg-[#3F3BE6] rounded-full text-white text-sm font-medium transition-colors">Watch Again</button>
+                <button onClick={() => window.location.reload()} className="px-6 py-2 bg-[#4E4AFC] hover:bg-[#3F3BE6] rounded-full text-white text-sm font-normal transition-colors">Watch Again</button>
               </div>
             </div>
           )}
@@ -882,7 +882,7 @@ export const VideosPage = () => {
           <div className="fixed inset-0 bottom-22 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setCommentModal({ isOpen: false, video: null, index: null })}>
             <div className="relative w-full sm:max-w-lg bg-[#101A2F] rounded-t-2xl sm:rounded-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between p-4 border-b border-white/10">
-                <h3 className="text-lg font-semibold text-white">Comments</h3>
+                <h3 className="text-lg font-normal text-white">Comments</h3>
                 <button onClick={() => setCommentModal({ isOpen: false, video: null, index: null })} className="p-1 rounded-full bg-white/10 active:bg-white/20 transition">
                   <XMarkIcon className="h-5 w-5 text-white" />
                 </button>
@@ -894,14 +894,14 @@ export const VideosPage = () => {
                   ) : (<UserIcon className="h-6 w-6 text-white" />)}
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-white">{commentModal.video?.userName || commentModal.video?.user?.fullName}</p>
+                  <p className="font-normal text-white">{commentModal.video?.userName || commentModal.video?.user?.fullName}</p>
                   <p className="text-white/70 text-sm line-clamp-2">{commentModal.video?.description}</p>
                 </div>
               </div>
               <div className="p-4 border-t border-white/10">
                 <div className="flex gap-2">
                   <input type="text" value={commentText} onChange={(e) => setCommentText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleCommentSubmit()} placeholder="Write a comment..." className="flex-1 bg-white/10 border border-white/20 rounded-full px-4 py-2 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#4E4AFC]" autoFocus />
-                  <button onClick={handleCommentSubmit} disabled={!commentText.trim()} className="px-4 py-2 bg-[#4E4AFC] hover:bg-[#3F3BE6] rounded-full text-white text-sm font-medium disabled:opacity-50 transition-colors">
+                  <button onClick={handleCommentSubmit} disabled={!commentText.trim()} className="px-4 py-2 bg-[#4E4AFC] hover:bg-[#3F3BE6] rounded-full text-white text-sm font-normal disabled:opacity-50 transition-colors">
                     <PaperAirplaneIcon className="h-5 w-5" />
                   </button>
                 </div>

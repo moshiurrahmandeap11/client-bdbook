@@ -36,13 +36,13 @@ export default function RegisterForm() {
   return (
     <div className="w-full max-w-md p-8 space-y-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700">
       <div className="text-center space-y-2">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Create Account</h1>
+        <h1 className="text-2xl font-normal text-gray-900 dark:text-white">Create Account</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400">Join the Stalk community</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+          <label className="block text-sm font-normal text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
           <input
             type="text"
             required
@@ -54,7 +54,7 @@ export default function RegisterForm() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+          <label className="block text-sm font-normal text-gray-700 dark:text-gray-300 mb-1">Email</label>
           <input
             type="email"
             required
@@ -66,7 +66,7 @@ export default function RegisterForm() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
+          <label className="block text-sm font-normal text-gray-700 dark:text-gray-300 mb-1">Password</label>
           <input
             type="password"
             required
@@ -80,7 +80,7 @@ export default function RegisterForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2.5 px-4 bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white font-medium rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+          className="w-full py-2.5 px-4 bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white font-normal rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
         >
           {loading ? "Creating..." : "Sign Up"}
         </button>
@@ -88,7 +88,7 @@ export default function RegisterForm() {
 
       <p className="text-center text-xs text-gray-500 dark:text-gray-400">
         Already have an account?{" "}
-        <Link href="/auth/login" className="text-[#4E4AFC] hover:underline font-medium">
+        <Link href="/auth/login" className="text-[#4E4AFC] hover:underline font-normal">
           Sign in
         </Link>
       </p>
