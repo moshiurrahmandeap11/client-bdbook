@@ -792,6 +792,12 @@ export const VideosPage = () => {
             const videoUserName = video.userName || video.user?.fullName || "User";
             const videoUserPic = video.userProfilePicture || video.user?.profilePicture?.url;
             
+            const videoOwnerUsername =
+              video.user?.username ||
+              video.username ||
+              video.userName?.toLowerCase().replace(/\s+/g, "") ||
+              videoOwnerId;
+            
             return (
               <div key={vId} className="relative bg-black" style={{ height: "100vh", width: "100vw" }}>
                 <VideoPlayer video={video} isMuted={isMuted} isActive={isActive} onDoubleTap={() => handleDoubleTap(video, index)} onVideoRef={(ref) => videoRefsMap.current.set(vId, ref)} />
@@ -844,7 +850,7 @@ export const VideosPage = () => {
                 
                 {/* Video Info */}
                 <div className="absolute bottom-36 sm:bottom-20 left-3 right-16 z-10">
-                  <Link href={`/profile/${videoOwnerId}`}>
+                  <Link href={`/s/${videoOwnerUsername}`}>
                     <div className="flex items-center gap-2.5 mb-2">
                       <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#4E4AFC] flex items-center justify-center overflow-hidden ring-2 ring-white/20 flex-shrink-0">
                         {videoUserPic ? (
