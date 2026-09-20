@@ -64,3 +64,4 @@ export interface PaginatedResult<T> {
 // Step 27: feat(header): update mobile search overlay with suggestions list in Header.tsx
 // Step 28: fix(header): add anti-autofill attributes to mobile search input in Header.tsx
 // Step 29: refactor(header): update handleProfileNavigate to route to /s/[username] in Header.tsx
+// Step 30: refactor(postcard): add author avatar click navigation to /s/[username] in PostCard.tsx
