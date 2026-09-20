@@ -55,3 +55,4 @@ export interface PaginatedResult<T> {
 // Step 18: feat(post): implement comments list with user avatars and timestamps in PostDetailsPage
 // Step 19: feat(post): add comment input form in PostDetailsPage
 // Step 20: feat(post): handle comment submission with postService.commentPost in PostDetailsPage
+// Step 21: fix(post): add null check for user avatar in comment form in PostDetailsPage
