@@ -80,4 +80,31 @@ export const AuthHeroAnimation: React.FC<AuthHeroAnimationProps> = ({
           <line
             x1="50%"
             y1="50%"
-// [wip step 3/6]
+            x2="20%"
+            y2="75%"
+            stroke="#cbd5e1"
+            strokeWidth="1.5"
+            strokeDasharray="4 4"
+          />
+          <line
+            x1="50%"
+            y1="50%"
+            x2="80%"
+            y2="75%"
+            stroke="#cbd5e1"
+            strokeWidth="1.5"
+            strokeDasharray="4 4"
+          />
+        </svg>
+
+        {/* Central Brand Hub Node */}
+        <div className="relative z-10 flex flex-col items-center">
+          <div className="relative w-16 h-16 rounded-2xl bg-[#4E4AFC] text-white flex items-center justify-center">
+            <span className="text-2xl font-normal tracking-tight">S</span>
+            {/* Ping Ring Effect */}
+            <span className="absolute -inset-1.5 rounded-2xl border-2 border-[#4E4AFC]/30 animate-ping opacity-30" />
+          </div>
+          <span className="mt-2 text-xs font-normal text-slate-500 bg-white px-2.5 py-0.5 rounded-md border border-slate-200/70">
+            Stalk Network
+          </span>
+// [wip step 4/6]
