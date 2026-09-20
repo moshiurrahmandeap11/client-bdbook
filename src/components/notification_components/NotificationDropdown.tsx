@@ -174,4 +174,178 @@ export const NotificationDropdown = ({ onClose }: NotificationDropdownProps = {}
     if (page > 1 && initialFetchDone) {
       fetchNotifications(page, true);
     }
-// [wip step 1/2]
+  }, [page, fetchNotifications, initialFetchDone]);
+
+  useEffect(() => {
+    if (!socket || !isAuthenticated) return;
+
+    const handleNewNotification = (notification: any) => {
+      setNotifications((prev) => {
+        if (prev.some((n) => n._id === notification._id)) return prev;
+        return [notification, ...prev];
+      });
+      setUnreadCount((prev) => prev + 1);
+      toast.custom(
+        (t) => (
+          <div
+            className="bg-white/95 backdrop-blur-xl border border-slate-200 rounded-xl p-3 cursor-pointer max-w-sm"
+            onClick={() => {
+              toast.dismiss(t.id);
+              handleNotificationClick(notification);
+            }}
+          >
+            <div className="flex items-center gap-3">
+              {notification.data?.senderProfilePicture ? (
+                <img
+                  src={notification.data.senderProfilePicture}
+                  alt=""
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-[#4E4AFC] flex items-center justify-center">
+                  <BellIcon className="h-5 w-5 text-white" />
+                </div>
+              )}
+              <div className="flex-1">
+                <p className="text-slate-900 text-sm font-normal">
+                  {notification.data?.message || "New notification"}
+                </p>
+                <p className="text-slate-500 text-xs">Just now</p>
+              </div>
+            </div>
+          </div>
+        ),
+        { duration: 4000 },
+      );
+    };
+
+    socket.on("new_notification", handleNewNotification);
+    return () => {
+      socket.off("new_notification", handleNewNotification);
+    };
+  }, [socket, isAuthenticated, handleNotificationClick]);
+
+  useEffect(() => {
+    if (isAuthenticated && !initialFetchDone) {
+      fetchNotifications(1, false);
+      fetchUnreadNotificationsCount();
+      setInitialFetchDone(true);
+    }
+  }, [
+    isAuthenticated,
+    initialFetchDone,
+    fetchNotifications,
+    fetchUnreadNotificationsCount,
+  ]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const interval = setInterval(() => {
+      fetchUnreadNotificationsCount();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, fetchUnreadNotificationsCount]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target as Node)
+      ) {
+        setIsNotificationsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={notificationsRef}>
+      <button
+        onClick={() => setIsNotificationsOpen((prev) => !prev)}
+        className="relative p-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-600 hover:text-slate-900 transition-all duration-200 cursor-pointer"
+        aria-label="Notifications"
+      >
+        <BellIcon className="h-5 w-5" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-red-500 rounded-full flex items-center justify-center text-xs font-normal text-white animate-pulse px-1">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {isNotificationsOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40 md:hidden bg-slate-900/40 backdrop-blur-xs"
+            onClick={() => setIsNotificationsOpen(false)}
+          />
+          <div className="absolute -right-23 md:right-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 md:w-80 lg:w-96 rounded-2xl bg-white border border-slate-200 overflow-hidden animate-fadeInDown z-50">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="text-slate-900 font-normal text-sm">Notifications</h3>
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="text-xs text-[#4E4AFC] hover:text-[#3F3BE6] font-normal cursor-pointer"
+                >
+                  Mark all as read
+                </button>
+              )}
+            </div>
+            <div
+              ref={notificationsContainerRef}
+              onScroll={handleScroll}
+              className="max-h-96 overflow-y-auto divide-y divide-slate-100"
+            >
+              {notifications.length === 0 ? (
+                <div className="text-center py-8">
+                  <BellIcon className="h-10 w-10 text-slate-300 mx-auto mb-2" />
+                  <p className="text-slate-400 text-sm">No notifications yet</p>
+                </div>
+              ) : (
+                <>
+                  {notifications.map((notification) => (
+                    <button
+                      key={notification._id}
+                      onClick={() => handleNotificationClick(notification)}
+                      className={`w-full flex items-start gap-3 p-3.5 hover:bg-slate-50 transition-all duration-150 text-left cursor-pointer ${
+                        !notification.isRead ? "bg-[#4E4AFC]/5" : ""
+                      }`}
+                    >
+                      <div
+                        className={`w-9 h-9 rounded-full ${getNotificationBg(notification.type)} flex items-center justify-center text-lg flex-shrink-0`}
+                      >
+                        {getNotificationIcon(notification.type)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-sm ${!notification.isRead ? "text-slate-900 font-normal" : "text-slate-600"}`}
+                        >
+                          {notification.data?.message ||
+                            `${notification.type} notification`}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          {formatNotificationTime(notification.createdAt)}
+                        </p>
+                      </div>
+                      {!notification.isRead && (
+                        <div className="w-2 h-2 bg-[#4E4AFC] rounded-full mt-2 flex-shrink-0"></div>
+                      )}
+                    </button>
+                  ))}
+                  {loadingNotifications && (
+                    <div className="flex justify-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-slate-200 border-t-[#4E4AFC]"></div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default NotificationDropdown;
