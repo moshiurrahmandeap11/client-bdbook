@@ -59,4 +59,64 @@ export const Dropdown: React.FC<DropdownProps> = ({
   items,
   align = "right",
   className,
-// [wip step 1/2]
+  isOpen: controlledIsOpen,
+  onOpenChange,
+}) => {
+  const [uncontrolledIsOpen, setUncontrolledIsOpen] = useState(false);
+  const isControlled = controlledIsOpen !== undefined;
+  const open = isControlled ? controlledIsOpen : uncontrolledIsOpen;
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const setOpen = (newOpen: boolean) => {
+    if (!isControlled) {
+      setUncontrolledIsOpen(newOpen);
+    }
+    onOpenChange?.(newOpen);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  return (
+    <div className="relative inline-block" ref={containerRef}>
+      <div onClick={() => setOpen(!open)} className="cursor-pointer">
+        {trigger}
+      </div>
+
+      {open && (
+        <div
+          className={cn(
+            "absolute mt-2 min-w-[12rem] p-1.5 bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-2xl z-50 animate-fadeInDown",
+            align === "right" ? "right-0" : "left-0",
+            className
+          )}
+        >
+          {items
+            ? items.map((item, idx) => (
+                <DropdownItem
+                  key={idx}
+                  {...item}
+                  onClick={() => {
+                    item.onClick?.();
+                    setOpen(false);
+                  }}
+                />
+              ))
+            : children}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Dropdown;
+
