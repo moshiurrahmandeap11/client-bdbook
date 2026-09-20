@@ -60,3 +60,4 @@ export interface PaginatedResult<T> {
 // Step 23: fix(header): rename search input to stalk_search to avoid Chrome popup in Header.tsx
 // Step 24: feat(header): update search suggestions query to use searchService.searchUsers in Header.tsx
 // Step 25: feat(header): render rich user suggestions with avatars and usernames in Header.tsx
+// Step 26: feat(header): add click navigation to /s/[username] from search suggestions in Header.tsx
