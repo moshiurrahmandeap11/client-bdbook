@@ -8,3 +8,4 @@ export * from "./auth.interface";
 export * from "./search.interface";
 
 // perf(feed): optimize query caching for user profile posts
+// refactor(search): optimize search suggestions debounce timing
