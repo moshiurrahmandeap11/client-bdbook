@@ -95,4 +95,101 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
   const sharePreview = useMemo(() => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const targetPost = originalPost || post;
-// [wip step 1/5]
+    return {
+      postUrl: `${origin}/post/details/${targetPost?._id || targetPost?.id}`,
+      text: post.description || originalPost?.description || "Shared a post",
+    };
+  }, [post.description, originalPost?.description, originalPost?._id, originalPost?.id, post._id, post.id]);
+
+  useEffect(() => {
+    setIsLiked(initialLikeState.isLiked);
+    setLikeCount(initialLikeState.likeCount);
+  }, [initialLikeState]);
+
+  const checkAuth = useCallback(() => {
+    if (!isAuthenticated) {
+      toast.error("Please login to continue");
+      router.push("/auth/login");
+      return false;
+    }
+    return true;
+  }, [isAuthenticated, router]);
+
+  const likeMutation = useMutation({
+    mutationFn: () => postService.likePost(post._id || post.id),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["posts"] });
+      const previous = queryClient.getQueryData(["posts"]);
+
+      queryClient.setQueryData(["posts"], (old: any) => {
+        if (!old?.pages) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            data: page.data.map((p: any) => {
+              const pId = p._id || p.id;
+              const targetId = post._id || post.id;
+              if (pId !== targetId) return p;
+              const wasLiked = p.likes?.includes(currentUserId);
+              return {
+                ...p,
+                likes: wasLiked
+                  ? p.likes?.filter((id: string) => id !== currentUserId)
+                  : [...(p.likes || []), currentUserId],
+                likesCount: wasLiked ? (p.likesCount || 1) - 1 : (p.likesCount || 0) + 1,
+              };
+            }),
+          })),
+        };
+      });
+      return { previous };
+    },
+    onError: (err, vars, context: any) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["posts"], context.previous);
+      }
+      toast.error("Failed to like post");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["posts", post._id || post.id],
+        refetchType: "none",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => postService.deletePost(post._id || post.id),
+    onSuccess: () => {
+      toast.success("Post deleted");
+      onPostUpdate?.();
+    },
+    onError: () => toast.error("Failed to delete post"),
+  });
+
+  const editMutation = useMutation({
+    mutationFn: (description: string) =>
+      postService.updatePost(post._id || post.id, { description }),
+    onSuccess: () => {
+      toast.success("Post updated!");
+      setShowEditModal(false);
+      onPostUpdate?.();
+    },
+    onError: (err: any) =>
+      toast.error(err.response?.data?.message || "Failed to update post"),
+  });
+
+  const handleLike = useCallback(() => {
+    if (!checkAuth()) return;
+    setIsLiked((prev: boolean) => !prev);
+    setLikeCount((prev: number) => prev + (isLiked ? -1 : 1));
+    likeMutation.mutate();
+  }, [checkAuth, likeMutation, isLiked]);
+
+  const goToPostDetails = useCallback(() => {
+    router.push(`/post/details/${post._id || post.id}`);
+  }, [router, post._id, post.id]);
+
+  const handleComment = useCallback(() => {
+// [wip step 2/5]
