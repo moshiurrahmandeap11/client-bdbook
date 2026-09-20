@@ -54,4 +54,32 @@ export const RightSidebar: React.FC = () => {
         </button>
       </div>
 
-// [wip step 2/4]
+      <div className="divide-y divide-slate-100">
+        {recentPosts.map((post) => {
+          const authorName = post.userName || post.user?.fullName || "User";
+          const authorPic =
+            post.userProfilePicture ||
+            (typeof post.user?.profilePicture === "object"
+              ? post.user?.profilePicture?.url
+              : post.user?.profilePicture);
+          const mediaUrl = post.mediaUrl || post.media?.url;
+          const mediaType = post.mediaType || post.media?.resourceType;
+
+          return (
+            <Link
+              key={post._id || post.id}
+              href={`/post/details/${post._id || post.id}`}
+              className="group block py-3.5 first:pt-0 last:pb-0"
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Avatar src={authorPic} name={authorName} size={18} />
+                    <span className="text-xs font-normal text-slate-700 truncate">
+                      s/{authorName.toLowerCase().replace(/\s+/g, "")}
+                    </span>
+                  </div>
+                  <p className="text-xs font-normal text-slate-900 group-hover:text-[#4E4AFC] line-clamp-2 leading-snug transition-colors">
+                    {post.description || "Shared a post"}
+                  </p>
+// [wip step 3/4]
