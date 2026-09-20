@@ -47,3 +47,4 @@ export interface PaginatedResult<T> {
 // Step 10: feat(profile): implement automatic URL rewriting with router.replace in UserProfilePage
 // Step 11: feat(search): implement SearchContent component with useSearchParams
 // Step 12: feat(search): add filter tabs for All, Users, and Posts in SearchPage
+// Step 13: feat(search): display matching users with avatars and @username links in SearchPage
