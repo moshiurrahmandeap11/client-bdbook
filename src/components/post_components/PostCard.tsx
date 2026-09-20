@@ -277,7 +277,11 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
   }, [isSaved, handleSavePost, handleHidePost, handleCopyPostLink, isOwner, user?.role, handleDeletePost]);
 
   const authorName = post.userName || post.user?.fullName || "User";
-  const communityTag = `s/${authorName.toLowerCase().replace(/\s+/g, "")}`;
+  const authorUsername =
+    post.user?.username ||
+    post.username ||
+    authorName.toLowerCase().replace(/\s+/g, "");
+  const communityTag = `s/${authorUsername}`;
   const authorPic = post.userProfilePicture || post.user?.profilePicture?.url;
   const mediaUrl = post.mediaUrl || post.media?.url;
   const mediaType = post.mediaType || post.media?.resourceType || "image";
@@ -301,11 +305,16 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
       {/* Top Header: Subreddit/Author + Time + Follow Button + Options Menu */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <Avatar src={authorPic} name={authorName} size={36} />
+          <div
+            onClick={() => router.push(`/s/${authorUsername}`)}
+            className="cursor-pointer shrink-0"
+          >
+            <Avatar src={authorPic} name={authorName} size={36} />
+          </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <button
-                onClick={() => router.push(`/profile/${postUserId}`)}
+                onClick={() => router.push(`/s/${authorUsername}`)}
                 className="font-normal text-xs text-slate-900 hover:text-[#4E4AFC] transition-colors truncate cursor-pointer"
               >
                 {communityTag}
