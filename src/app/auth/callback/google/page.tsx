@@ -30,4 +30,15 @@ function GoogleCallbackContent() {
       processedRef.current = true;
       toast.error("No authorization code found");
       router.replace("/auth/login");
-// [wip step 3/8]
+      return;
+    }
+
+    processedRef.current = true;
+
+    const exchangeCode = async () => {
+      try {
+        const redirectUri = `${window.location.origin}/auth/callback/google`;
+        const data = await googleAuth({ code, redirectUri });
+
+        Cookies.set("token", data.accessToken, { expires: 7 });
+// [wip step 4/8]
