@@ -168,4 +168,31 @@ h1, h2, h3, h4, h5, h6, b, strong, button, input, textarea, select {
   animation: floatDelayed 4.5s ease-in-out infinite 0.7s;
 }
 
-// [wip step 6/7]
+/* Smooth Auth Page & Card Transition Animations */
+@keyframes authPageFade {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-auth-page {
+  animation: authPageFade 0.3s ease-out both;
+}
+
+@keyframes authCardIn {
+  0% {
+    opacity: 0.85;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-auth-card {
+  animation: authCardIn 0.15s ease-out both;
+}
