@@ -28,4 +28,19 @@ export default function LoginForm() {
       router.push("/");
     } catch (err: any) {
       toast.error(err.message || "Failed to login");
-// [wip step 2/7]
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="w-full max-w-md mx-auto bg-white border border-slate-200/90 rounded-md p-6 sm:p-8 animate-auth-card">
+      <div className="text-center space-y-1.5 mb-6">
+        <h1 className="text-2xl font-normal text-slate-900">Welcome Back</h1>
+        <p className="text-sm font-normal text-slate-500">Sign in to your Stalk account</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-xs font-normal text-slate-700 mb-1.5">
+// [wip step 3/7]
