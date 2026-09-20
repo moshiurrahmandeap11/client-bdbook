@@ -30,4 +30,19 @@ export default function RootLayout({
         <QueryProvider>
           <AuthProvider>
             <SocketProvider>
-// [wip step 2/3]
+              <Toaster position="bottom-left" />
+              <Header />
+              <div className="flex-1 flex w-full pt-14 sm:pt-16">
+                <Sidebar />
+                <main className="flex-1 min-w-0 bg-white">
+                  {children}
+                </main>
+                <RightSidebar />
+              </div>
+            </SocketProvider>
+          </AuthProvider>
+        </QueryProvider>
+      </body>
+    </html>
+  );
+}
