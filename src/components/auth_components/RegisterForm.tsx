@@ -83,4 +83,21 @@ export default function RegisterForm() {
             placeholder="••••••••"
           />
         </div>
-// [wip step 5/7]
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-2.5 px-4 bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white font-normal rounded-md transition-colors disabled:opacity-50 cursor-pointer text-sm mt-2"
+        >
+          {loading ? "Creating account..." : "Sign Up"}
+        </button>
+      </form>
+
+      <div className="relative my-5">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-slate-200" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-white px-2 text-slate-400 font-normal">or</span>
+        </div>
+// [wip step 6/7]
