@@ -36,3 +36,4 @@ export interface PaginatedResult<T> {
   };
 }
 // Step 1: feat(interfaces): add pagination structure to ApiResponse
+// Step 2: feat(interfaces): add senderUsername and actorUsername to notification data
