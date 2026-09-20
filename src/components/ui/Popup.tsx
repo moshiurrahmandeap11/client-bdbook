@@ -60,7 +60,7 @@ export const Popup: React.FC<PopupProps> = ({
       {open && (
         <div
           className={cn(
-            "absolute z-50 p-3 bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-xl shadow-lg shadow-slate-200/40 text-slate-800 animate-fadeInDown",
+            "absolute z-50 p-3 bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-xl text-slate-800 animate-fadeInDown",
             positionStyles[position],
             className
           )}
