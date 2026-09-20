@@ -15,4 +15,21 @@ export default function RegisterForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-// [wip step 1/7]
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const data = await register({ name, email, password });
+      Cookies.set("token", data.accessToken, { expires: 7 });
+      localStorage.setItem("token", data.accessToken);
+      setUser(data.user);
+      toast.success("Account created successfully!");
+      router.push("/");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create account");
+    } finally {
+      setLoading(false);
+    }
+// [wip step 2/7]
