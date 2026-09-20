@@ -49,4 +49,21 @@ export default function RegisterForm() {
           <input
             type="text"
             required
-// [wip step 3/7]
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full px-3.5 py-2.5 text-sm font-normal border border-slate-300 rounded-md bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#4E4AFC] focus:ring-0 focus:outline-none transition-colors"
+            placeholder="John Doe"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-normal text-slate-700 mb-1.5">
+            Email address
+          </label>
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-3.5 py-2.5 text-sm font-normal border border-slate-300 rounded-md bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#4E4AFC] focus:ring-0 focus:outline-none transition-colors"
+// [wip step 4/7]
