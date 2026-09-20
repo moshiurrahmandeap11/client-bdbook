@@ -12,3 +12,4 @@ export * from "./search.interface";
 // style(button): ensure consistent rounded-md borders across modal actions
 // perf(post): optimize post details comment rendering and memoization
 // style(header): polish search dropdown border styling and transitions
+// chore(release): verify all architectural deliverables and profile routes
