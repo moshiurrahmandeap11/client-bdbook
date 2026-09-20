@@ -89,4 +89,18 @@ export default function LoginForm() {
         </div>
       </div>
 
-// [wip step 6/7]
+      <GoogleSignInButton text="Sign in with Google" />
+
+      <div className="my-5 border-t border-slate-200" />
+
+      <div className="text-center">
+        <Link
+          href="/auth/register"
+          className="inline-flex items-center justify-center px-5 py-2.5 text-sm font-normal text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-md transition-colors cursor-pointer"
+        >
+          Create new account
+        </Link>
+      </div>
+    </div>
+  );
+}
