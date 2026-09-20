@@ -179,7 +179,7 @@ export const ShareModal = ({
       <div className="-m-5">
         {/* Post Preview Snippet */}
         <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200/80 shadow-xs">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200/80">
             <Avatar src={postAuthorPic} name={postAuthorName} size={40} />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-normal text-slate-900 truncate">{postAuthorName}</p>
