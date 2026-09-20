@@ -74,4 +74,19 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-// [wip step 5/7]
+          className="w-full py-2.5 px-4 bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white font-normal rounded-md transition-colors disabled:opacity-50 cursor-pointer text-sm mt-2"
+        >
+          {loading ? "Signing in..." : "Log In"}
+        </button>
+      </form>
+
+      <div className="relative my-5">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-slate-200" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-white px-2 text-slate-400 font-normal">or</span>
+        </div>
+      </div>
+
+// [wip step 6/7]
