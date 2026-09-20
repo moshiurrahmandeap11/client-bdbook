@@ -6,9 +6,9 @@ const AUTH_ROUTES = ["/auth/login", "/auth/register"];
 
 async function fetchAuthStatus(request: NextRequest) {
   const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:6969";
-  const apiBaseUrl = rawApiUrl.endsWith("/v1/api")
+  const apiBaseUrl = rawApiUrl.endsWith("/api/v1")
     ? rawApiUrl
-    : `${rawApiUrl.replace(/\/+$/, "")}/v1/api`;
+    : `${rawApiUrl.replace(/\/+$/, "")}/api/v1`;
 
   const cookieHeader = request.headers.get("cookie") || "";
 
