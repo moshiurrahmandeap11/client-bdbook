@@ -14,4 +14,8 @@ export default function AuthLayout({
         <div className="lg:col-span-5 flex justify-center w-full">
           {children}
         </div>
-// [wip step 3/4]
+      </div>
+    </div>
+  );
+}
+
