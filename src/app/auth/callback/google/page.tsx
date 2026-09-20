@@ -8,4 +8,15 @@ import Cookies from "js-cookie";
 import toast from "react-hot-toast";
 
 function GoogleCallbackContent() {
-// [wip step 1/8]
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { setUser } = useAuth();
+  const processedRef = useRef(false);
+
+  useEffect(() => {
+    if (processedRef.current) return;
+
+    const code = searchParams.get("code");
+    const error = searchParams.get("error");
+
+// [wip step 2/8]
