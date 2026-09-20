@@ -44,3 +44,4 @@ export interface PaginatedResult<T> {
 // Step 7: feat(profile): display user bio, location, website, and join date in UserProfilePage
 // Step 8: feat(profile): fetch and display user posts in UserProfilePage
 // Step 9: feat(profile): add empty state and loading state for UserProfilePage
+// Step 10: feat(profile): implement automatic URL rewriting with router.replace in UserProfilePage
