@@ -38,4 +38,22 @@ export const changePassword = async (payload: ChangePasswordPayload): Promise<vo
     return handleApiError(error);
   }
 };
-// [wip step 2/3]
+
+export const logout = async (): Promise<void> => {
+  try {
+    await apiClient.post<ApiResponse<null>>("/auth/logout");
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const googleAuth = async (payload: { idToken?: string; code?: string; redirectUri?: string }): Promise<AuthResponseData> => {
+  try {
+    const response = await apiClient.post<ApiResponse<AuthResponseData>>("/auth/google", payload);
+    return response.data.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+
