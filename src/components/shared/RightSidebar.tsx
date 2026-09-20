@@ -82,4 +82,30 @@ export const RightSidebar: React.FC = () => {
                   <p className="text-xs font-normal text-slate-900 group-hover:text-[#4E4AFC] line-clamp-2 leading-snug transition-colors">
                     {post.description || "Shared a post"}
                   </p>
-// [wip step 3/4]
+                </div>
+
+                {mediaUrl && (
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-slate-200/80">
+                    {mediaType === "video" ? (
+                      <video src={mediaUrl} className="w-full h-full object-cover" />
+                    ) : (
+                      <Image
+                        src={mediaUrl}
+                        alt=""
+                        width={64}
+                        height={64}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </aside>
+  );
+};
+
+export default RightSidebar;
