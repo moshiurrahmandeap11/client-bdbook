@@ -18,33 +18,4 @@ export const register = async (payload: RegisterPayload): Promise<AuthResponseDa
     const response = await apiClient.post<ApiResponse<AuthResponseData>>("/auth/register", payload);
     return response.data.data;
   } catch (error) {
-    return handleApiError(error);
-  }
-};
-
-export const getMe = async (): Promise<IUser> => {
-  try {
-    const response = await apiClient.get<ApiResponse<IUser>>("/auth/me");
-    return response.data.data;
-  } catch (error) {
-    return handleApiError(error);
-  }
-};
-
-export const changePassword = async (payload: ChangePasswordPayload): Promise<void> => {
-  try {
-    await apiClient.post<ApiResponse<null>>("/auth/change-password", payload);
-  } catch (error) {
-    return handleApiError(error);
-  }
-};
-
-export const logout = async (): Promise<void> => {
-  try {
-    await apiClient.post<ApiResponse<null>>("/auth/logout");
-  } catch (error) {
-    return handleApiError(error);
-  }
-};
-
-
+// [wip step 1/3]
