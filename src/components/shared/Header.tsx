@@ -446,4 +446,228 @@ export const Header = () => {
                   
                   {searchQuery && (
                     <button
-// [wip step 2/4]
+                      type="button"
+                      onClick={clearSearch}
+                      className="absolute right-9 p-0.5 hover:bg-slate-200 rounded-full transition cursor-pointer"
+                    >
+                      <XMarkIcon className="h-3.5 w-3.5 text-slate-500" />
+                    </button>
+                  )}
+                </div>
+
+                {(showSearchDropdown || isSearching) &&
+                  searchQuery.trim().length >= 2 && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-200 overflow-hidden z-50 max-h-80 overflow-y-auto animate-fadeInDown">
+                      {isSearching ? (
+                        <div className="p-4 text-center text-slate-400 text-sm">
+                          Searching...
+                        </div>
+                      ) : suggestions.length > 0 ? (
+                        <>
+                          <div className="px-4 py-2 border-b border-slate-100 bg-slate-50">
+                            <span className="text-slate-400 text-xs font-normal tracking-wider">
+                              Quick Search
+                            </span>
+                          </div>
+                          {suggestions.map((suggestion: string, idx: number) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => handleSuggestionClick(suggestion)}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition text-left cursor-pointer"
+                            >
+                              <MagnifyingGlassIcon className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                              <span className="text-slate-800 text-sm font-normal">
+                                {suggestion}
+                              </span>
+                            </button>
+                          ))}
+                        </>
+                      ) : (
+                        <div className="px-4 py-6 text-center text-slate-400 text-sm">
+                          No results found
+                        </div>
+                      )}
+                    </div>
+                  )}
+              </form>
+            </div>
+
+            {/* Right: + Create Button + Action Icons + Profile Avatar */}
+            <div className="flex items-center gap-3 shrink-0">
+              {/* + Create Button */}
+              <button
+                onClick={handleOpenCreateModal}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-normal text-white bg-[#4E4AFC] hover:bg-[#3F3BE6] transition-colors cursor-pointer"
+              >
+                <PlusIcon className="h-4 w-4 stroke-[2.5]" />
+                <span>Create</span>
+              </button>
+
+              {/* Direct Messages Icon */}
+              <Link
+                href="/message"
+                className="p-2 rounded-full hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition relative"
+                aria-label="Messages"
+              >
+                <MessageCircle className="h-5 w-5" />
+                {unreadMessagesCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-normal text-white px-1 animate-pulse">
+                    {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* Notifications Dropdown */}
+              <NotificationDropdown />
+
+              {/* User Profile / Get Started */}
+              {!isAuthenticated ? (
+                <button
+                  onClick={handleGetStarted}
+                  className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-normal text-black bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer"
+                >
+                  <span className="text-black">Log in</span>
+                </button>
+              ) : (
+                <div className="relative" ref={profileMenuRef}>
+                  <button
+                    onClick={handleProfileClick}
+                    className="flex items-center p-0.5 rounded-full hover:ring-2 hover:ring-[#4E4AFC]/30 transition-all cursor-pointer"
+                    aria-label="Profile"
+                  >
+                    {userPic ? (
+                      <div className="relative w-8 h-8 rounded-full overflow-hidden border border-slate-200">
+                        <Image
+                          src={userPic}
+                          alt={userName}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-[#EEEDFE] text-[#4E4AFC] flex items-center justify-center font-normal text-xs border border-[#4E4AFC]/20">
+                        {userName.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </button>
+
+                  {isProfileMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white border border-slate-200 overflow-hidden animate-fadeInDown z-50">
+                      <div className="py-2">
+                        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50">
+                          <p className="text-slate-900 font-normal text-sm">
+                            {userName}
+                          </p>
+                          <p className="text-slate-500 text-xs mt-0.5 truncate">
+                            {user?.email || ""}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setIsProfileMenuOpen(false);
+                            handleProfileNavigate();
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors text-left text-sm cursor-pointer"
+                        >
+                          <UserCircleIcon className="h-4 w-4 text-slate-400" />
+                          <span>Profile</span>
+                        </button>
+                        <Link
+                          href="/community"
+                          className="flex items-center gap-3 px-4 py-2.5 text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors text-sm"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                        >
+                          <UserGroupIcon className="h-4 w-4 text-slate-400" />
+                          <span>Friends</span>
+                        </Link>
+                        <div className="border-t border-slate-100 my-1"></div>
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors text-left text-sm cursor-pointer"
+                        >
+                          <ArrowRightOnRectangleIcon className="h-4 w-4" />
+                          <span>Log out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* MOBILE HEADER */}
+      <header className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200/80">
+        <div className="px-4 h-14 flex items-center justify-between">
+          {BrandLogo}
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openMobileSearch}
+              className="p-2 rounded-full hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition cursor-pointer"
+              aria-label="Search"
+            >
+              <MagnifyingGlassIcon className="h-5 w-5" />
+            </button>
+
+            {/* Mobile + Create button */}
+            <button
+              onClick={handleOpenCreateModal}
+              className="p-2 rounded-md bg-[#4E4AFC] text-white hover:bg-[#3F3BE6] transition-colors cursor-pointer"
+              aria-label="Create Post"
+            >
+              <PlusIcon className="h-4 w-4 stroke-[2.5]" />
+            </button>
+
+            <Link
+              href="/message"
+              className="p-2 rounded-full hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition relative"
+              aria-label="Messages"
+            >
+              <MessageCircle className="h-5 w-5" />
+              {unreadMessagesCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-normal text-white px-1 animate-pulse">
+                  {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
+                </span>
+              )}
+            </Link>
+
+            {isAuthenticated && <NotificationDropdown />}
+
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="p-2 rounded-full hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition mobile-menu-button cursor-pointer"
+              aria-label="Menu"
+            >
+              {isMenuOpen ? (
+                <XMarkIcon className="h-5 w-5" />
+              ) : (
+                <Bars3Icon className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* MOBILE DRAWER MENU */}
+      {isMenuOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-[55] bg-slate-900/40 backdrop-blur-xs flex justify-end"
+          ref={mobileMenuRef}
+        >
+          <div className="w-64 bg-white h-full p-4 flex flex-col justify-between border-l border-slate-200 animate-slideDown">
+            <div>
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+                <span className="text-slate-900 font-normal text-lg">Menu</span>
+                <button
+                  onClick={() => setIsMenuOpen(false)}
+                  className="p-1 rounded-full text-slate-400 hover:text-slate-700 cursor-pointer"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+// [wip step 3/4]
