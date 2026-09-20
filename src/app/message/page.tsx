@@ -73,25 +73,39 @@ export default function MessagePage() {
           ) : (
             conversations.map((conv) => {
               const partner = conv.participants[0];
-              const isSelected = selectedUserId === (partner?.id || partner?._id);
+              const partnerId = partner?.userId || partner?.user?.id || partner?.id || partner?._id;
+              const partnerName = partner?.user?.fullName || partner?.name || partner?.user?.name || "User";
+              const partnerAvatar =
+                partner?.user?.avatar ||
+                partner?.user?.profilePicUrl ||
+                partner?.avatar ||
+                (typeof partner?.user?.profilePicture === "object"
+                  ? partner?.user?.profilePicture?.url
+                  : partner?.user?.profilePicture);
+              const isSelected = selectedUserId === partnerId;
+              const lastMsgText =
+                typeof conv.lastMessage === "string"
+                  ? conv.lastMessage
+                  : (conv.lastMessage as any)?.text || (conv.lastMessage as any)?.message || "Started conversation";
+
               return (
                 <button
                   key={conv.id}
-                  onClick={() => setSelectedUserId(partner?.id || partner?._id || null)}
+                  onClick={() => setSelectedUserId(partnerId || null)}
                   className={`w-full p-4 flex items-center gap-3 text-left transition ${
                     isSelected ? "bg-[#EEEDFE] dark:bg-[#4E4AFC]/20" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"
                   }`}
                 >
-                  <div className="w-10 h-10 rounded-full bg-[#4E4AFC] text-white font-normal flex items-center justify-center overflow-hidden">
-                    {partner?.avatar ? (
-                      <img src={partner.avatar} alt={partner.name} className="w-full h-full object-cover" />
+                  <div className="w-10 h-10 rounded-full bg-[#4E4AFC] text-white font-normal flex items-center justify-center overflow-hidden shrink-0">
+                    {partnerAvatar ? (
+                      <img src={partnerAvatar} alt={partnerName} className="w-full h-full object-cover" />
                     ) : (
-                      (partner?.name || "U").charAt(0).toUpperCase()
+                      partnerName.charAt(0).toUpperCase()
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-normal text-sm truncate">{partner?.name || "User"}</h4>
-                    <p className="text-xs text-gray-400 truncate">{conv.lastMessage?.text || "Started conversation"}</p>
+                    <h4 className="font-normal text-sm truncate">{partnerName}</h4>
+                    <p className="text-xs text-gray-400 truncate">{lastMsgText}</p>
                   </div>
                 </button>
               );
@@ -119,7 +133,7 @@ export default function MessagePage() {
                           : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-none"
                       }`}
                     >
-                      <p>{msg.text}</p>
+                      <p>{msg.text || msg.message}</p>
                       <span className="text-[10px] opacity-70 block text-right mt-1">
                         {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                       </span>
