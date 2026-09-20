@@ -386,4 +386,99 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
               src={mediaUrl}
               alt={post.description || "Post media"}
               width={800}
-// [wip step 4/5]
+              height={500}
+              loading="lazy"
+              className="w-full object-cover max-h-[480px]"
+            />
+          )}
+        </div>
+      ) : null}
+
+      {/* SlothUI / Reddit-Style Pill Actions Bar */}
+      <div className="flex items-center gap-2 mt-3.5">
+        {/* Upvote/Downvote Pill */}
+        <div className="inline-flex items-center bg-slate-100 hover:bg-slate-200/80 rounded-md px-3 py-1 text-xs font-normal text-slate-700 transition-colors">
+          <button
+            onClick={handleLike}
+            disabled={likeMutation.isPending}
+            className={cn(
+              "hover:text-[#4E4AFC] transition-colors p-0.5 cursor-pointer",
+              isLiked && "text-[#4E4AFC] font-normal"
+            )}
+            aria-label="Upvote"
+          >
+            <ArrowUpIcon className="h-3.5 w-3.5 stroke-[2.5]" />
+          </button>
+          <span className="px-2 min-w-[20px] text-center">{likeCount}</span>
+          <button
+            onClick={handleLike}
+            className="hover:text-red-600 transition-colors p-0.5 cursor-pointer"
+            aria-label="Downvote"
+          >
+            <ArrowDownIcon className="h-3.5 w-3.5 stroke-[2.5]" />
+          </button>
+        </div>
+
+        {/* Comment Pill */}
+        <button
+          onClick={handleComment}
+          className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/80 rounded-md px-3 py-1 text-xs font-normal text-slate-700 transition-colors cursor-pointer"
+        >
+          <ChatBubbleLeftIcon className="h-3.5 w-3.5 stroke-[2]" />
+          <span>{commentCount}</span>
+        </button>
+
+        {/* Share Pill */}
+        <button
+          onClick={handleSharePost}
+          className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/80 rounded-md px-3 py-1 text-xs font-normal text-slate-700 transition-colors cursor-pointer"
+        >
+          <ShareIcon className="h-3.5 w-3.5 stroke-[2]" />
+          <span>Share</span>
+        </button>
+      </div>
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <ShareModal
+          post={post}
+          user={user}
+          sharePreview={sharePreview}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
+
+      {/* Edit Modal */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="Edit Post"
+        footer={
+          <div className="flex items-center justify-end gap-2 w-full">
+            <Button variant="outline" onClick={() => setShowEditModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleEditPost}
+              loading={editMutation.isPending}
+            >
+              Save Changes
+            </Button>
+          </div>
+        }
+      >
+        <TextArea
+          value={editDescription}
+          onChange={(e) => setEditDescription(e.target.value)}
+          placeholder="What's on your mind?"
+          rows={4}
+          autoFocus
+        />
+      </Modal>
+    </article>
+  );
+});
+
+PostCard.displayName = "PostCard";
+export default PostCard;
