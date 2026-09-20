@@ -40,3 +40,4 @@ export interface PaginatedResult<T> {
 // Step 3: feat(interfaces): add SendMessagePayload interface
 // Step 4: feat(interfaces): define ChangePasswordPayload in auth.interface.ts
 // Step 5: refactor(services): add fallback ID lookup to getUserByUsername in user.service.ts
+// Step 6: feat(profile): add user avatar and cover photo display in UserProfilePage
