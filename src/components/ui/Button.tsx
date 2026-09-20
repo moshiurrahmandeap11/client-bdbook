@@ -14,7 +14,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const variantStyles: Record<NonNullable<ButtonProps["variant"]>, string> = {
   primary:
-    "bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white shadow-xs transition-colors",
+    "bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white transition-colors",
   secondary:
     "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 transition-colors",
   outline:
@@ -22,80 +22,14 @@ const variantStyles: Record<NonNullable<ButtonProps["variant"]>, string> = {
   ghost:
     "text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors",
   danger:
-    "bg-red-600 hover:bg-red-700 text-white shadow-xs transition-colors",
+    "bg-red-600 hover:bg-red-700 text-white transition-colors",
   glass:
-    "bg-white/80 backdrop-blur-md border border-slate-200/80 text-slate-800 hover:bg-white shadow-xs transition-colors",
+    "bg-white/80 backdrop-blur-md border border-slate-200/80 text-slate-800 hover:bg-white transition-colors",
 };
 
 const sizeStyles: Record<NonNullable<ButtonProps["size"]>, string> = {
-  xs: "px-3 py-1 text-xs font-normal rounded-lg gap-1.5",
-  sm: "px-3.5 py-1.5 text-xs font-normal rounded-xl gap-1.5",
-  md: "px-4 py-2 text-sm font-normal rounded-xl gap-2",
-  lg: "px-5 py-2.5 text-sm font-normal rounded-xl gap-2.5",
-};
-
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  (
-    {
-      className,
-      variant = "primary",
-      size = "md",
-      loading = false,
-      leftIcon,
-      rightIcon,
-      fullWidth = false,
-      disabled,
-      children,
-      ...props
-    },
-    ref
-  ) => {
-    const isDisabled = disabled || loading;
-
-    return (
-      <button
-        ref={ref}
-        disabled={isDisabled}
-        className={cn(
-          "inline-flex items-center justify-center font-normal select-none cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4E4AFC] focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none",
-          variantStyles[variant],
-          sizeStyles[size],
-          fullWidth && "w-full",
-          className
-        )}
-        {...props}
-      >
-        {loading ? (
-          <svg
-            className="animate-spin h-4 w-4 text-current"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            />
-          </svg>
-        ) : (
-          leftIcon
-        )}
-        <span>{children}</span>
-        {!loading && rightIcon}
-      </button>
-    );
-  }
-);
-
-Button.displayName = "Button";
-export default Button;
-
+  xs: "px-3 py-1 text-xs font-normal rounded-md gap-1.5",
+  sm: "px-3.5 py-1.5 text-xs font-normal rounded-md gap-1.5",
+  md: "px-4 py-2 text-sm font-normal rounded-md gap-2",
+  lg: "px-5 py-2.5 text-sm font-normal rounded-md gap-2.5",
+// [wip step 1/3]
