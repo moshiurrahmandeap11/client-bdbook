@@ -80,4 +80,45 @@ export const Sidebar: React.FC = () => {
               <span>{item.name}</span>
             </Link>
           );
-// [wip step 2/5]
+        })}
+      </div>
+
+      {/* Moderation Section */}
+      <div className="mt-3.5">
+        <button
+          onClick={() => setModOpen(!modOpen)}
+          className="w-full flex items-center justify-between px-3 py-1 text-xs font-normal text-slate-500 hover:text-slate-700 cursor-pointer"
+        >
+          <span>Moderation</span>
+          <ChevronDownIcon
+            className={cn(
+              "h-3.5 w-3.5 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] text-slate-400",
+              !modOpen && "-rotate-90"
+            )}
+          />
+        </button>
+
+        <div
+          className={cn(
+            "grid transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden",
+            modOpen ? "grid-rows-[1fr] opacity-100 mt-0.5" : "grid-rows-[0fr] opacity-0 pointer-events-none mt-0"
+          )}
+        >
+          <div className="overflow-hidden">
+            <div
+              className={cn(
+                "space-y-0.5 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                modOpen ? "translate-y-0" : "-translate-y-2"
+              )}
+            >
+              {moderationNav.map((item) => {
+                const isActive = pathname === item.href;
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-normal transition-all duration-150",
+                      isActive
+// [wip step 3/5]
