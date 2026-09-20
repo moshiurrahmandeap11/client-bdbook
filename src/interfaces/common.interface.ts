@@ -54,3 +54,4 @@ export interface PaginatedResult<T> {
 // Step 17: feat(post): render PostCard and back button in PostDetailsPage
 // Step 18: feat(post): implement comments list with user avatars and timestamps in PostDetailsPage
 // Step 19: feat(post): add comment input form in PostDetailsPage
+// Step 20: feat(post): handle comment submission with postService.commentPost in PostDetailsPage
