@@ -192,4 +192,101 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
   }, [router, post._id, post.id]);
 
   const handleComment = useCallback(() => {
-// [wip step 2/5]
+    if (!checkAuth()) return;
+    goToPostDetails();
+  }, [checkAuth, goToPostDetails]);
+
+  const handleSharePost = useCallback(() => {
+    if (!checkAuth()) return;
+    setShowShareModal(true);
+  }, [checkAuth]);
+
+  const handleDeletePost = useCallback(() => {
+    if (!confirm("Are you sure you want to delete this post?")) return;
+    deleteMutation.mutate();
+  }, [deleteMutation]);
+
+  const handleEditPost = useCallback(() => {
+    if (!editDescription.trim()) {
+      toast.error("Please add a description");
+      return;
+    }
+    editMutation.mutate(editDescription);
+  }, [editDescription, editMutation]);
+
+  const handleFollow = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!checkAuth()) return;
+    setIsFollowing((prev) => !prev);
+    toast.success(isFollowing ? "Unfollowed" : "Following!");
+  };
+
+  const [isSaved, setIsSaved] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
+
+  const handleSavePost = useCallback(() => {
+    if (!checkAuth()) return;
+    setIsSaved((prev) => !prev);
+    toast.success(!isSaved ? "Post saved to your bookmarks" : "Post removed from bookmarks");
+  }, [checkAuth, isSaved]);
+
+  const handleHidePost = useCallback(() => {
+    setIsHidden(true);
+    toast.success("Post hidden from feed");
+  }, []);
+
+  const handleCopyPostLink = useCallback(() => {
+    const url = `${window.location.origin}/post/details/${post._id || post.id}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Link copied to clipboard!");
+  }, [post._id, post.id]);
+
+  const dropdownItems = useMemo(() => {
+    const items: DropdownItemProps[] = [
+      {
+        label: isSaved ? "Unsave Post" : "Save Post",
+        icon: <BookmarkIcon className={cn("h-4 w-4", isSaved && "text-[#4E4AFC]")} />,
+        onClick: handleSavePost,
+      },
+      {
+        label: "Hide Post",
+        icon: <EyeSlashIcon className="h-4 w-4" />,
+        onClick: handleHidePost,
+      },
+      {
+        label: "Copy Link",
+        icon: <LinkIcon className="h-4 w-4" />,
+        onClick: handleCopyPostLink,
+      },
+    ];
+
+    if (isOwner || user?.role === "ADMIN" || (user?.role as string) === "admin") {
+      items.push({
+        label: "Edit Post",
+        icon: <PencilIcon className="h-4 w-4" />,
+        onClick: () => setShowEditModal(true),
+      });
+      items.push({
+        label: "Delete Post",
+        icon: <TrashIcon className="h-4 w-4" />,
+        onClick: handleDeletePost,
+        danger: true,
+      });
+    }
+    return items;
+  }, [isSaved, handleSavePost, handleHidePost, handleCopyPostLink, isOwner, user?.role, handleDeletePost]);
+
+  const authorName = post.userName || post.user?.fullName || "User";
+  const communityTag = `s/${authorName.toLowerCase().replace(/\s+/g, "")}`;
+  const authorPic = post.userProfilePicture || post.user?.profilePicture?.url;
+  const mediaUrl = post.mediaUrl || post.media?.url;
+  const mediaType = post.mediaType || post.media?.resourceType || "image";
+
+  if (isHidden) {
+    return (
+      <article className="py-3 px-4 sm:px-6 text-xs text-slate-500 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+        <span>Post hidden from feed</span>
+        <button
+          onClick={() => setIsHidden(false)}
+          className="text-[#4E4AFC] hover:underline cursor-pointer"
+// [wip step 3/5]
