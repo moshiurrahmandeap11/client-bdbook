@@ -4,6 +4,8 @@ import { useSocket } from "@/components/providers/SocketProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
 import axiosInstance from "@/lib/axios";
 import { postService } from "@/services/post.service";
+import { searchService } from "@/services/search.service";
+import { IUser } from "@/interfaces";
 import {
   ArrowLeftIcon,
   ArrowRightOnRectangleIcon,
@@ -87,22 +89,11 @@ export const Header = () => {
     []
   );
 
-  const { data: suggestionsData, isLoading: isSuggestionsLoading } = useQuery({
+  const { data: suggestionsData, isLoading: isSuggestionsLoading } = useQuery<IUser[]>({
     queryKey: ["search-suggestions", searchQuery],
     queryFn: async () => {
       if (!searchQuery.trim() || searchQuery.length < 2) return [];
-      const response = await axiosInstance.get(
-        `/users/search/${encodeURIComponent(searchQuery)}`,
-        {
-          params: { limit: 5 },
-        }
-      );
-      if (!response.data.success) return [];
-      return [
-        ...new Set(
-          (response.data.data as any[]).map((u: any) => u.fullName).filter(Boolean)
-        ),
-      ].slice(0, 5);
+      return await searchService.searchUsers(searchQuery, 6);
     },
     enabled: isAuthenticated && searchQuery.trim().length >= 2,
     staleTime: 3 * 60 * 1000,
@@ -384,9 +375,9 @@ export const Header = () => {
   const handleProfileNavigate = useCallback(() => {
     setIsProfileMenuOpen(false);
     setShowMobileProfileMenu(false);
-    const userId = user?._id || user?.id;
-    if (userId) {
-      router.push(`/profile/${userId}`);
+    const userIdentifier = user?.username || user?._id || user?.id;
+    if (userIdentifier) {
+      router.push(`/s/${userIdentifier}`);
     }
   }, [router, user]);
 
@@ -439,11 +430,13 @@ export const Header = () => {
                 <div className="relative flex items-center">
                   <input
                     type="text"
-                    name="search_query"
+                    name="stalk_search"
                     autoComplete="off"
                     autoCorrect="off"
                     autoCapitalize="off"
                     spellCheck="false"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
                     value={searchQuery}
                     onChange={handleSearchChange}
                     onFocus={() =>
@@ -469,32 +462,66 @@ export const Header = () => {
                   searchQuery.trim().length >= 2 && (
                     <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-200 overflow-hidden z-50 max-h-80 overflow-y-auto animate-fadeInDown">
                       {isSearching ? (
-                        <div className="p-4 text-center text-slate-400 text-sm">
+                        <div className="p-4 text-center text-slate-400 text-sm font-normal">
                           Searching...
                         </div>
                       ) : suggestions.length > 0 ? (
                         <>
                           <div className="px-4 py-2 border-b border-slate-100 bg-slate-50">
                             <span className="text-slate-400 text-xs font-normal tracking-wider">
-                              Quick Search
+                              Users
                             </span>
                           </div>
-                          {suggestions.map((suggestion: string, idx: number) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => handleSuggestionClick(suggestion)}
-                              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition text-left cursor-pointer"
-                            >
-                              <MagnifyingGlassIcon className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                              <span className="text-slate-800 text-sm font-normal">
-                                {suggestion}
-                              </span>
-                            </button>
-                          ))}
+                          {suggestions.map((sUser: IUser) => {
+                            const uAvatar =
+                              sUser.avatar ||
+                              sUser.profilePicUrl ||
+                              (typeof sUser.profilePicture === "object"
+                                ? sUser.profilePicture?.url
+                                : sUser.profilePicture);
+                            const uName = sUser.fullName || sUser.name || sUser.username || "User";
+                            const uUsername = sUser.username || sUser.id || sUser._id;
+                            return (
+                              <button
+                                key={sUser.id || sUser._id}
+                                type="button"
+                                onClick={() => {
+                                  setShowSearchDropdown(false);
+                                  setShowMobileSearch(false);
+                                  setSearchQuery("");
+                                  router.push(`/s/${uUsername}`);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition text-left cursor-pointer"
+                              >
+                                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden shrink-0 border border-slate-200">
+                                  {uAvatar ? (
+                                    <img
+                                      src={uAvatar}
+                                      alt={uName}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <span className="text-xs font-normal text-[#4E4AFC]">
+                                      {uName.charAt(0).toUpperCase()}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-normal text-slate-900 truncate">
+                                    {uName}
+                                  </p>
+                                  {sUser.username && (
+                                    <p className="text-xs text-slate-400 truncate font-normal">
+                                      @{sUser.username}
+                                    </p>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
                         </>
                       ) : (
-                        <div className="px-4 py-6 text-center text-slate-400 text-sm">
+                        <div className="px-4 py-6 text-center text-slate-400 text-sm font-normal">
                           No results found
                         </div>
                       )}
@@ -784,7 +811,7 @@ export const Header = () => {
 
       {/* MOBILE SEARCH OVERLAY */}
       {showMobileSearch && (
-        <div className="md:hidden fixed inset-0 z-[60] bg-white">
+        <div className="md:hidden fixed inset-0 z-[60] bg-white flex flex-col">
           <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200">
             <button
               onClick={closeMobileSearch}
@@ -796,11 +823,13 @@ export const Header = () => {
               <input
                 ref={mobileSearchInputRef}
                 type="text"
-                name="mobile_search_query"
+                name="stalk_search_mobile"
                 autoComplete="off"
                 autoCorrect="off"
                 autoCapitalize="off"
                 spellCheck="false"
+                data-lpignore="true"
+                data-1p-ignore="true"
                 value={searchQuery}
                 onChange={handleSearchChange}
                 placeholder="Search stalk..."
@@ -818,6 +847,72 @@ export const Header = () => {
                 </button>
               )}
             </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {isSearching ? (
+              <div className="p-6 text-center text-slate-400 text-sm font-normal">
+                Searching...
+              </div>
+            ) : suggestions.length > 0 ? (
+              <div className="divide-y divide-slate-100">
+                <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
+                  <span className="text-slate-400 text-xs font-normal tracking-wider">
+                    Users
+                  </span>
+                </div>
+                {suggestions.map((sUser: IUser) => {
+                  const uAvatar =
+                    sUser.avatar ||
+                    sUser.profilePicUrl ||
+                    (typeof sUser.profilePicture === "object"
+                      ? sUser.profilePicture?.url
+                      : sUser.profilePicture);
+                  const uName = sUser.fullName || sUser.name || sUser.username || "User";
+                  const uUsername = sUser.username || sUser.id || sUser._id;
+                  return (
+                    <button
+                      key={sUser.id || sUser._id}
+                      type="button"
+                      onClick={() => {
+                        setShowMobileSearch(false);
+                        setSearchQuery("");
+                        router.push(`/s/${uUsername}`);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition text-left cursor-pointer"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden shrink-0 border border-slate-200">
+                        {uAvatar ? (
+                          <img
+                            src={uAvatar}
+                            alt={uName}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-sm font-normal text-[#4E4AFC]">
+                            {uName.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-normal text-slate-900 truncate">
+                          {uName}
+                        </p>
+                        {sUser.username && (
+                          <p className="text-xs text-slate-400 truncate font-normal">
+                            @{sUser.username}
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : searchQuery.trim().length >= 2 ? (
+              <div className="p-8 text-center text-slate-400 text-sm font-normal">
+                No results found
+              </div>
+            ) : null}
           </div>
         </div>
       )}
