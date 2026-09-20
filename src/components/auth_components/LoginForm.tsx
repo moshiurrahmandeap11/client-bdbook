@@ -13,4 +13,19 @@ export default function LoginForm() {
   const router = useRouter();
   const { setUser } = useAuth();
   const [email, setEmail] = useState("");
-// [wip step 1/7]
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const data = await login({ email, password });
+      Cookies.set("token", data.accessToken, { expires: 7 });
+      localStorage.setItem("token", data.accessToken);
+      setUser(data.user);
+      toast.success("Logged in successfully!");
+      router.push("/");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to login");
+// [wip step 2/7]
