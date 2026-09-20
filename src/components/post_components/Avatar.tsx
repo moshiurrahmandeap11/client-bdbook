@@ -19,4 +19,24 @@ export const Avatar = memo(({ src, name, size = 40 }: AvatarProps) => (
     }}
   >
     {src ? (
-// [wip step 1/2]
+      <Image 
+        src={src} 
+        alt={name || "User Avatar"} 
+        width={size} 
+        height={size} 
+        className="object-cover w-full h-full"
+        loading="lazy"
+      />
+    ) : (
+      <UserIcon 
+        className="text-slate-500" 
+        style={{ width: size * 0.8, height: size * 0.8, marginBottom: -size * 0.05 }} 
+      />
+    )}
+  </div>
+));
+
+Avatar.displayName = 'Avatar';
+export default Avatar;
+
+
