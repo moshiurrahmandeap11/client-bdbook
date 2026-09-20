@@ -469,4 +469,473 @@ export const VideosPage = () => {
   const activeIndexRef = useRef(0);
   const touchStartRef = useRef({ y: 0, time: 0 });
   const isDraggingRef = useRef(false);
-// [wip step 1/2]
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const videoRefsMap = useRef(new Map<string, HTMLVideoElement>());
+
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
+    queryKey: ["videos"],
+    initialPageParam: 1,
+    queryFn: async ({ pageParam = 1 }) => {
+      const res = await postService.getPosts({ page: pageParam, limit: 8 });
+      const videoPosts = res.data.filter((p: IPost) => p.mediaType === "video" || p.media?.resourceType === "video");
+      return { data: videoPosts, pagination: res.pagination };
+    },
+    getNextPageParam: (last: any) => {
+      const page = last?.pagination?.page || 1;
+      const pages = last?.pagination?.pages || 1;
+      return page < pages ? page + 1 : undefined;
+    },
+    staleTime: 10 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
+  const allVideos = useMemo(() => data?.pages.flatMap((p) => p.data) || [], [data]);
+
+  useEffect(() => { activeIndexRef.current = activeIndex; }, [activeIndex]);
+
+  const snapToIndex = useCallback((index: number, fast = false) => {
+    if (!containerRef.current) return;
+    const total = allVideos.length;
+    const clamped = Math.max(0, Math.min(index, total - 1));
+    const duration = fast ? "0.15s" : "0.25s";
+    containerRef.current.style.transition = `transform ${duration} cubic-bezier(0.2, 0.9, 0.4, 1.1)`;
+    containerRef.current.style.transform = `translateY(-${clamped * 100}vh)`;
+    setActiveIndex(clamped);
+    if (clamped >= total - 2 && hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }, [allVideos.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => { touchStartRef.current = { y: e.touches[0].clientY, time: Date.now() }; isDraggingRef.current = true; if (containerRef.current) containerRef.current.style.transition = "none"; }, []);
+  const handleTouchMove = useCallback((e: React.TouchEvent) => { if (!isDraggingRef.current) return; const diff = e.touches[0].clientY - touchStartRef.current.y; const base = -activeIndexRef.current * window.innerHeight; const idx = activeIndexRef.current; const resistance = (idx === 0 && diff > 0) || (idx >= allVideos.length - 1 && diff < 0) ? 0.3 : 1; if (containerRef.current) containerRef.current.style.transform = `translateY(${base + diff * resistance}px)`; }, [allVideos.length]);
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => { if (!isDraggingRef.current) return; isDraggingRef.current = false; const diff = e.changedTouches[0].clientY - touchStartRef.current.y; const elapsed = Date.now() - touchStartRef.current.time; const velocity = Math.abs(diff) / elapsed; const cur = activeIndexRef.current; const shouldChange = velocity > 0.3 || Math.abs(diff) > 40; if (shouldChange && diff < 0 && cur < allVideos.length - 1) snapToIndex(cur + 1, velocity > 0.6); else if (shouldChange && diff > 0 && cur > 0) snapToIndex(cur - 1, velocity > 0.6); else snapToIndex(cur); touchStartRef.current = { y: 0, time: 0 }; }, [allVideos.length, snapToIndex]);
+  const handleWheel = useCallback((e: WheelEvent) => { e.preventDefault(); if (scrollTimeoutRef.current) return; const cur = activeIndexRef.current; if (e.deltaY > 0 && cur < allVideos.length - 1) snapToIndex(cur + 1); else if (e.deltaY < 0 && cur > 0) snapToIndex(cur - 1); scrollTimeoutRef.current = setTimeout(() => { scrollTimeoutRef.current = null; }, 200); }, [allVideos.length, snapToIndex]);
+
+  useEffect(() => {
+    const wrapper = document.getElementById("video-wrapper");
+    if (wrapper) { wrapper.addEventListener("wheel", handleWheel, { passive: false }); return () => wrapper.removeEventListener("wheel", handleWheel); }
+  }, [handleWheel]);
+
+  const currentUserId = user?._id || user?.id;
+
+  const likeMutation = useMutation({
+    mutationFn: ({ videoId }: { videoId: string; index: number }) => postService.likePost(videoId),
+    onMutate: async ({ videoId, index }) => {
+      await queryClient.cancelQueries({ queryKey: ["videos"] });
+      const prev = queryClient.getQueryData(["videos"]);
+      queryClient.setQueryData(["videos"], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any, pi: number) => ({
+            ...page,
+            data: page.data.map((video: any, vi: number) => {
+              if (pi === Math.floor(index / 8) && vi === index % 8) {
+                const liked = video.likes?.includes(currentUserId);
+                return {
+                  ...video,
+                  likesCount: liked ? (video.likesCount || 0) - 1 : (video.likesCount || 0) + 1,
+                  likes: liked ? video.likes.filter((id: string) => id !== currentUserId) : [...(video.likes || []), currentUserId]
+                };
+              }
+              return video;
+            })
+          }))
+        };
+      });
+      return { prev };
+    },
+    onError: (_, __, ctx: any) => { queryClient.setQueryData(["videos"], ctx.prev); toast.error("Failed to like video"); },
+  });
+
+  const commentMutation = useMutation({
+    mutationFn: ({ videoId, text }: { videoId: string; text: string; index: number }) => postService.commentPost(videoId, text),
+    onSuccess: (_, { index }) => {
+      queryClient.setQueryData(["videos"], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any, pi: number) => ({
+            ...page,
+            data: page.data.map((video: any, vi: number) => {
+              if (pi === Math.floor(index / 8) && vi === index % 8) return { ...video, commentsCount: (video.commentsCount || 0) + 1 };
+              return video;
+            })
+          }))
+        };
+      });
+      setCommentText("");
+      setCommentModal({ isOpen: false, video: null, index: null });
+      toast.success("Comment added!");
+    },
+    onError: () => toast.error("Failed to add comment"),
+  });
+
+  const shareMutation = useMutation({
+    mutationFn: async ({ videoId }: { videoId: string; video: any; index?: number }) => {
+      return postService.sharePost(videoId);
+    },
+    onSuccess: (_, { index }) => {
+      toast.success("Video shared to your feed!");
+      if (index !== undefined) {
+        queryClient.setQueryData(["videos"], (old: any) => {
+          if (!old) return old;
+          return { ...old, pages: old.pages.map((page: any, pi: number) => ({ ...page, data: page.data.map((videoItem: any, vi: number) => { if (pi === Math.floor(index / 8) && vi === index % 8) { return { ...videoItem, sharesCount: (videoItem.sharesCount || 0) + 1 }; } return videoItem; }) })) };
+        });
+      }
+      setShareModal({ isOpen: false, video: null });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || "Failed to share video");
+    },
+  });
+
+  const shareToMessageMutation = useMutation({
+    mutationFn: async ({ friendId, video }: { friendId: string; video: any }) => {
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const vId = video._id || video.id;
+      const postUrl = `${origin}/post/details/${vId}`;
+      const res = await axiosInstance.post(`/users/send-message/${friendId}`, {
+        message: JSON.stringify({
+          type: "post_share",
+          postId: vId,
+          postUrl,
+          postText: video.description || "Check out this video",
+          postAuthor: video.userName || video.user?.fullName,
+          postAuthorProfilePic: video.userProfilePicture || video.user?.profilePicture?.url,
+          hasMedia: !!(video.mediaUrl || video.media?.url),
+          mediaType: video.mediaType || video.media?.resourceType,
+          mediaUrl: video.mediaUrl || video.media?.url,
+          sharedBy: user?.fullName || user?.name,
+          sharedByProfilePic: typeof user?.profilePicture === "object" ? user?.profilePicture?.url : user?.profilePicture || user?.avatar,
+        }),
+        messageType: "share",
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      toast.success("Video shared via message!");
+      setShareModal({ isOpen: false, video: null });
+    },
+    onError: () => toast.error("Failed to share via message"),
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async ({ postId }: { postId: string; index: number }) => {
+      const res = await axiosInstance.post(`/posts/${postId}/save`);
+      return res.data;
+    },
+    onSuccess: (resData, { postId, index }) => {
+      setSavedPosts(prev => ({ ...prev, [postId]: resData.data.isSaved }));
+      toast.success(resData.message || "Post saved");
+    },
+    onError: () => toast.error("Failed to save post"),
+  });
+
+  const interestedMutation = useMutation({
+    mutationFn: async ({ postId }: { postId: string }) => {
+      const res = await axiosInstance.post(`/posts/${postId}/interested`);
+      return res.data;
+    },
+    onSuccess: (resData, { postId }) => {
+      setInterestedPosts(prev => ({ ...prev, [postId]: resData.data.isInterested }));
+      toast.success(resData.message || "Marked interested");
+    },
+    onError: () => toast.error("Failed to mark interest"),
+  });
+
+  const notInterestedMutation = useMutation({
+    mutationFn: async ({ postId }: { postId: string }) => {
+      const res = await axiosInstance.post(`/posts/${postId}/not-interested`);
+      return res.data;
+    },
+    onSuccess: (resData, { postId }) => {
+      setNotInterestedPosts(prev => ({ ...prev, [postId]: resData.data.isNotInterested }));
+      toast.success(resData.message || "Marked not interested");
+    },
+    onError: () => toast.error("Failed to mark as not interested"),
+  });
+
+  const repostMutation = useMutation({
+    mutationFn: async ({ postId }: { postId: string; index: number }) => {
+      const res = await axiosInstance.post(`/posts/${postId}/repost`);
+      return res.data;
+    },
+    onSuccess: (_, { postId, index }) => {
+      setRepostedPosts(prev => ({ ...prev, [postId]: true }));
+      toast.success("Post reposted to your profile!");
+    },
+    onError: () => toast.error("Failed to repost"),
+  });
+
+  const deleteVideoMutation = useMutation({
+    mutationFn: async ({ postId }: { postId: string; index: number }) => {
+      return postService.deletePost(postId);
+    },
+    onSuccess: (_, { index }) => {
+      toast.success("Video deleted");
+      queryClient.invalidateQueries({ queryKey: ["videos"] });
+      if (index === activeIndex && allVideos.length > 1) {
+        setTimeout(() => snapToIndex(Math.max(0, activeIndex - 1)), 100);
+      }
+    },
+    onError: () => toast.error("Failed to delete video"),
+  });
+
+  const handleDoubleTap = (video: any, index: number) => {
+    if (!isAuthenticated) return;
+    const vId = video._id || video.id;
+    const isLiked = video.likes?.includes(currentUserId);
+    if (!isLiked) likeMutation.mutate({ videoId: vId, index });
+    setFloatingHearts(prev => ({ ...prev, [vId]: Date.now() }));
+  };
+
+  const handleLike = (video: any, index: number) => {
+    if (!isAuthenticated) { toast.error("Please login to like videos"); return; }
+    const vId = video._id || video.id;
+    likeMutation.mutate({ videoId: vId, index });
+  };
+
+  const handleCommentSubmit = () => {
+    if (!isAuthenticated) { toast.error("Please login to comment"); return; }
+    if (!commentText.trim()) { toast.error("Please write a comment"); return; }
+    if (!commentModal.video || commentModal.index === null) return;
+    const vId = commentModal.video._id || commentModal.video.id;
+    commentMutation.mutate({ videoId: vId, text: commentText, index: commentModal.index });
+  };
+
+  const handleShareClick = useCallback((video: any, index: number) => {
+    if (!isAuthenticated) { toast.error("Please login to share"); return; }
+    setShareModal({ isOpen: true, video, index });
+  }, [isAuthenticated]);
+
+  const getSharePreview = useCallback((video: any) => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const vId = video._id || video.id;
+    const postUrl = `${origin}/post/details/${vId}`;
+    const text = video.description || "Check out this video";
+    return { postUrl, text };
+  }, []);
+
+  const handleShareToFeed = useCallback(() => {
+    if (!shareModal.video) return;
+    const vId = shareModal.video._id || shareModal.video.id;
+    shareMutation.mutate({ videoId: vId, video: shareModal.video, index: shareModal.index });
+  }, [shareModal.video, shareModal.index, shareMutation]);
+
+  const handleShareToMessage = useCallback((friendId: string) => {
+    if (!shareModal.video) return;
+    shareToMessageMutation.mutate({ friendId, video: shareModal.video });
+  }, [shareModal.video, shareToMessageMutation]);
+
+  const handleCopyLink = useCallback(() => {
+    toast.success("Link copied!");
+  }, []);
+
+  const handleRepost = useCallback((video: any, index: number) => {
+    if (!isAuthenticated) { toast.error("Please login to repost"); return; }
+    const vId = video._id || video.id;
+    if (repostedPosts[vId]) {
+      toast.error("You already reposted this");
+      return;
+    }
+    repostMutation.mutate({ postId: vId, index });
+  }, [isAuthenticated, repostedPosts, repostMutation]);
+
+  const getTimeAgo = (date?: string | Date) => {
+    if (!date) return "recently";
+    const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+    if (s < 60) return "just now";
+    if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+    if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+    if (s < 604800) return `${Math.floor(s / 86400)}d ago`;
+    return new Date(date).toLocaleDateString();
+  };
+
+  if (isLoading && allVideos.length === 0) {
+    return (<div className="min-h-screen bg-black">{[...Array(3)].map((_, i) => <VideoSkeleton key={i} />)}</div>);
+  }
+
+  if (!isLoading && allVideos.length === 0) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center px-6">
+          <VideoCameraIcon className="h-20 w-20 text-white/30 mx-auto mb-4" />
+          <p className="text-white/60 text-lg mb-4">No videos yet</p>
+          {isAuthenticated && (
+            <Link href="/" className="inline-block px-6 py-2 bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white font-normal rounded-xl transition-colors">
+              Create First Video Post
+            </Link>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div id="video-wrapper" className="fixed inset-0 bg-black overflow-hidden touch-none select-none">
+        <button onClick={() => setIsMuted(p => !p)} className="fixed top-20 right-4 z-50 bg-black/50 rounded-full p-2.5 backdrop-blur-sm active:bg-black/70 transition">
+          {isMuted ? <SpeakerXMarkIcon className="h-5 w-5 text-white" /> : <SpeakerWaveIcon className="h-5 w-5 text-white" />}
+        </button>
+        
+        <div ref={containerRef} className="w-full" style={{ transform: "translateY(0px)", willChange: "transform" }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+          {allVideos.map((video: any, index: number) => {
+            const vId = video._id || video.id;
+            const isLiked = video.likes?.includes(currentUserId) || false;
+            const isActive = index === activeIndex;
+            const isVideoSaved = savedPosts[vId] || video.isSaved || false;
+            const isVideoInterested = interestedPosts[vId] || false;
+            const isVideoNotInterested = notInterestedPosts[vId] || false;
+            const isVideoReposted = repostedPosts[vId] || video.isReposted || false;
+            const videoOwnerId = video.userId || video.user?._id || video.user?.id;
+            const videoUserName = video.userName || video.user?.fullName || "User";
+            const videoUserPic = video.userProfilePicture || video.user?.profilePicture?.url;
+            
+            return (
+              <div key={vId} className="relative bg-black" style={{ height: "100vh", width: "100vw" }}>
+                <VideoPlayer video={video} isMuted={isMuted} isActive={isActive} onDoubleTap={() => handleDoubleTap(video, index)} onVideoRef={(ref) => videoRefsMap.current.set(vId, ref)} />
+                {floatingHearts[vId] && <FloatingHeart onDone={() => setFloatingHearts(p => { const n = { ...p }; delete n[vId]; return n; })} />}
+                <div className="absolute inset-0 pointer-events-none" />
+                
+                {/* Action Buttons */}
+                <div className="absolute right-3 bottom-28 sm:bottom-32 flex flex-col items-center gap-5 z-10">
+                  <VideoAction
+                    icon={isLiked ? <HeartSolidIcon className="h-7 w-7 sm:h-8 sm:w-8 text-red-500" /> : <HeartIcon className="h-7 w-7 sm:h-8 sm:w-8 text-white" />}
+                    count={video.likesCount || video.likes?.length || 0}
+                    onClick={() => handleLike(video, index)}
+                    onLongPress={() => setLikesModal({ isOpen: true, video })}
+                  />
+                  <VideoAction
+                    icon={<ChatBubbleLeftIcon className="h-7 w-7 sm:h-8 sm:w-8 text-white" />}
+                    count={video.commentsCount || video.comments?.length || 0}
+                    onClick={() => setCommentModal({ isOpen: true, video, index })}
+                  />
+                  
+                  <RepostButton
+                    count={video.repostsCount || 0}
+                    isReposted={isVideoReposted}
+                    onClick={() => handleRepost(video, index)}
+                  />
+                  
+                  <VideoAction
+                    icon={<ShareIcon className="h-7 w-7 sm:h-8 sm:w-8 text-white" />}
+                    count={video.sharesCount || 0}
+                    onClick={() => handleShareClick(video, index)}
+                  />
+                  
+                  <ThreeDotMenu
+                    video={video}
+                    index={index}
+                    isOwner={videoOwnerId === currentUserId}
+                    isSaved={isVideoSaved}
+                    isInterested={isVideoInterested}
+                    isNotInterested={isVideoNotInterested}
+                    onSave={() => saveMutation.mutate({ postId: vId, index })}
+                    onInterested={() => interestedMutation.mutate({ postId: vId })}
+                    onNotInterested={() => notInterestedMutation.mutate({ postId: vId })}
+                    onDelete={() => {
+                      if (confirm("Are you sure you want to delete this video?")) {
+                        deleteVideoMutation.mutate({ postId: vId, index });
+                      }
+                    }}
+                  />
+                </div>
+                
+                {/* Video Info */}
+                <div className="absolute bottom-36 sm:bottom-20 left-3 right-16 z-10">
+                  <Link href={`/profile/${videoOwnerId}`}>
+                    <div className="flex items-center gap-2.5 mb-2">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#4E4AFC] flex items-center justify-center overflow-hidden ring-2 ring-white/20 flex-shrink-0">
+                        {videoUserPic ? (
+                          <Image src={videoUserPic} alt={videoUserName} width={40} height={40} className="object-cover" loading="lazy" />
+                        ) : (<UserIcon className="h-5 w-5 text-white" />)}
+                      </div>
+                      <span className="font-normal text-white text-sm sm:text-base">{videoUserName}</span>
+                    </div>
+                  </Link>
+                  {video.description && (
+                    <p onClick={() => window.location.href = `/post/details/${vId}`} className="text-white/90 text-xs sm:text-sm mb-1 line-clamp-2 cursor-pointer leading-relaxed">
+                      {video.description}
+                    </p>
+                  )}
+                  <p className="text-white/50 text-xs">{getTimeAgo(video.createdAt)}</p>
+                </div>
+              </div>
+            );
+          })}
+          
+          {isFetchingNextPage && (<div className="relative bg-black flex items-center justify-center" style={{ height: "100vh", width: "100vw" }}><div className="w-8 h-8 border-2 border-[#4E4AFC] border-t-transparent rounded-full animate-spin" /></div>)}
+          {!hasNextPage && allVideos.length > 0 && (
+            <div className="relative bg-black flex items-center justify-center" style={{ height: "100vh", width: "100vw" }}>
+              <div className="text-center px-6">
+                <VideoCameraIcon className="h-16 w-16 text-white/30 mx-auto mb-3" />
+                <p className="text-white/60 mb-4">You've seen all videos! 🎉</p>
+                <button onClick={() => window.location.reload()} className="px-6 py-2 bg-[#4E4AFC] hover:bg-[#3F3BE6] rounded-md text-white text-sm font-normal transition-colors">Watch Again</button>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Comment Modal */}
+        {commentModal.isOpen && (
+          <div className="fixed inset-0 bottom-22 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setCommentModal({ isOpen: false, video: null, index: null })}>
+            <div className="relative w-full sm:max-w-lg bg-[#101A2F] rounded-t-2xl sm:rounded-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <h3 className="text-lg font-normal text-white">Comments</h3>
+                <button onClick={() => setCommentModal({ isOpen: false, video: null, index: null })} className="p-1 rounded-full bg-white/10 active:bg-white/20 transition">
+                  <XMarkIcon className="h-5 w-5 text-white" />
+                </button>
+              </div>
+              <div className="p-4 border-b border-white/10 flex gap-3">
+                <div className="w-12 h-12 rounded-full bg-[#4E4AFC] flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {commentModal.video?.userProfilePicture || commentModal.video?.user?.profilePicture?.url ? (
+                    <Image src={commentModal.video.userProfilePicture || commentModal.video.user.profilePicture.url} alt={commentModal.video.userName || "User"} width={48} height={48} className="object-cover" loading="lazy" />
+                  ) : (<UserIcon className="h-6 w-6 text-white" />)}
+                </div>
+                <div className="flex-1">
+                  <p className="font-normal text-white">{commentModal.video?.userName || commentModal.video?.user?.fullName}</p>
+                  <p className="text-white/70 text-sm line-clamp-2">{commentModal.video?.description}</p>
+                </div>
+              </div>
+              <div className="p-4 border-t border-white/10">
+                <div className="flex gap-2">
+                  <input type="text" value={commentText} onChange={(e) => setCommentText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleCommentSubmit()} placeholder="Write a comment..." className="flex-1 bg-white/10 border border-white/20 rounded-md px-4 py-2 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#4E4AFC]" autoFocus />
+                  <button onClick={handleCommentSubmit} disabled={!commentText.trim()} className="px-4 py-2 bg-[#4E4AFC] hover:bg-[#3F3BE6] rounded-md text-white text-sm font-normal disabled:opacity-50 transition-colors">
+                    <PaperAirplaneIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+              <div className="p-4 text-center border-t border-white/10">
+                <button onClick={() => { setCommentModal({ isOpen: false, video: null, index: null }); window.location.href = `/post/details/${commentModal.video?._id || commentModal.video?.id}`; }} className="text-[#4E4AFC] text-sm hover:underline transition-colors">
+                  View all {commentModal.video?.commentsCount || commentModal.video?.comments?.length || 0} comments
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Likes Modal */}
+        {likesModal.isOpen && likesModal.video && <LikesModal video={likesModal.video} onClose={() => setLikesModal({ isOpen: false, video: null })} />}
+        
+        {/* Share Modal */}
+        {shareModal.isOpen && shareModal.video && (
+          <ShareModal
+            post={shareModal.video}
+            user={user}
+            sharePreview={getSharePreview(shareModal.video)}
+            onClose={() => setShareModal({ isOpen: false, video: null })}
+            onShareToFeed={handleShareToFeed}
+            onShareToMessage={handleShareToMessage}
+            onCopyLink={handleCopyLink}
+            isSharingToFeed={shareMutation.isPending}
+            isSharingToMessage={shareToMessageMutation.isPending}
+          />
+        )}
+      </div>
+    </>
+  );
+};
+
+export default VideosPage;
+
