@@ -70,3 +70,4 @@ export interface PaginatedResult<T> {
 // Step 33: style(profile): ensure zero shadows and rounded-md buttons on /s/[username]
 // Step 34: style(post): adhere to design system with font-normal typography in post details
 // Step 35: style(search): polish search result item hover states and borders
+// Step 36: chore(build): complete client modernization and verify Next.js production build
