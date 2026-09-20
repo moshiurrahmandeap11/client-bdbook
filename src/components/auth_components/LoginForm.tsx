@@ -43,4 +43,20 @@ export default function LoginForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-xs font-normal text-slate-700 mb-1.5">
-// [wip step 3/7]
+            Email address
+          </label>
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-3.5 py-2.5 text-sm font-normal border border-slate-300 rounded-md bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#4E4AFC] focus:ring-0 focus:outline-none transition-colors"
+            placeholder="you@example.com"
+          />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-normal text-slate-700">
+              Password
+// [wip step 4/7]
