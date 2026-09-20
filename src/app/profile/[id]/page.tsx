@@ -47,4 +47,51 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               {user.avatar ? (
                 <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
               ) : (
-// [wip step 1/2]
+                user.name.charAt(0).toUpperCase()
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-2xl font-normal text-gray-900 dark:text-white">{user.name}</h1>
+            {user.bio && <p className="text-sm text-gray-600 dark:text-gray-300">{user.bio}</p>}
+
+            <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400 pt-2">
+              {user.location && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5" /> {user.location}
+                </span>
+              )}
+              {user.website && (
+                <a
+                  href={user.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 text-[#4E4AFC] hover:underline"
+                >
+                  <Globe className="h-3.5 w-3.5" /> {user.website}
+                </a>
+              )}
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5" /> Joined {new Date(user.createdAt).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* User Posts */}
+      <div className="space-y-4">
+        <h3 className="font-normal text-lg text-gray-900 dark:text-white">Posts ({userPosts.length})</h3>
+        {userPosts.length === 0 ? (
+          <div className="text-center py-8 text-sm text-gray-500 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700">
+            No posts published by this user yet.
+          </div>
+        ) : (
+          userPosts.map((post) => <PostCard key={post.id || post._id} post={post} />)
+        )}
+      </div>
+    </div>
+  );
+}
+
