@@ -107,4 +107,31 @@ export const AuthHeroAnimation: React.FC<AuthHeroAnimationProps> = ({
           <span className="mt-2 text-xs font-normal text-slate-500 bg-white px-2.5 py-0.5 rounded-md border border-slate-200/70">
             Stalk Network
           </span>
-// [wip step 4/6]
+        </div>
+
+        {/* Floating Card 1: Top-Left (Friend Connected) */}
+        <div className="absolute top-6 left-6 sm:top-8 sm:left-10 z-20 bg-white border border-slate-200 rounded-md px-3 py-2 flex items-center gap-2.5 animate-float-slow">
+          <div className="relative">
+            <Avatar name="Alex Johnson" size={28} />
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />
+          </div>
+          <div className="text-left">
+            <p className="text-xs font-normal text-slate-900 leading-tight">Sarah joined</p>
+            <p className="text-[10px] text-slate-400 font-normal">s/technology</p>
+          </div>
+        </div>
+
+        {/* Floating Card 2: Top-Right (Heart / Reaction Badge) */}
+        <div className="absolute top-6 right-6 sm:top-7 sm:right-10 z-20 bg-white border border-slate-200 rounded-md px-3 py-2 flex items-center gap-2 animate-float-delayed">
+          <div className="w-7 h-7 rounded-md bg-red-50 text-red-500 flex items-center justify-center">
+            <HeartIcon className="h-4 w-4" />
+          </div>
+          <div className="text-left">
+            <p className="text-xs font-normal text-slate-900 leading-tight">Liked a post</p>
+            <p className="text-[10px] text-slate-400 font-normal">Just now</p>
+          </div>
+        </div>
+
+        {/* Floating Card 3: Bottom-Left (Chat Message Bubble) */}
+        <div className="absolute bottom-6 left-6 sm:bottom-8 sm:left-8 z-20 bg-white border border-slate-200 rounded-md px-3 py-2 flex items-center gap-2 animate-float-delayed">
+// [wip step 5/6]
