@@ -57,19 +57,12 @@ export const Header = () => {
     }
   };
 
-  const navItems = useMemo(() => {
-    const publicNavItems = [
-      { name: "Home", href: "/", icon: HomeIcon },
-      { name: "Videos", href: "/videos", icon: VideoCameraIcon },
-      { name: "Room", href: "/room", icon: VideoCameraSlashIcon },
-    ];
-    const privateNavItems = [
-      { name: "Messages", href: "/message", icon: MessageCircle },
-    ];
-    return isAuthenticated
-      ? [...publicNavItems, ...privateNavItems]
-      : publicNavItems;
-  }, [isAuthenticated]);
+  const navItems = useMemo(() => [
+    { name: "Home", href: "/", icon: HomeIcon },
+    { name: "Videos", href: "/videos", icon: VideoCameraIcon },
+    { name: "Messages", href: "/message", icon: MessageCircle },
+    { name: "Room", href: "/room", icon: VideoCameraSlashIcon },
+  ], []);
 
   const { data: suggestionsData, isLoading: isSuggestionsLoading } = useQuery({
     queryKey: ["search-suggestions", searchQuery],
@@ -484,6 +477,20 @@ export const Header = () => {
               <MagnifyingGlassIcon className="h-5 w-5 text-white" />
             </button>
 
+            {/* Direct Messages Icon on Mobile Header */}
+            <Link
+              href="/message"
+              className="p-2 rounded-full hover:bg-white/10 transition relative text-white"
+              aria-label="Messages"
+            >
+              <MessageCircle className="h-5 w-5" />
+              {unreadMessagesCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1 animate-pulse">
+                  {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
+                </span>
+              )}
+            </Link>
+
             {isAuthenticated && (
               <NotificationDropdown />
             )}
@@ -541,6 +548,83 @@ export const Header = () => {
         </div>
       </header>
 
+      {/* MOBILE DRAWER MENU */}
+      {isMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-[55] bg-black/60 backdrop-blur-sm flex justify-end" ref={mobileMenuRef}>
+          <div className="w-64 bg-[#18191a] h-full p-4 flex flex-col justify-between border-l border-white/10 animate-fadeInLeft">
+            <div>
+              <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+                <span className="text-white font-bold text-lg">Menu</span>
+                <button onClick={() => setIsMenuOpen(false)} className="p-1 rounded-full text-white/70 hover:text-white">
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-1">
+                {navItems.map((item) => {
+                  const isActive = pathname === item.href;
+                  const Icon = item.icon;
+                  const isMessage = item.name === "Messages";
+                  const hasUnread = isMessage && unreadMessagesCount > 0;
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={() => setIsMenuOpen(false)}
+                      className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition ${
+                        isActive ? "bg-purple-600/30 text-purple-300 border border-purple-500/30" : "text-white/80 hover:bg-white/10"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="h-5 w-5" />
+                        <span>{item.name}</span>
+                      </div>
+                      {hasUnread && (
+                        <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                          {unreadMessagesCount}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+
+              {isAuthenticated && (
+                <div className="mt-6 pt-4 border-t border-white/10 space-y-1">
+                  <button
+                    onClick={() => { setIsMenuOpen(false); handleProfileNavigate(); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-white/80 hover:bg-white/10 text-left"
+                  >
+                    <UserCircleIcon className="h-5 w-5" />
+                    <span>Profile</span>
+                  </button>
+                  <Link
+                    href="/community"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-white/80 hover:bg-white/10"
+                  >
+                    <UserGroupIcon className="h-5 w-5" />
+                    <span>Friends</span>
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {isAuthenticated && (
+              <div className="pt-4 border-t border-white/10">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 text-left"
+                >
+                  <ArrowRightOnRectangleIcon className="h-5 w-5" />
+                  <span>Log out</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* MOBILE SEARCH OVERLAY */}
       {showMobileSearch && (
         <div className="md:hidden fixed inset-0 z-[60] bg-[#242526]">
@@ -573,4 +657,3 @@ export const Header = () => {
 };
 
 export default Header;
-
