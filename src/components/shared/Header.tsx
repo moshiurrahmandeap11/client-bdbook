@@ -670,4 +670,226 @@ export const Header = () => {
                 </button>
               </div>
 
-// [wip step 3/4]
+              <div className="space-y-1">
+                {navItems.map((item) => {
+                  const isActive = pathname === item.href;
+                  const Icon = item.icon;
+                  const isMessage = item.name === "Messages";
+                  const hasUnread = isMessage && unreadMessagesCount > 0;
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={() => setIsMenuOpen(false)}
+                      className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-normal transition ${
+                        isActive
+                          ? "bg-[#EEEDFE] text-[#4E4AFC] font-normal"
+                          : "text-slate-700 hover:text-slate-900 hover:bg-slate-50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="h-5 w-5" />
+                        <span>{item.name}</span>
+                      </div>
+                      {hasUnread && (
+                        <span className="bg-red-500 text-white text-xs font-normal px-2 py-0.5 rounded-full">
+                          {unreadMessagesCount}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+
+              {isAuthenticated && (
+                <div className="mt-6 pt-4 border-t border-slate-100 space-y-1">
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      handleProfileNavigate();
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-normal text-slate-700 hover:bg-slate-50 text-left cursor-pointer"
+                  >
+                    <UserCircleIcon className="h-5 w-5 text-slate-400" />
+                    <span>Profile</span>
+                  </button>
+                  <Link
+                    href="/community"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-normal text-slate-700 hover:bg-slate-50"
+                  >
+                    <UserGroupIcon className="h-5 w-5 text-slate-400" />
+                    <span>Friends</span>
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {isAuthenticated && (
+              <div className="pt-4 border-t border-slate-100">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-normal text-red-600 hover:bg-red-50 text-left cursor-pointer"
+                >
+                  <ArrowRightOnRectangleIcon className="h-5 w-5" />
+                  <span>Log out</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MOBILE SEARCH OVERLAY */}
+      {showMobileSearch && (
+        <div className="md:hidden fixed inset-0 z-[60] bg-white">
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200">
+            <button
+              onClick={closeMobileSearch}
+              className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition cursor-pointer"
+            >
+              <ArrowLeftIcon className="h-5 w-5 text-slate-700" />
+            </button>
+            <div className="flex-1 relative">
+              <input
+                ref={mobileSearchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder="Search stalk..."
+                className="w-full bg-slate-100 text-slate-900 rounded-full py-2.5 pl-4 pr-10 placeholder:text-slate-400 border border-slate-200 focus:outline-none focus:ring-0 focus:border-slate-300 text-sm"
+                autoFocus
+              />
+              <MagnifyingGlassIcon className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  className="absolute right-9 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-200 rounded-full cursor-pointer"
+                >
+                  <XMarkIcon className="h-4 w-4 text-slate-500" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GLOBAL CREATE POST MODAL (TRIGGERABLE FROM ANYWHERE) */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false);
+          setPostDescription("");
+          setSelectedMedia(null);
+          setMediaPreview(null);
+        }}
+        title="Create Post"
+        maxWidth="md"
+        footer={
+          <Button
+            variant="primary"
+            fullWidth
+            size="lg"
+            onClick={handleCreatePostSubmit}
+            loading={createPostMutation.isPending}
+            disabled={!postDescription.trim() && !selectedMedia}
+          >
+            Post
+          </Button>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#4E4AFC] flex items-center justify-center overflow-hidden flex-shrink-0">
+              {userPic ? (
+                <Image
+                  src={userPic}
+                  alt={userName}
+                  width={40}
+                  height={40}
+                  className="object-cover"
+                />
+              ) : (
+                <UserIcon className="h-5 w-5 text-white" />
+              )}
+            </div>
+            <div>
+              <p className="font-normal text-sm text-slate-900">{userName}</p>
+              <span className="text-xs text-slate-500">Public</span>
+            </div>
+          </div>
+
+          <TextArea
+            value={postDescription}
+            onChange={(e) => setPostDescription(e.target.value)}
+            placeholder="What's on your mind?"
+            rows={4}
+            autoFocus
+          />
+
+          {mediaPreview && (
+            <div className="relative rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+              {mediaType === "video" ? (
+                <video src={mediaPreview} controls className="w-full max-h-64" />
+              ) : (
+                <Image
+                  src={mediaPreview}
+                  alt="Preview"
+                  width={500}
+                  height={300}
+                  className="w-full object-cover max-h-64"
+                />
+              )}
+              <button
+                onClick={() => {
+                  setSelectedMedia(null);
+                  setMediaPreview(null);
+                }}
+                className="absolute top-2 right-2 p-1.5 bg-slate-900/70 hover:bg-slate-900 rounded-full text-white transition-colors cursor-pointer"
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          <div className="border border-slate-200/90 rounded-xl p-3 bg-slate-50/50">
+            <p className="text-xs font-normal text-slate-600 mb-2">Add to your post</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-normal cursor-pointer"
+              >
+                <PhotoIcon className="h-4 w-4 text-emerald-500" />
+                <span>Photo</span>
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-normal cursor-pointer"
+              >
+                <VideoCameraIcon className="h-4 w-4 text-red-500" />
+                <span>Video</span>
+              </button>
+              <button
+                type="button"
+                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-normal cursor-pointer"
+              >
+                <FaceSmileIcon className="h-4 w-4 text-amber-500" />
+                <span>Feeling</span>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*"
+                onChange={handleMediaSelect}
+                className="hidden"
+              />
+            </div>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+};
+
+export default Header;
