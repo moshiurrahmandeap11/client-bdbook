@@ -134,4 +134,30 @@ export const AuthHeroAnimation: React.FC<AuthHeroAnimationProps> = ({
 
         {/* Floating Card 3: Bottom-Left (Chat Message Bubble) */}
         <div className="absolute bottom-6 left-6 sm:bottom-8 sm:left-8 z-20 bg-white border border-slate-200 rounded-md px-3 py-2 flex items-center gap-2 animate-float-delayed">
-// [wip step 5/6]
+          <div className="w-7 h-7 rounded-md bg-indigo-50 text-[#4E4AFC] flex items-center justify-center">
+            <ChatBubbleLeftRightIcon className="h-4 w-4" />
+          </div>
+          <div className="text-left">
+            <p className="text-xs font-normal text-slate-900 leading-tight">New message</p>
+            <p className="text-[10px] text-slate-400 font-normal">Hey, how are you?</p>
+          </div>
+        </div>
+
+        {/* Floating Card 4: Bottom-Right (Community & Photo Badge) */}
+        <div className="absolute bottom-6 right-6 sm:bottom-8 sm:right-8 z-20 bg-white border border-slate-200 rounded-md px-3 py-2 flex items-center gap-2 animate-float-slow">
+          <div className="w-7 h-7 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center">
+            <PhotoIcon className="h-4 w-4" />
+          </div>
+          <div className="text-left">
+            <p className="text-xs font-normal text-slate-900 leading-tight">Photo shared</p>
+            <p className="text-[10px] text-slate-400 font-normal">s/photography</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  );
+};
+
+export default AuthHeroAnimation;
+
