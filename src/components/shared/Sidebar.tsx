@@ -121,4 +121,45 @@ export const Sidebar: React.FC = () => {
                     className={cn(
                       "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-normal transition-all duration-150",
                       isActive
-// [wip step 3/5]
+                        ? "bg-slate-100 text-slate-900 font-normal"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                    )}
+                  >
+                    <Icon
+                      className={cn(
+                        "h-4 w-4 transition-colors",
+                        isActive ? "text-slate-900" : "text-slate-400"
+                      )}
+                    />
+                    <span>{item.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Communities Section */}
+      <div className="mt-3.5">
+        <button
+          onClick={() => setRecentOpen(!recentOpen)}
+          className="w-full flex items-center justify-between px-3 py-1 text-xs font-normal text-slate-500 hover:text-slate-700 cursor-pointer"
+        >
+          <span>Recent</span>
+          <ChevronDownIcon
+            className={cn(
+              "h-3.5 w-3.5 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] text-slate-400",
+              !recentOpen && "-rotate-90"
+            )}
+          />
+        </button>
+
+        <div
+          className={cn(
+            "grid transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden",
+            recentOpen ? "grid-rows-[1fr] opacity-100 mt-0.5" : "grid-rows-[0fr] opacity-0 pointer-events-none mt-0"
+          )}
+        >
+          <div className="overflow-hidden">
+// [wip step 4/5]
