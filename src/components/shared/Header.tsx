@@ -8,11 +8,13 @@ import {
   ArrowLeftIcon,
   ArrowRightOnRectangleIcon,
   Bars3Icon,
+  Cog6ToothIcon,
   FaceSmileIcon,
   HomeIcon,
   MagnifyingGlassIcon,
   PhotoIcon,
   PlusIcon,
+  QuestionMarkCircleIcon,
   UserCircleIcon,
   UserIcon,
   UserGroupIcon,
@@ -437,6 +439,11 @@ export const Header = () => {
                 <div className="relative flex items-center">
                   <input
                     type="text"
+                    name="search_query"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck="false"
                     value={searchQuery}
                     onChange={handleSearchChange}
                     onFocus={() =>
@@ -584,6 +591,22 @@ export const Header = () => {
                           <UserGroupIcon className="h-4 w-4 text-slate-400" />
                           <span>Friends</span>
                         </Link>
+                        <Link
+                          href="/settings"
+                          className="flex items-center gap-3 px-4 py-2.5 text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors text-sm"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                        >
+                          <Cog6ToothIcon className="h-4 w-4 text-slate-400" />
+                          <span>Settings</span>
+                        </Link>
+                        <Link
+                          href="/help"
+                          className="flex items-center gap-3 px-4 py-2.5 text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors text-sm"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                        >
+                          <QuestionMarkCircleIcon className="h-4 w-4 text-slate-400" />
+                          <span>Help & Support</span>
+                        </Link>
                         <div className="border-t border-slate-100 my-1"></div>
                         <button
                           onClick={handleLogout}
@@ -724,6 +747,22 @@ export const Header = () => {
                     <UserGroupIcon className="h-5 w-5 text-slate-400" />
                     <span>Friends</span>
                   </Link>
+                  <Link
+                    href="/settings"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-normal text-slate-700 hover:bg-slate-50"
+                  >
+                    <Cog6ToothIcon className="h-5 w-5 text-slate-400" />
+                    <span>Settings</span>
+                  </Link>
+                  <Link
+                    href="/help"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-normal text-slate-700 hover:bg-slate-50"
+                  >
+                    <QuestionMarkCircleIcon className="h-5 w-5 text-slate-400" />
+                    <span>Help & Support</span>
+                  </Link>
                 </div>
               )}
             </div>
@@ -757,6 +796,11 @@ export const Header = () => {
               <input
                 ref={mobileSearchInputRef}
                 type="text"
+                name="mobile_search_query"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
                 value={searchQuery}
                 onChange={handleSearchChange}
                 placeholder="Search stalk..."
