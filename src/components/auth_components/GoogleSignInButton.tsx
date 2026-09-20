@@ -18,4 +18,14 @@ export default function GoogleSignInButton({
     const clientId =
       process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
       "277143469886-iaqandra9ce62d85ojoppvttro16sflf.apps.googleusercontent.com";
-// [wip step 2/7]
+
+    if (!clientId) {
+      toast.error("Google Client ID is not configured");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const redirectUri = `${window.location.origin}/auth/callback/google`;
+      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(
+// [wip step 3/7]
