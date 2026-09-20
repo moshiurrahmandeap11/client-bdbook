@@ -187,10 +187,10 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* User Profile Quick Link */}
-      {isAuthenticated && currentUserId && (
+      {isAuthenticated && (user?.username || currentUserId) && (
         <div className="mt-5 pt-3 border-t border-slate-100">
           <Link
-            href={`/profile/${currentUserId}`}
+            href={`/s/${user?.username || currentUserId}`}
             className="flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-normal text-slate-700 hover:bg-slate-50 transition-colors"
           >
             <UserCircleIcon className="h-4.5 w-4.5 text-slate-400" />
