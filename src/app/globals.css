@@ -54,4 +54,33 @@ h1, h2, h3, h4, h5, h6, b, strong, button, input, textarea, select {
 
 /* Centralized Spacing Utilities controlled via variables */
 .p-page-x {
-// [wip step 2/7]
+  padding-left: var(--padding-page-x);
+  padding-right: var(--padding-page-x);
+}
+
+.p-page-y {
+  padding-top: var(--padding-page-y);
+  padding-bottom: var(--padding-page-y);
+}
+
+.p-page {
+  padding: var(--padding-page-y) var(--padding-page-x);
+}
+
+.p-card {
+  padding: var(--padding-card);
+}
+
+.p-card-sm {
+  padding: var(--padding-card-sm);
+}
+
+.m-card-b {
+  margin-bottom: var(--margin-card);
+}
+
+.p-modal {
+  padding: var(--padding-modal);
+}
+
+// [wip step 3/7]
