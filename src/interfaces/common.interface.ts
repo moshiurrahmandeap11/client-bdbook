@@ -57,3 +57,4 @@ export interface PaginatedResult<T> {
 // Step 20: feat(post): handle comment submission with postService.commentPost in PostDetailsPage
 // Step 21: fix(post): add null check for user avatar in comment form in PostDetailsPage
 // Step 22: fix(header): add anti-autofill attributes to search input in Header.tsx
+// Step 23: fix(header): rename search input to stalk_search to avoid Chrome popup in Header.tsx
