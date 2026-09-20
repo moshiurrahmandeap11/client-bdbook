@@ -135,9 +135,9 @@ export default function MessagePage() {
                 placeholder="Type a message..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                className="flex-1 px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-[#4E4AFC]"
+                className="flex-1 px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4E4AFC]"
               />
-              <button type="submit" className="p-2.5 bg-[#4E4AFC] text-white rounded-full hover:bg-[#3F3BE6] transition-colors">
+              <button type="submit" className="p-2.5 bg-[#4E4AFC] text-white rounded-md hover:bg-[#3F3BE6] transition-colors">
                 <Send className="h-4 w-4" />
               </button>
             </form>
