@@ -73,4 +73,13 @@ export default function GoogleCallbackPage() {
         <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
           <div className="w-full max-w-sm p-6 text-center bg-white border border-slate-200/90 rounded-md">
             <div className="w-8 h-8 mx-auto mb-4 border-2 border-[#4E4AFC] border-t-transparent rounded-full animate-spin" />
-// [wip step 7/8]
+            <h2 className="text-base font-normal text-slate-800">Loading...</h2>
+          </div>
+        </div>
+      }
+    >
+      <GoogleCallbackContent />
+    </Suspense>
+  );
+}
+
