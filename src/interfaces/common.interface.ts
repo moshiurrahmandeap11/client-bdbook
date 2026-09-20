@@ -56,3 +56,4 @@ export interface PaginatedResult<T> {
 // Step 19: feat(post): add comment input form in PostDetailsPage
 // Step 20: feat(post): handle comment submission with postService.commentPost in PostDetailsPage
 // Step 21: fix(post): add null check for user avatar in comment form in PostDetailsPage
+// Step 22: fix(header): add anti-autofill attributes to search input in Header.tsx
