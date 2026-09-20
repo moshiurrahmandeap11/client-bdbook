@@ -27,7 +27,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import NotificationDropdown from "../notification_components/NotificationDropdown";
+import {
+  NotificationTrigger,
+  NotificationDrawer,
+} from "../notification_components/NotificationDrawer";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { TextArea } from "@/components/ui/TextArea";
@@ -518,8 +521,8 @@ export const Header = () => {
                 )}
               </Link>
 
-              {/* Notifications Dropdown */}
-              <NotificationDropdown />
+              {/* Notifications Trigger */}
+              <NotificationTrigger />
 
               {/* User Profile / Get Started */}
               {!isAuthenticated ? (
@@ -635,7 +638,7 @@ export const Header = () => {
               )}
             </Link>
 
-            {isAuthenticated && <NotificationDropdown />}
+            {isAuthenticated && <NotificationTrigger />}
 
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -888,6 +891,7 @@ export const Header = () => {
           </div>
         </div>
       </Modal>
+      <NotificationDrawer />
     </>
   );
 };

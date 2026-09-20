@@ -4,6 +4,7 @@ import "./globals.css";
 import QueryProvider from "@/components/providers/QueryProvider";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { SocketProvider } from "@/components/providers/SocketProvider";
+import { NotificationProvider } from "@/components/providers/NotificationProvider";
 import Header from "@/components/shared/Header";
 import Sidebar from "@/components/shared/Sidebar";
 import RightSidebar from "@/components/shared/RightSidebar";
@@ -30,15 +31,17 @@ export default function RootLayout({
         <QueryProvider>
           <AuthProvider>
             <SocketProvider>
-              <Toaster position="bottom-left" />
-              <Header />
-              <div className="flex-1 flex w-full pt-14 sm:pt-16">
-                <Sidebar />
-                <main className="flex-1 min-w-0 bg-white">
-                  {children}
-                </main>
-                <RightSidebar />
-              </div>
+              <NotificationProvider>
+                <Toaster position="bottom-left" />
+                <Header />
+                <div className="flex-1 flex w-full pt-14 sm:pt-16">
+                  <Sidebar />
+                  <main className="flex-1 min-w-0 bg-white">
+                    {children}
+                  </main>
+                  <RightSidebar />
+                </div>
+              </NotificationProvider>
             </SocketProvider>
           </AuthProvider>
         </QueryProvider>
