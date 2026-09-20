@@ -79,10 +79,10 @@ export default function MessagePage() {
                   key={conv.id}
                   onClick={() => setSelectedUserId(partner?.id || partner?._id || null)}
                   className={`w-full p-4 flex items-center gap-3 text-left transition ${
-                    isSelected ? "bg-blue-50 dark:bg-blue-950/30" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                    isSelected ? "bg-[#EEEDFE] dark:bg-[#4E4AFC]/20" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"
                   }`}
                 >
-                  <div className="w-10 h-10 rounded-full bg-blue-500 text-white font-bold flex items-center justify-center overflow-hidden">
+                  <div className="w-10 h-10 rounded-full bg-[#4E4AFC] text-white font-bold flex items-center justify-center overflow-hidden">
                     {partner?.avatar ? (
                       <img src={partner.avatar} alt={partner.name} className="w-full h-full object-cover" />
                     ) : (
@@ -115,7 +115,7 @@ export default function MessagePage() {
                     <div
                       className={`max-w-xs px-4 py-2 rounded-2xl text-sm ${
                         isMine
-                          ? "bg-blue-600 text-white rounded-br-none"
+                          ? "bg-[#4E4AFC] text-white rounded-br-none"
                           : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-none"
                       }`}
                     >
@@ -135,9 +135,9 @@ export default function MessagePage() {
                 placeholder="Type a message..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                className="flex-1 px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-[#4E4AFC]"
               />
-              <button type="submit" className="p-2.5 bg-blue-600 text-white rounded-full hover:bg-blue-700">
+              <button type="submit" className="p-2.5 bg-[#4E4AFC] text-white rounded-full hover:bg-[#3F3BE6] transition-colors">
                 <Send className="h-4 w-4" />
               </button>
             </form>

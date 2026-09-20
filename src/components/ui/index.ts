@@ -4,4 +4,4 @@ export * from "./Modal";
 export * from "./Popup";
 export * from "./Input";
 export * from "./TextArea";
-
+export * from "./Logo";

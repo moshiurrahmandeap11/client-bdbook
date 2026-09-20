@@ -58,7 +58,7 @@ export default function CreatePostModal({
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="What's on your mind?"
-            className="w-full p-3 text-sm bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-3 text-sm bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#4E4AFC]"
           />
 
           <div className="flex items-center gap-2">
@@ -68,7 +68,7 @@ export default function CreatePostModal({
               value={mediaUrl}
               onChange={(e) => setMediaUrl(e.target.value)}
               placeholder="Image URL (optional)"
-              className="flex-1 px-3 py-1.5 text-xs bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-3 py-1.5 text-xs bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-[#4E4AFC]"
             />
           </div>
 
@@ -76,16 +76,16 @@ export default function CreatePostModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 rounded-lg flex items-center gap-2 disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white rounded-xl flex items-center gap-2 disabled:opacity-50 transition-colors cursor-pointer"
             >
-              <Send className="h-3.5 w-3.5" />
+              <Send className="h-4 w-4" />
               {loading ? "Publishing..." : "Post"}
             </button>
           </div>

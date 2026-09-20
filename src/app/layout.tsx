@@ -5,13 +5,15 @@ import QueryProvider from "@/components/providers/QueryProvider";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { SocketProvider } from "@/components/providers/SocketProvider";
 import Header from "@/components/shared/Header";
+import Sidebar from "@/components/shared/Sidebar";
+import RightSidebar from "@/components/shared/RightSidebar";
 import { Toaster } from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "BDBook - Enterprise Social Network",
-  description: "Connect, Share and Communicate on BDBook",
+  title: "Stalk - Modern Social Network",
+  description: "Connect, Share and Discover on Stalk",
 };
 
 export default function RootLayout({
@@ -21,13 +23,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col`}>
+      <body className={`${inter.className} bg-white text-slate-900 min-h-screen flex flex-col`}>
         <QueryProvider>
           <AuthProvider>
             <SocketProvider>
               <Toaster position="top-right" />
               <Header />
-              <main className="flex-1">{children}</main>
+              <div className="flex-1 flex w-full pt-14 sm:pt-16">
+                <Sidebar />
+                <main className="flex-1 min-w-0 bg-white">
+                  {children}
+                </main>
+                <RightSidebar />
+              </div>
             </SocketProvider>
           </AuthProvider>
         </QueryProvider>
@@ -35,4 +43,3 @@ export default function RootLayout({
     </html>
   );
 }
-

@@ -16,7 +16,7 @@ export const Avatar = memo(({ src, name, size = 40 }: AvatarProps) => (
     style={{
       width: size,
       height: size,
-      background: src ? "transparent" : "linear-gradient(135deg,#7c3aed,#2563eb)",
+      background: src ? "transparent" : "#4E4AFC",
       border: "1.5px solid rgba(255,255,255,0.2)",
     }}
   >

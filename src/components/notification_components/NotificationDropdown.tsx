@@ -42,10 +42,10 @@ export const NotificationDropdown = ({ onClose }: NotificationDropdownProps = {}
   const getNotificationBg = useCallback((type: string) => {
     const bgColors: Record<string, string> = {
       post_like: "bg-red-100 text-red-600",
-      post_comment: "bg-blue-100 text-blue-600",
+      post_comment: "bg-[#EEEDFE] text-[#4E4AFC]",
       friend_request: "bg-amber-100 text-amber-600",
       friend_accept: "bg-emerald-100 text-emerald-600",
-      message: "bg-indigo-100 text-indigo-600",
+      message: "bg-[#EEEDFE] text-[#4E4AFC]",
     };
     return bgColors[type] || "bg-slate-100 text-slate-600";
   }, []);
@@ -202,7 +202,7 @@ export const NotificationDropdown = ({ onClose }: NotificationDropdownProps = {}
                   className="w-10 h-10 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-[#4E4AFC] flex items-center justify-center">
                   <BellIcon className="h-5 w-5 text-white" />
                 </div>
               )}
@@ -286,7 +286,7 @@ export const NotificationDropdown = ({ onClose }: NotificationDropdownProps = {}
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer"
+                  className="text-xs text-[#4E4AFC] hover:text-[#3F3BE6] font-semibold cursor-pointer"
                 >
                   Mark all as read
                 </button>
@@ -309,7 +309,7 @@ export const NotificationDropdown = ({ onClose }: NotificationDropdownProps = {}
                       key={notification._id}
                       onClick={() => handleNotificationClick(notification)}
                       className={`w-full flex items-start gap-3 p-3.5 hover:bg-slate-50 transition-all duration-150 text-left cursor-pointer ${
-                        !notification.isRead ? "bg-indigo-50/30" : ""
+                        !notification.isRead ? "bg-[#4E4AFC]/5" : ""
                       }`}
                     >
                       <div
@@ -329,13 +329,13 @@ export const NotificationDropdown = ({ onClose }: NotificationDropdownProps = {}
                         </p>
                       </div>
                       {!notification.isRead && (
-                        <div className="w-2 h-2 bg-indigo-600 rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="w-2 h-2 bg-[#4E4AFC] rounded-full mt-2 flex-shrink-0"></div>
                       )}
                     </button>
                   ))}
                   {loadingNotifications && (
                     <div className="flex justify-center py-4">
-                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-indigo-200 border-t-indigo-600"></div>
+                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-slate-200 border-t-[#4E4AFC]"></div>
                     </div>
                   )}
                 </>

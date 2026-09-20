@@ -38,12 +38,12 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     <div className="max-w-4xl mx-auto py-6 px-4 space-y-6">
       {/* Banner & Header */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700">
-        <div className="h-48 bg-gradient-to-r from-blue-500 to-indigo-600 relative">
+        <div className="h-48 bg-[#4E4AFC] relative">
           {user.coverImage && <img src={user.coverImage} alt="Cover" className="w-full h-full object-cover" />}
         </div>
         <div className="p-6 relative pt-0">
           <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 -mt-16 sm:-mt-12 mb-4">
-            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-white dark:border-gray-800 bg-blue-500 text-white font-bold text-3xl flex items-center justify-center overflow-hidden shadow-lg">
+            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-white dark:border-gray-800 bg-[#4E4AFC] text-white font-bold text-3xl flex items-center justify-center overflow-hidden shadow-lg">
               {user.avatar ? (
                 <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
               ) : (
@@ -67,7 +67,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                   href={user.website}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 text-blue-500 hover:underline"
+                  className="flex items-center gap-1 text-[#4E4AFC] hover:underline"
                 >
                   <Globe className="h-3.5 w-3.5" /> {user.website}
                 </a>

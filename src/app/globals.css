@@ -6,9 +6,9 @@
   --foreground: #0f172a;
   
   /* Primary & Accent Colors */
-  --color-primary: #4f46e5;
-  --color-primary-hover: #4338ca;
-  --color-primary-light: #eef2ff;
+  --color-primary: #4E4AFC;
+  --color-primary-hover: #3F3BE6;
+  --color-primary-light: #EEEDFE;
 
   /* Card & Surface Tokens */
   --color-card-bg: #ffffff;

@@ -23,29 +23,29 @@ import { Button } from "@/components/ui/Button";
 import { TextArea } from "@/components/ui/TextArea";
 
 const PostSkeleton = () => (
-  <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-xs animate-pulse">
+  <div className="p-5 border-b border-slate-100 animate-pulse bg-white">
     <div className="flex items-center gap-3">
-      <div className="w-11 h-11 rounded-full bg-slate-200"></div>
+      <div className="w-8 h-8 rounded-full bg-slate-200"></div>
       <div className="flex-1">
-        <div className="h-4 bg-slate-200 rounded w-32 mb-2"></div>
-        <div className="h-3 bg-slate-100 rounded w-24"></div>
+        <div className="h-3.5 bg-slate-200 rounded w-32 mb-1.5"></div>
+        <div className="h-2.5 bg-slate-100 rounded w-20"></div>
       </div>
     </div>
-    <div className="mt-4 space-y-2">
-      <div className="h-4 bg-slate-200 rounded w-full"></div>
-      <div className="h-4 bg-slate-100 rounded w-3/4"></div>
+    <div className="mt-3 space-y-2">
+      <div className="h-4 bg-slate-200 rounded w-4/5"></div>
+      <div className="h-3.5 bg-slate-100 rounded w-full"></div>
     </div>
-    <div className="mt-4 aspect-video bg-slate-100 rounded-xl"></div>
-    <div className="flex justify-between mt-4 pt-3 border-t border-slate-100">
-      <div className="h-8 bg-slate-100 rounded w-24"></div>
-      <div className="h-8 bg-slate-100 rounded w-24"></div>
-      <div className="h-8 bg-slate-100 rounded w-24"></div>
+    <div className="mt-4 aspect-video bg-slate-100 rounded-2xl"></div>
+    <div className="flex gap-2 mt-4">
+      <div className="h-7 bg-slate-100 rounded-full w-20"></div>
+      <div className="h-7 bg-slate-100 rounded-full w-16"></div>
+      <div className="h-7 bg-slate-100 rounded-full w-16"></div>
     </div>
   </div>
 );
 
 const FeedSkeleton = () => (
-  <div className="space-y-4 max-w-2xl mx-auto">
+  <div className="divide-y divide-slate-100">
     {[...Array(3)].map((_, i) => (
       <PostSkeleton key={i} />
     ))}
@@ -174,140 +174,93 @@ export const PostFeed = () => {
     queryClient.invalidateQueries({ queryKey: ["posts"] });
   }, [queryClient]);
 
-  const handleProfileClick = () => {
-    const userId = user?._id || user?.id;
-    if (userId) {
-      window.location.href = `/profile/${userId}`;
-    }
-  };
+  const userPic = (typeof user?.profilePicture === "object" ? user?.profilePicture?.url : user?.profilePicture || user?.avatar) || null;
+  const userName = user?.fullName || user?.name || "User";
 
   return (
-    <div className="min-h-screen bg-slate-50/60 pt-20 pb-24">
-      <div className="max-w-2xl mx-auto px-3 sm:px-4">
-        {/* Create Post Card */}
-        {isAuthenticated && (
-          <div className="bg-white rounded-2xl border border-slate-200/90 p-4 mb-4 shadow-xs">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleProfileClick}
-                className="flex-shrink-0 focus:outline-none cursor-pointer"
-              >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 flex items-center justify-center overflow-hidden">
-                  {(typeof user?.profilePicture === "object"
-                    ? user?.profilePicture?.url
-                    : user?.profilePicture || user?.avatar) ? (
-                    <Image
-                      src={
-                        (typeof user?.profilePicture === "object"
-                          ? user?.profilePicture?.url
-                          : user?.profilePicture || user?.avatar) as string
-                      }
-                      alt={user?.fullName || user?.name || "User"}
-                      width={40}
-                      height={40}
-                      className="object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <UserIcon className="h-5 w-5 text-white" />
-                  )}
-                </div>
-              </button>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="flex-1 text-left px-4 py-2.5 bg-slate-100 hover:bg-slate-200/80 rounded-full text-slate-500 hover:text-slate-800 transition-colors text-sm cursor-pointer"
-              >
-                What&apos;s on your mind, {user?.fullName?.split(" ")[0]}?
-              </button>
-            </div>
-
-            <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100">
-              <button
-                onClick={() => {
-                  setShowCreateModal(true);
-                  setTimeout(() => fileInputRef.current?.click(), 100);
-                }}
-                className="flex-1 flex items-center justify-center gap-2 py-2 text-slate-600 hover:text-red-600 hover:bg-red-50/60 rounded-xl transition cursor-pointer"
-              >
-                <VideoCameraIcon className="h-5 w-5 text-red-500" />
-                <span className="text-xs sm:text-sm font-medium">Video</span>
-              </button>
-              <button
-                onClick={() => {
-                  setShowCreateModal(true);
-                  setTimeout(() => fileInputRef.current?.click(), 100);
-                }}
-                className="flex-1 flex items-center justify-center gap-2 py-2 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50/60 rounded-xl transition cursor-pointer"
-              >
-                <PhotoIcon className="h-5 w-5 text-emerald-500" />
-                <span className="text-xs sm:text-sm font-medium">Photo</span>
-              </button>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="flex-1 flex items-center justify-center gap-2 py-2 text-slate-600 hover:text-amber-600 hover:bg-amber-50/60 rounded-xl transition cursor-pointer"
-              >
-                <FaceSmileIcon className="h-5 w-5 text-amber-500" />
-                <span className="text-xs sm:text-sm font-medium">Feeling</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Posts Feed */}
-        {isLoading ? (
-          <FeedSkeleton />
-        ) : allPosts.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200/90 p-8 sm:p-12 text-center shadow-xs">
-            <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <PhotoIcon className="h-8 w-8" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-1">No Posts Yet</h3>
-            <p className="text-slate-500 text-sm mb-5">Be the first to share something with your community!</p>
-            {isAuthenticated ? (
-              <Button
-                variant="primary"
-                onClick={() => setShowCreateModal(true)}
-              >
-                Create First Post
-              </Button>
+    <div className="min-h-screen bg-white">
+      {/* Create Post Header Bar (SlothUI Style) */}
+      {isAuthenticated && (
+        <div className="p-4 border-b border-slate-100 flex items-center gap-3 bg-white">
+          <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-100 shrink-0 border border-slate-200">
+            {userPic ? (
+              <Image src={userPic} alt={userName} width={36} height={36} className="object-cover w-full h-full" />
             ) : (
-              <Link href="/auth/login">
-                <Button variant="primary">Login to See Posts</Button>
-              </Link>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {allPosts.map((post: IPost) => (
-              <PostCard
-                key={post._id || post.id}
-                post={post}
-                onPostUpdate={refreshPosts}
-                currentUser={user}
-              />
-            ))}
-
-            {isFetchingNextPage && (
-              <div className="flex justify-center py-6">
-                <div className="w-7 h-7 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-              </div>
-            )}
-
-            {hasNextPage && !isFetchingNextPage && (
-              <div ref={loadMoreRef} className="h-4" />
-            )}
-
-            {!hasNextPage && allPosts.length > 0 && (
-              <div className="text-center py-8">
-                <CheckCircleIcon className="h-8 w-8 text-indigo-400 mx-auto mb-2" />
-                <p className="text-slate-400 text-sm font-medium">You&apos;ve seen all posts! 🎉</p>
+              <div className="w-full h-full bg-[#EEEDFE] text-[#4E4AFC] flex items-center justify-center">
+                <UserIcon className="h-4 w-4" />
               </div>
             )}
           </div>
-        )}
-      </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex-1 text-left px-4 py-2 bg-slate-100 hover:bg-slate-200/80 rounded-full text-slate-500 hover:text-slate-800 transition-colors text-sm cursor-pointer"
+          >
+            Create a post...
+          </button>
+          <button
+            onClick={() => {
+              setShowCreateModal(true);
+              setTimeout(() => fileInputRef.current?.click(), 100);
+            }}
+            className="p-2 text-slate-500 hover:text-[#4E4AFC] hover:bg-[#EEEDFE] rounded-full transition-colors cursor-pointer"
+            title="Upload Media"
+          >
+            <PhotoIcon className="h-5 w-5" />
+          </button>
+        </div>
+      )}
 
-      {/* Create Post Modal using reusable Modal & TextArea & Button */}
+      {/* Posts Feed List */}
+      {isLoading ? (
+        <FeedSkeleton />
+      ) : allPosts.length === 0 ? (
+        <div className="py-16 px-6 text-center">
+          <div className="w-16 h-16 bg-[#EEEDFE] text-[#4E4AFC] rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <PhotoIcon className="h-8 w-8" />
+          </div>
+          <h3 className="text-base font-bold text-slate-900 mb-1">No Posts Yet</h3>
+          <p className="text-slate-400 text-xs mb-5">Be the first to share something with the community!</p>
+          {isAuthenticated ? (
+            <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)}>
+              Create First Post
+            </Button>
+          ) : (
+            <Link href="/auth/login">
+              <Button variant="primary" size="sm">Login to See Posts</Button>
+            </Link>
+          )}
+        </div>
+      ) : (
+        <div className="divide-y divide-slate-100">
+          {allPosts.map((post: IPost) => (
+            <PostCard
+              key={post._id || post.id}
+              post={post}
+              onPostUpdate={refreshPosts}
+              currentUser={user}
+            />
+          ))}
+
+          {isFetchingNextPage && (
+            <div className="flex justify-center py-6">
+              <div className="w-6 h-6 border-2 border-slate-200 border-t-[#4E4AFC] rounded-full animate-spin" />
+            </div>
+          )}
+
+          {hasNextPage && !isFetchingNextPage && (
+            <div ref={loadMoreRef} className="h-4" />
+          )}
+
+          {!hasNextPage && allPosts.length > 0 && (
+            <div className="text-center py-10">
+              <CheckCircleIcon className="h-8 w-8 text-[#4E4AFC] mx-auto mb-2" />
+              <p className="text-slate-400 text-xs font-medium">You&apos;ve reached the end! 🎉</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Create Post Modal */}
       <Modal
         isOpen={showCreateModal}
         onClose={() => {
@@ -317,7 +270,6 @@ export const PostFeed = () => {
           setMediaPreview(null);
         }}
         title="Create Post"
-        maxWidth="md"
         footer={
           <Button
             variant="primary"
@@ -333,28 +285,16 @@ export const PostFeed = () => {
       >
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 flex items-center justify-center overflow-hidden flex-shrink-0">
-              {(typeof user?.profilePicture === "object"
-                ? user?.profilePicture?.url
-                : user?.profilePicture || user?.avatar) ? (
-                <Image
-                  src={
-                    (typeof user?.profilePicture === "object"
-                      ? user?.profilePicture?.url
-                      : user?.profilePicture || user?.avatar) as string
-                  }
-                  alt={user?.fullName || user?.name || "User"}
-                  width={40}
-                  height={40}
-                  className="object-cover"
-                />
+            <div className="w-10 h-10 rounded-full bg-[#4E4AFC] flex items-center justify-center overflow-hidden shrink-0">
+              {userPic ? (
+                <Image src={userPic} alt={userName} width={40} height={40} className="object-cover" />
               ) : (
                 <UserIcon className="h-5 w-5 text-white" />
               )}
             </div>
             <div>
-              <p className="font-bold text-sm text-slate-900">{user?.fullName || "You"}</p>
-              <span className="text-xs text-slate-500">Public</span>
+              <p className="font-bold text-sm text-slate-900">{userName}</p>
+              <span className="text-xs text-slate-400">Posting to stalk feed</span>
             </div>
           </div>
 
@@ -371,20 +311,14 @@ export const PostFeed = () => {
               {mediaType === "video" ? (
                 <video src={mediaPreview} controls className="w-full max-h-64" />
               ) : (
-                <Image
-                  src={mediaPreview}
-                  alt="Preview"
-                  width={500}
-                  height={300}
-                  className="w-full object-cover max-h-64"
-                />
+                <Image src={mediaPreview} alt="Preview" width={500} height={300} className="w-full object-cover max-h-64" />
               )}
               <button
                 onClick={() => {
                   setSelectedMedia(null);
                   setMediaPreview(null);
                 }}
-                className="absolute top-2 right-2 p-1.5 bg-slate-900/70 hover:bg-slate-900 rounded-full text-white transition-colors cursor-pointer"
+                className="absolute top-2 right-2 p-1.5 bg-slate-900/70 hover:bg-slate-900 rounded-full text-white transition cursor-pointer"
               >
                 <XMarkIcon className="h-4 w-4" />
               </button>
@@ -392,7 +326,7 @@ export const PostFeed = () => {
           )}
 
           <div className="border border-slate-200/90 rounded-xl p-3 bg-slate-50/50">
-            <p className="text-xs font-semibold text-slate-600 mb-2">Add to your post</p>
+            <p className="text-xs font-semibold text-slate-600 mb-2">Add media</p>
             <div className="flex gap-2">
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -407,13 +341,6 @@ export const PostFeed = () => {
               >
                 <VideoCameraIcon className="h-4 w-4 text-red-500" />
                 <span>Video</span>
-              </button>
-              <button
-                onClick={() => {}}
-                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-medium cursor-pointer"
-              >
-                <FaceSmileIcon className="h-4 w-4 text-amber-500" />
-                <span>Feeling</span>
               </button>
               <input
                 ref={fileInputRef}

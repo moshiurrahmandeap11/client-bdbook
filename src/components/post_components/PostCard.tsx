@@ -6,14 +6,14 @@ import { postService } from "@/services/post.service";
 import { IPost } from "@/types/post.types";
 import { IUser } from "@/types/user.types";
 import {
+  ArrowDownIcon,
+  ArrowUpIcon,
   ChatBubbleLeftIcon,
   EllipsisHorizontalIcon,
-  HeartIcon,
   PencilIcon,
   ShareIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -76,12 +76,11 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
   const [showEditModal, setShowEditModal] = useState(false);
   const [editDescription, setEditDescription] = useState(post.description || "");
   const [showShareModal, setShowShareModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
 
   const postUserId = post.userId || post.user?._id || post.user?.id;
   const isOwner = postUserId === currentUserId;
   const commentCount = post.commentsCount || post.comments?.length || 0;
-  const shareCount = post.sharesCount || 0;
 
   const isSharedPost = useMemo(
     () => !!(post.isShare || post.originalPost || post.sharedPost || post.sharedPostId || post.type === "share"),
@@ -157,48 +156,13 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
     },
   });
 
-  const shareToFeedMutation = useMutation({
-    mutationFn: () => postService.sharePost(post._id || post.id),
+  const deleteMutation = useMutation({
+    mutationFn: () => postService.deletePost(post._id || post.id),
     onSuccess: () => {
-      toast.success("Post shared to your feed!");
-      setShowShareModal(false);
+      toast.success("Post deleted");
       onPostUpdate?.();
     },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.message || "Failed to share post");
-    },
-  });
-
-  const shareToMessageMutation = useMutation({
-    mutationFn: (friendId: string) => {
-      const postId = String(post._id || post.id)?.trim();
-      return axiosInstance
-        .post(`/users/send-message/${friendId}`, {
-          message: JSON.stringify({
-            type: "post_share",
-            postId,
-            postUrl: sharePreview.postUrl,
-            postText: post.description,
-            postAuthor: post.userName || post.user?.fullName,
-            postAuthorProfilePic: post.userProfilePicture || post.user?.profilePicture?.url,
-            hasMedia: !!(post.mediaUrl || post.media?.url),
-            mediaType: post.mediaType || post.media?.resourceType,
-            mediaUrl: post.mediaUrl || post.media?.url,
-            sharedBy: user?.fullName || user?.name,
-            sharedByProfilePic:
-              typeof user?.profilePicture === "object"
-                ? user?.profilePicture?.url
-                : user?.profilePicture || user?.avatar,
-          }),
-          messageType: "share",
-        })
-        .then((res) => res.data);
-    },
-    onSuccess: () => {
-      toast.success("Post shared via message!");
-      setShowShareModal(false);
-    },
-    onError: () => toast.error("Failed to share via message"),
+    onError: () => toast.error("Failed to delete post"),
   });
 
   const editMutation = useMutation({
@@ -211,38 +175,6 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
     },
     onError: (err: any) =>
       toast.error(err.response?.data?.message || "Failed to update post"),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: () => postService.deletePost(post._id || post.id),
-    onMutate: async () => {
-      setIsDeleting(true);
-      await queryClient.cancelQueries({ queryKey: ["posts"] });
-      const previous = queryClient.getQueryData(["posts"]);
-
-      queryClient.setQueryData(["posts"], (old: any) => {
-        if (!old?.pages) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page: any) => ({
-            ...page,
-            data: page.data.filter((p: any) => (p._id || p.id) !== (post._id || post.id)),
-          })),
-        };
-      });
-      return { previous };
-    },
-    onSuccess: () => {
-      toast.success("Post deleted");
-      onPostUpdate?.();
-    },
-    onError: (err, vars, context: any) => {
-      setIsDeleting(false);
-      if (context?.previous) {
-        queryClient.setQueryData(["posts"], context.previous);
-      }
-      toast.error("Failed to delete post");
-    },
   });
 
   const handleLike = useCallback(() => {
@@ -279,6 +211,13 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
     editMutation.mutate(editDescription);
   }, [editDescription, editMutation]);
 
+  const handleFollow = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!checkAuth()) return;
+    setIsFollowing((prev) => !prev);
+    toast.success(isFollowing ? "Unfollowed" : "Following!");
+  };
+
   const dropdownItems = useMemo(() => {
     const items = [];
     if (isOwner || user?.role === "ADMIN" || (user?.role as string) === "admin") {
@@ -305,191 +244,181 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
   }, [isOwner, user?.role, handleSharePost, handleDeletePost]);
 
   const authorName = post.userName || post.user?.fullName || "User";
+  const communityTag = `s/${authorName.toLowerCase().replace(/\s+/g, "")}`;
   const authorPic = post.userProfilePicture || post.user?.profilePicture?.url;
   const mediaUrl = post.mediaUrl || post.media?.url;
   const mediaType = post.mediaType || post.media?.resourceType || "image";
 
   return (
-    <>
-      <div
-        className={cn(
-          "bg-white border border-slate-200/90 rounded-2xl shadow-xs hover:shadow-sm transition-all duration-200 overflow-hidden",
-          isDeleting && "opacity-50 scale-[0.98]"
-        )}
-      >
-        <div className="p-4 sm:p-5">
-          {/* Header */}
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-3 flex-1 min-w-0">
-              <button
-                onClick={() => router.push(`/profile/${postUserId}`)}
-                className="flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 rounded-full cursor-pointer"
-                aria-label={`View ${authorName}'s profile`}
-              >
-                <Avatar src={authorPic} name={authorName} size={44} />
-              </button>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    onClick={() => router.push(`/profile/${postUserId}`)}
-                    className="font-semibold text-sm leading-tight text-slate-900 hover:text-indigo-600 transition-colors cursor-pointer"
-                    aria-label={`View ${authorName}'s profile`}
-                  >
-                    {authorName}
-                  </button>
-                  {isSharedPost && (
-                    <span className="text-xs text-slate-400">
-                      shared a post
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {getTimeAgo(post.createdAt)}
-                </p>
-              </div>
-            </div>
+    <article className="py-4 px-4 sm:px-6 hover:bg-slate-50/50 transition-colors border-b border-slate-100 bg-white">
+      {/* Top Header: Subreddit/Author + Time + Follow Button + Options Menu */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Avatar src={authorPic} name={authorName} size={24} />
+          <button
+            onClick={() => router.push(`/profile/${postUserId}`)}
+            className="font-bold text-xs text-slate-900 hover:text-[#4E4AFC] transition-colors truncate cursor-pointer"
+          >
+            {communityTag}
+          </button>
+          <span className="text-slate-300 text-xs">·</span>
+          <span className="text-slate-400 text-xs shrink-0">
+            {getTimeAgo(post.createdAt)}
+          </span>
+        </div>
 
-            {/* Menu Dropdown using reusable Dropdown */}
-            {!hideMenu && dropdownItems.length > 0 && (
-              <Dropdown
-                align="right"
-                trigger={
-                  <button
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none"
-                    aria-label="Post options"
-                  >
-                    <EllipsisHorizontalIcon className="h-5 w-5" />
-                  </button>
-                }
-                items={dropdownItems}
-              />
-            )}
-          </div>
-
-          {/* Description */}
-          {post.description && (
-            <p
-              className="mt-3 text-sm text-slate-800 leading-relaxed break-words cursor-pointer hover:text-slate-950 transition-colors"
-              onClick={goToPostDetails}
+        <div className="flex items-center gap-2 shrink-0">
+          {!isOwner && (
+            <button
+              onClick={handleFollow}
+              className={cn(
+                "px-3 py-1 text-xs font-medium rounded-full transition-colors cursor-pointer",
+                isFollowing
+                  ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  : "bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white shadow-xs"
+              )}
             >
-              {post.description}
-            </p>
+              {isFollowing ? "Joined" : "Follow +"}
+            </button>
           )}
 
-          {/* Media or Shared Post Preview */}
-          <div className="-mx-4 sm:-mx-5 mt-3">
-            {isSharedPost ? (
-              <SharedPostPreview
-                originalPost={originalPost}
-                postUrl={sharePreview.postUrl}
-                onClick={() => {
-                  const targetId = originalPost?._id || originalPost?.id || post._id || post.id;
-                  if (targetId) router.push(`/post/details/${targetId}`);
-                }}
-              />
-            ) : mediaUrl ? (
-              <div
-                className="overflow-hidden cursor-pointer group bg-slate-100 border-y border-slate-100"
-                onClick={goToPostDetails}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => e.key === "Enter" && goToPostDetails()}
-              >
-                {mediaType === "video" ? (
-                  <CustomVideoPlayer src={mediaUrl} poster={post.mediaThumbnail || post.media?.thumbnailUrl} />
-                ) : (
-                  <Image
-                    src={mediaUrl}
-                    alt={post.description || "Post media"}
-                    width={800}
-                    height={600}
-                    loading="lazy"
-                    className="w-full object-cover transition-transform duration-300 group-hover:scale-[1.01]"
-                    style={{ maxHeight: 520 }}
-                  />
-                )}
-              </div>
-            ) : null}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
-            <button
-              onClick={handleLike}
-              disabled={likeMutation.isPending}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer",
-                isLiked
-                  ? "text-red-500 bg-red-50 hover:bg-red-100/80"
-                  : "text-slate-600 hover:text-red-500 hover:bg-slate-50"
-              )}
-            >
-              {isLiked ? (
-                <HeartSolidIcon className="h-5 w-5 text-red-500 animate-scale" />
-              ) : (
-                <HeartIcon className="h-5 w-5" />
-              )}
-              <span>{likeCount}</span>
-            </button>
-
-            <button
-              onClick={handleComment}
-              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition-all cursor-pointer"
-            >
-              <ChatBubbleLeftIcon className="h-5 w-5" />
-              <span>{commentCount}</span>
-            </button>
-
-            <button
-              onClick={handleSharePost}
-              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 transition-all cursor-pointer"
-            >
-              <ShareIcon className="h-5 w-5" />
-              <span>{shareCount}</span>
-            </button>
-          </div>
+          {!hideMenu && dropdownItems.length > 0 && (
+            <Dropdown
+              align="right"
+              trigger={
+                <button
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                  aria-label="Post options"
+                >
+                  <EllipsisHorizontalIcon className="h-4 w-4" />
+                </button>
+              }
+              items={dropdownItems}
+            />
+          )}
         </div>
       </div>
 
-      {/* ShareModal */}
+      {/* Post Title & Description (SlothUI Style) */}
+      <div className="mt-2.5">
+        <h2
+          onClick={goToPostDetails}
+          className="font-bold text-base text-slate-900 hover:text-[#4E4AFC] transition-colors cursor-pointer leading-snug"
+        >
+          {post.title || post.description || "Untitled Post"}
+        </h2>
+
+        {post.description && post.title && (
+          <p className="mt-1 text-sm text-slate-600 leading-relaxed line-clamp-3">
+            {post.description}
+          </p>
+        )}
+
+        <p className="text-xs text-[#4E4AFC] hover:underline mt-1 cursor-pointer truncate" onClick={goToPostDetails}>
+          stalk.com/post/details/{post._id || post.id}
+        </p>
+      </div>
+
+      {/* Media or Shared Post Preview */}
+      {isSharedPost ? (
+        <div className="mt-3">
+          <SharedPostPreview
+            originalPost={originalPost}
+            postUrl={sharePreview.postUrl}
+            onClick={() => {
+              const targetId = originalPost?._id || originalPost?.id || post._id || post.id;
+              if (targetId) router.push(`/post/details/${targetId}`);
+            }}
+          />
+        </div>
+      ) : mediaUrl ? (
+        <div
+          className="mt-3 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 cursor-pointer group"
+          onClick={goToPostDetails}
+        >
+          {mediaType === "video" ? (
+            <CustomVideoPlayer src={mediaUrl} poster={post.mediaThumbnail || post.media?.thumbnailUrl} />
+          ) : (
+            <Image
+              src={mediaUrl}
+              alt={post.description || "Post media"}
+              width={800}
+              height={500}
+              loading="lazy"
+              className="w-full object-cover max-h-[480px]"
+            />
+          )}
+        </div>
+      ) : null}
+
+      {/* SlothUI / Reddit-Style Pill Actions Bar */}
+      <div className="flex items-center gap-2 mt-3.5">
+        {/* Upvote/Downvote Pill */}
+        <div className="inline-flex items-center bg-slate-100 hover:bg-slate-200/80 rounded-full px-3 py-1 text-xs font-semibold text-slate-700 transition-colors">
+          <button
+            onClick={handleLike}
+            disabled={likeMutation.isPending}
+            className={cn(
+              "hover:text-[#4E4AFC] transition-colors p-0.5 cursor-pointer",
+              isLiked && "text-[#4E4AFC] font-bold"
+            )}
+            aria-label="Upvote"
+          >
+            <ArrowUpIcon className="h-3.5 w-3.5 stroke-[2.5]" />
+          </button>
+          <span className="px-2 min-w-[20px] text-center">{likeCount}</span>
+          <button
+            onClick={handleLike}
+            className="hover:text-red-600 transition-colors p-0.5 cursor-pointer"
+            aria-label="Downvote"
+          >
+            <ArrowDownIcon className="h-3.5 w-3.5 stroke-[2.5]" />
+          </button>
+        </div>
+
+        {/* Comment Pill */}
+        <button
+          onClick={handleComment}
+          className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/80 rounded-full px-3 py-1 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
+        >
+          <ChatBubbleLeftIcon className="h-3.5 w-3.5 stroke-[2]" />
+          <span>{commentCount}</span>
+        </button>
+
+        {/* Share Pill */}
+        <button
+          onClick={handleSharePost}
+          className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/80 rounded-full px-3 py-1 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
+        >
+          <ShareIcon className="h-3.5 w-3.5 stroke-[2]" />
+          <span>Share</span>
+        </button>
+      </div>
+
+      {/* Share Modal */}
       {showShareModal && (
         <ShareModal
           post={post}
           user={user}
           sharePreview={sharePreview}
           onClose={() => setShowShareModal(false)}
-          onShareToFeed={() => shareToFeedMutation.mutate()}
-          onShareToMessage={(friendId) => shareToMessageMutation.mutate(friendId)}
-          isSharingToFeed={shareToFeedMutation.isPending}
-          isSharingToMessage={shareToMessageMutation.isPending}
         />
       )}
 
-      {/* Edit Modal using reusable Modal & TextArea & Button */}
+      {/* Edit Modal */}
       <Modal
         isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setEditDescription(post.description || "");
-        }}
+        onClose={() => setShowEditModal(false)}
         title="Edit Post"
-        maxWidth="md"
         footer={
-          <div className="flex items-center justify-end gap-2.5 w-full">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowEditModal(false);
-                setEditDescription(post.description || "");
-              }}
-            >
+          <div className="flex items-center justify-end gap-2 w-full">
+            <Button variant="outline" onClick={() => setShowEditModal(false)}>
               Cancel
             </Button>
             <Button
               variant="primary"
               onClick={handleEditPost}
               loading={editMutation.isPending}
-              disabled={!editDescription.trim()}
             >
               Save Changes
             </Button>
@@ -504,7 +433,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
           autoFocus
         />
       </Modal>
-    </>
+    </article>
   );
 });
 

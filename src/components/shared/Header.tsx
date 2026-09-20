@@ -3,19 +3,24 @@
 import { useSocket } from "@/components/providers/SocketProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
 import axiosInstance from "@/lib/axios";
+import { postService } from "@/services/post.service";
 import {
   ArrowLeftIcon,
   ArrowRightOnRectangleIcon,
   Bars3Icon,
+  FaceSmileIcon,
   HomeIcon,
   MagnifyingGlassIcon,
+  PhotoIcon,
+  PlusIcon,
   UserCircleIcon,
+  UserIcon,
   UserGroupIcon,
   VideoCameraIcon,
   VideoCameraSlashIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MessageCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -23,6 +28,10 @@ import { usePathname, useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import NotificationDropdown from "../notification_components/NotificationDropdown";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
+import { TextArea } from "@/components/ui/TextArea";
+import { Logo } from "@/components/ui/Logo";
 
 export const Header = () => {
   const { user, logout, isAuthenticated, initialLoadDone } = useAuth();
@@ -34,6 +43,14 @@ export const Header = () => {
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [showMobileProfileMenu, setShowMobileProfileMenu] = useState(false);
+
+  // Global Create Post Modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [postDescription, setPostDescription] = useState("");
+  const [selectedMedia, setSelectedMedia] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [mediaType, setMediaType] = useState<"image" | "video" | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const mobileMenuRef = useRef<HTMLDivElement | null>(null);
@@ -98,6 +115,83 @@ export const Header = () => {
   });
 
   const unreadMessagesCount = unreadData || 0;
+
+  const createPostMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      return postService.createPost(formData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      setShowCreateModal(false);
+      setPostDescription("");
+      setSelectedMedia(null);
+      setMediaPreview(null);
+      toast.success("Post created!");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Failed to create post");
+    },
+  });
+
+  const handleMediaSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/jpg",
+      "image/gif",
+      "image/webp",
+      "video/mp4",
+      "video/mov",
+      "video/avi",
+    ];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Please upload a valid image or video file");
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("File size should be less than 50MB");
+      return;
+    }
+
+    setSelectedMedia(file);
+    setMediaType(file.type.startsWith("video") ? "video" : "image");
+
+    const reader = new FileReader();
+    reader.onloadend = () => setMediaPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handleCreatePostSubmit = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please login to create a post");
+      router.push("/auth/login");
+      return;
+    }
+
+    if (!postDescription.trim() && !selectedMedia) {
+      toast.error("Please add a description or media");
+      return;
+    }
+
+    const formData = new FormData();
+    if (postDescription.trim()) formData.append("description", postDescription);
+    if (selectedMedia) formData.append("media", selectedMedia);
+
+    createPostMutation.mutate(formData);
+  };
+
+  const handleOpenCreateModal = () => {
+    if (!isAuthenticated) {
+      toast.error("Please login to create a post");
+      router.push("/auth/login");
+      return;
+    }
+    setShowCreateModal(true);
+  };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -218,7 +312,7 @@ export const Header = () => {
                     className="w-10 h-10 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-[#4E4AFC] flex items-center justify-center">
                     <MessageCircle className="h-5 w-5 text-white" />
                   </div>
                 )}
@@ -291,20 +385,16 @@ export const Header = () => {
     }
   }, [router, user]);
 
-  const Logo = (
-    <button onClick={handleHomeClick} className="group cursor-pointer">
-      <div className="w-10 h-10 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-xl flex items-center justify-center transform group-hover:scale-105 transition-all duration-300 shadow-sm shadow-indigo-200">
-        <span className="text-white font-bold text-xl">BD</span>
-      </div>
-    </button>
+  const BrandLogo = (
+    <Logo size="md" onClick={handleHomeClick} priority />
   );
 
   if (!initialLoadDone) {
     return (
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center shrink-0">{Logo}</div>
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            <div className="flex items-center shrink-0">{BrandLogo}</div>
           </div>
         </div>
       </header>
@@ -323,135 +413,128 @@ export const Header = () => {
 
   return (
     <>
-      {/* DESKTOP HEADER */}
+      {/* DESKTOP HEADER (SLOTHUI / REDDIT STYLE) */}
       <header
         className={`hidden md:block fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${
           isScrolled
             ? "backdrop-blur-xl bg-white/95 border-b border-slate-200/90 shadow-xs"
-            : "bg-white/85 backdrop-blur-md border-b border-slate-200/80"
+            : "bg-white border-b border-slate-200/80"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Left: Logo + Search */}
-            <div className="flex items-center gap-4 flex-1">
-              {Logo}
-
-              <div className="flex-1 max-w-md relative" ref={searchRef}>
-                <form onSubmit={handleSearchSubmit} className="w-full relative">
-                  <div className="relative">
-                    <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={handleSearchChange}
-                      onFocus={() =>
-                        searchQuery.trim().length >= 2 && setShowSearchDropdown(true)
-                      }
-                      placeholder="Search BD BOOK..."
-                      className="w-full bg-slate-100/90 hover:bg-slate-100 text-slate-900 rounded-full py-2 pl-10 pr-10 placeholder:text-slate-400 border border-slate-200/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 transition-all text-sm outline-none"
-                    />
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        onClick={clearSearch}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-200 rounded-full transition cursor-pointer"
-                      >
-                        <XMarkIcon className="h-4 w-4 text-slate-500" />
-                      </button>
-                    )}
-                  </div>
-
-                  {(showSearchDropdown || isSearching) &&
-                    searchQuery.trim().length >= 2 && (
-                      <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden z-50 max-h-80 overflow-y-auto animate-fadeInDown">
-                        {isSearching ? (
-                          <div className="p-4 text-center text-slate-400 text-sm">
-                            Searching...
-                          </div>
-                        ) : suggestions.length > 0 ? (
-                          <>
-                            <div className="px-4 py-2 border-b border-slate-100 bg-slate-50">
-                              <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                                Quick Search
-                              </span>
-                            </div>
-                            {suggestions.map((suggestion: string, idx: number) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => handleSuggestionClick(suggestion)}
-                                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition text-left cursor-pointer"
-                              >
-                                <MagnifyingGlassIcon className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                <span className="text-slate-800 text-sm font-medium">
-                                  {suggestion}
-                                </span>
-                              </button>
-                            ))}
-                          </>
-                        ) : (
-                          <div className="px-4 py-6 text-center text-slate-400 text-sm">
-                            No results found
-                          </div>
-                        )}
-                      </div>
-                    )}
-                </form>
-              </div>
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-16 gap-6">
+            {/* Left: Brand Logo & Name */}
+            <div className="flex items-center shrink-0">
+              {BrandLogo}
             </div>
 
-            {/* Right: Navigation + Profile */}
-            <div className="flex items-center gap-3">
-              <nav className="flex items-center justify-center space-x-1 lg:space-x-1.5">
-                {navItems.map((item) => {
-                  const isActive = pathname === item.href;
-                  const Icon = item.icon;
-                  const isMessage = item.name === "Messages";
-                  const hasUnread = isMessage && unreadMessagesCount > 0;
-                  return (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      className={`relative px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                        isActive
-                          ? "text-indigo-600 bg-indigo-50 font-semibold"
-                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                      }`}
+            {/* Center: Centered Rounded Pill Search Bar */}
+            <div className="flex-1 max-w-xl relative" ref={searchRef}>
+              <form onSubmit={handleSearchSubmit} className="w-full relative">
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    onFocus={() =>
+                      searchQuery.trim().length >= 2 && setShowSearchDropdown(true)
+                    }
+                    placeholder="Search stalk"
+                    className="w-full bg-slate-100 hover:bg-slate-200/70 text-slate-900 rounded-full py-2 pl-4 pr-10 placeholder:text-slate-400 border border-slate-200/80 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 transition-all text-sm outline-none"
+                  />
+                  <MagnifyingGlassIcon className="absolute right-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
+                  
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={clearSearch}
+                      className="absolute right-9 p-0.5 hover:bg-slate-200 rounded-full transition cursor-pointer"
                     >
-                      <div className="flex items-center gap-2 relative">
-                        <Icon
-                          className={`h-4 w-4 transition-colors ${
-                            isActive ? "text-indigo-600" : "text-slate-500 group-hover:text-slate-800"
-                          }`}
-                        />
-                        <span>{item.name}</span>
-                        {hasUnread && (
-                          <span className="absolute -top-1.5 -right-3 min-w-[18px] h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1 animate-pulse">
-                            {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </nav>
+                      <XMarkIcon className="h-3.5 w-3.5 text-slate-500" />
+                    </button>
+                  )}
+                </div>
 
+                {(showSearchDropdown || isSearching) &&
+                  searchQuery.trim().length >= 2 && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden z-50 max-h-80 overflow-y-auto animate-fadeInDown">
+                      {isSearching ? (
+                        <div className="p-4 text-center text-slate-400 text-sm">
+                          Searching...
+                        </div>
+                      ) : suggestions.length > 0 ? (
+                        <>
+                          <div className="px-4 py-2 border-b border-slate-100 bg-slate-50">
+                            <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                              Quick Search
+                            </span>
+                          </div>
+                          {suggestions.map((suggestion: string, idx: number) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => handleSuggestionClick(suggestion)}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition text-left cursor-pointer"
+                            >
+                              <MagnifyingGlassIcon className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                              <span className="text-slate-800 text-sm font-medium">
+                                {suggestion}
+                              </span>
+                            </button>
+                          ))}
+                        </>
+                      ) : (
+                        <div className="px-4 py-6 text-center text-slate-400 text-sm">
+                          No results found
+                        </div>
+                      )}
+                    </div>
+                  )}
+              </form>
+            </div>
+
+            {/* Right: + Create Button + Action Icons + Profile Avatar */}
+            <div className="flex items-center gap-3 shrink-0">
+              {/* + Create Button */}
+              <button
+                onClick={handleOpenCreateModal}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium text-white bg-[#4E4AFC] hover:bg-[#3F3BE6] transition-colors shadow-xs cursor-pointer"
+              >
+                <PlusIcon className="h-4 w-4 stroke-[2.5]" />
+                <span>Create</span>
+              </button>
+
+              {/* Direct Messages Icon */}
+              <Link
+                href="/message"
+                className="p-2 rounded-full hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition relative"
+                aria-label="Messages"
+              >
+                <MessageCircle className="h-5 w-5" />
+                {unreadMessagesCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1 animate-pulse">
+                    {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* Notifications Dropdown */}
               <NotificationDropdown />
 
+              {/* User Profile / Get Started */}
               {!isAuthenticated ? (
                 <button
                   onClick={handleGetStarted}
-                  className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 active:scale-95 cursor-pointer"
+                  className="flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium text-[#4E4AFC] bg-[#EEEDFE] hover:bg-[#E3E1FD] transition-colors cursor-pointer"
                 >
-                  <span>Get Started</span>
-                  <ArrowRightOnRectangleIcon className="h-4 w-4" />
+                  <span>Log in</span>
                 </button>
               ) : (
                 <div className="relative" ref={profileMenuRef}>
                   <button
                     onClick={handleProfileClick}
-                    className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100 transition-all cursor-pointer"
+                    className="flex items-center p-0.5 rounded-full hover:ring-2 hover:ring-[#4E4AFC]/30 transition-all cursor-pointer"
+                    aria-label="Profile"
                   >
                     {userPic ? (
                       <div className="relative w-8 h-8 rounded-full overflow-hidden border border-slate-200">
@@ -463,13 +546,10 @@ export const Header = () => {
                         />
                       </div>
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                        <UserCircleIcon className="h-5 w-5" />
+                      <div className="w-8 h-8 rounded-full bg-[#EEEDFE] text-[#4E4AFC] flex items-center justify-center font-bold text-xs border border-[#4E4AFC]/20">
+                        {userName.charAt(0).toUpperCase()}
                       </div>
                     )}
-                    <span className="text-slate-800 font-semibold text-sm">
-                      {userName.split(" ")[0]}
-                    </span>
                   </button>
 
                   {isProfileMenuOpen && (
@@ -521,10 +601,8 @@ export const Header = () => {
 
       {/* MOBILE HEADER */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200/80">
-        <div className="px-4 h-16 flex items-center justify-between">
-          {Logo}
-
-          <div className="flex-1"></div>
+        <div className="px-4 h-14 flex items-center justify-between">
+          {BrandLogo}
 
           <div className="flex items-center gap-2">
             <button
@@ -535,7 +613,15 @@ export const Header = () => {
               <MagnifyingGlassIcon className="h-5 w-5" />
             </button>
 
-            {/* Direct Messages Icon on Mobile Header */}
+            {/* Mobile + Create button */}
+            <button
+              onClick={handleOpenCreateModal}
+              className="p-2 rounded-full bg-[#4E4AFC] text-white hover:bg-[#3F3BE6] transition-colors cursor-pointer"
+              aria-label="Create Post"
+            >
+              <PlusIcon className="h-4 w-4 stroke-[2.5]" />
+            </button>
+
             <Link
               href="/message"
               className="p-2 rounded-full hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition relative"
@@ -543,72 +629,13 @@ export const Header = () => {
             >
               <MessageCircle className="h-5 w-5" />
               {unreadMessagesCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1 animate-pulse">
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1 animate-pulse">
                   {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
                 </span>
               )}
             </Link>
 
             {isAuthenticated && <NotificationDropdown />}
-
-            {!isAuthenticated ? (
-              <button
-                onClick={handleGetStarted}
-                className="px-4 py-1.5 rounded-full text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm cursor-pointer"
-              >
-                Get Started
-              </button>
-            ) : (
-              <div className="relative" ref={mobileProfileRef}>
-                <button
-                  onClick={toggleMobileProfileMenu}
-                  className="p-1 rounded-full hover:bg-slate-100 transition cursor-pointer"
-                  aria-label="Profile"
-                >
-                  {userPic ? (
-                    <div className="relative w-8 h-8 rounded-full overflow-hidden border border-slate-200">
-                      <Image
-                        src={userPic}
-                        alt={userName}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                      <UserCircleIcon className="h-5 w-5" />
-                    </div>
-                  )}
-                </button>
-
-                {showMobileProfileMenu && (
-                  <div className="absolute right-0 top-full mt-2 w-48 rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden z-[60] animate-fadeInDown">
-                    <div className="py-2">
-                      <button
-                        onClick={() => {
-                          setShowMobileProfileMenu(false);
-                          handleProfileNavigate();
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition text-left text-sm cursor-pointer"
-                      >
-                        <UserCircleIcon className="h-4 w-4 text-slate-400" />
-                        <span>Profile</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowMobileProfileMenu(false);
-                          handleLogout();
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-red-600 hover:text-red-700 hover:bg-red-50 transition text-left text-sm cursor-pointer"
-                      >
-                        <ArrowRightOnRectangleIcon className="h-4 w-4" />
-                        <span>Log out</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
 
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -656,8 +683,8 @@ export const Header = () => {
                       onClick={() => setIsMenuOpen(false)}
                       className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition ${
                         isActive
-                          ? "bg-indigo-50 text-indigo-600 font-semibold"
-                          : "text-slate-700 hover:bg-slate-50"
+                          ? "bg-[#EEEDFE] text-[#4E4AFC] font-semibold"
+                          : "text-slate-700 hover:text-slate-900 hover:bg-slate-50"
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -724,21 +751,21 @@ export const Header = () => {
               <ArrowLeftIcon className="h-5 w-5 text-slate-700" />
             </button>
             <div className="flex-1 relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
                 ref={mobileSearchInputRef}
                 type="text"
                 value={searchQuery}
                 onChange={handleSearchChange}
-                placeholder="Search BD BOOK..."
-                className="w-full bg-slate-100 text-slate-900 rounded-full py-2.5 pl-10 pr-10 placeholder:text-slate-400 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                placeholder="Search stalk..."
+                className="w-full bg-slate-100 text-slate-900 rounded-full py-2.5 pl-4 pr-10 placeholder:text-slate-400 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                 autoFocus
               />
+              <MagnifyingGlassIcon className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={clearSearch}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-200 rounded-full cursor-pointer"
+                  className="absolute right-9 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-200 rounded-full cursor-pointer"
                 >
                   <XMarkIcon className="h-4 w-4 text-slate-500" />
                 </button>
@@ -747,6 +774,120 @@ export const Header = () => {
           </div>
         </div>
       )}
+
+      {/* GLOBAL CREATE POST MODAL (TRIGGERABLE FROM ANYWHERE) */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false);
+          setPostDescription("");
+          setSelectedMedia(null);
+          setMediaPreview(null);
+        }}
+        title="Create Post"
+        maxWidth="md"
+        footer={
+          <Button
+            variant="primary"
+            fullWidth
+            size="lg"
+            onClick={handleCreatePostSubmit}
+            loading={createPostMutation.isPending}
+            disabled={!postDescription.trim() && !selectedMedia}
+          >
+            Post
+          </Button>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#4E4AFC] flex items-center justify-center overflow-hidden flex-shrink-0">
+              {userPic ? (
+                <Image
+                  src={userPic}
+                  alt={userName}
+                  width={40}
+                  height={40}
+                  className="object-cover"
+                />
+              ) : (
+                <UserIcon className="h-5 w-5 text-white" />
+              )}
+            </div>
+            <div>
+              <p className="font-bold text-sm text-slate-900">{userName}</p>
+              <span className="text-xs text-slate-500">Public</span>
+            </div>
+          </div>
+
+          <TextArea
+            value={postDescription}
+            onChange={(e) => setPostDescription(e.target.value)}
+            placeholder="What's on your mind?"
+            rows={4}
+            autoFocus
+          />
+
+          {mediaPreview && (
+            <div className="relative rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+              {mediaType === "video" ? (
+                <video src={mediaPreview} controls className="w-full max-h-64" />
+              ) : (
+                <Image
+                  src={mediaPreview}
+                  alt="Preview"
+                  width={500}
+                  height={300}
+                  className="w-full object-cover max-h-64"
+                />
+              )}
+              <button
+                onClick={() => {
+                  setSelectedMedia(null);
+                  setMediaPreview(null);
+                }}
+                className="absolute top-2 right-2 p-1.5 bg-slate-900/70 hover:bg-slate-900 rounded-full text-white transition-colors cursor-pointer"
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          <div className="border border-slate-200/90 rounded-xl p-3 bg-slate-50/50">
+            <p className="text-xs font-semibold text-slate-600 mb-2">Add to your post</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-medium cursor-pointer"
+              >
+                <PhotoIcon className="h-4 w-4 text-emerald-500" />
+                <span>Photo</span>
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-medium cursor-pointer"
+              >
+                <VideoCameraIcon className="h-4 w-4 text-red-500" />
+                <span>Video</span>
+              </button>
+              <button
+                type="button"
+                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-medium cursor-pointer"
+              >
+                <FaceSmileIcon className="h-4 w-4 text-amber-500" />
+                <span>Feeling</span>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*"
+                onChange={handleMediaSelect}
+                className="hidden"
+              />
+            </div>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 };

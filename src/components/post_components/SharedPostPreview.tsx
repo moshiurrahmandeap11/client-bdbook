@@ -22,7 +22,7 @@ export const SharedPostPreview = memo(
           className={`w-full text-left mt-3 rounded-xl overflow-hidden transition-all duration-200 bg-slate-50 border border-slate-200/80 hover:bg-slate-100/70 cursor-pointer ${className}`}
         >
           <div className="flex items-center gap-3 p-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-indigo-50 text-indigo-600">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-[#EEEDFE] text-[#4E4AFC]">
               <LinkIcon className="h-5 w-5" />
             </div>
             <div className="flex-1 min-w-0">
@@ -46,7 +46,7 @@ export const SharedPostPreview = memo(
     return (
       <button
         onClick={onClick}
-        className={`w-full text-left mt-3 rounded-xl overflow-hidden transition-all duration-200 bg-slate-50 border border-slate-200/80 hover:border-slate-300 active:scale-[0.99] cursor-pointer ${className}`}
+        className={`w-full text-left mt-3 rounded-xl overflow-hidden transition-all duration-200 bg-slate-50 border border-slate-200/80 hover:border-slate-300 cursor-pointer ${className}`}
       >
         {/* Header */}
         <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2.5 border-b border-slate-200/60 bg-white/60">
@@ -72,7 +72,7 @@ export const SharedPostPreview = memo(
               Original post
             </p>
           </div>
-          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 bg-indigo-50 text-indigo-700 border border-indigo-100">
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 bg-[#EEEDFE] text-[#4E4AFC] border border-[#4E4AFC]/20">
             Original
           </span>
         </div>

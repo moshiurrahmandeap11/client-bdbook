@@ -36,7 +36,7 @@ export default function LoginForm() {
     <div className="w-full max-w-md p-8 space-y-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700">
       <div className="text-center space-y-2">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Welcome Back</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Sign in to your BDBook account</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Sign in to your Stalk account</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -47,7 +47,7 @@ export default function LoginForm() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            className="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#4E4AFC] focus:outline-none"
             placeholder="you@example.com"
           />
         </div>
@@ -59,7 +59,7 @@ export default function LoginForm() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            className="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#4E4AFC] focus:outline-none"
             placeholder="••••••••"
           />
         </div>
@@ -67,7 +67,7 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition duration-200 disabled:opacity-50"
+          className="w-full py-2.5 px-4 bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white font-medium rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
         >
           {loading ? "Signing in..." : "Sign In"}
         </button>
@@ -75,7 +75,7 @@ export default function LoginForm() {
 
       <p className="text-center text-xs text-gray-500 dark:text-gray-400">
         Don't have an account?{" "}
-        <Link href="/auth/register" className="text-blue-600 hover:underline font-medium">
+        <Link href="/auth/register" className="text-[#4E4AFC] hover:underline font-medium">
           Sign up
         </Link>
       </p>

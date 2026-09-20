@@ -52,7 +52,7 @@ const FriendRow = memo(({ id, picture, name, onSend, disabled }: FriendRowProps)
   >
     <Avatar src={picture} name={name} size={38} />
     <p className="flex-1 text-sm font-medium text-slate-800 truncate">{name}</p>
-    <Send className="h-4 w-4 flex-shrink-0 text-slate-400 hover:text-indigo-600 transition-colors" />
+    <Send className="h-4 w-4 flex-shrink-0 text-slate-400 hover:text-[#4E4AFC] transition-colors" />
   </button>
 ));
 FriendRow.displayName = "FriendRow";
@@ -213,7 +213,7 @@ export const ShareModal = ({
                 className={cn(
                   "flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-all duration-150 border-b-2 cursor-pointer",
                   isSelected
-                    ? "text-indigo-600 border-indigo-600 font-semibold"
+                    ? "text-[#4E4AFC] border-[#4E4AFC] font-semibold"
                     : "text-slate-500 border-transparent hover:text-slate-800"
                 )}
               >
@@ -265,7 +265,7 @@ export const ShareModal = ({
 
               {(isLoadingFriends || isSearchingFriends) && (
                 <div className="flex justify-center py-6">
-                  <div className="w-7 h-7 rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin" />
+                  <div className="w-7 h-7 rounded-full border-2 border-slate-200 border-t-[#4E4AFC] animate-spin" />
                 </div>
               )}
 
@@ -321,7 +321,7 @@ export const ShareModal = ({
                 <div
                   className={cn(
                     "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors",
-                    copied ? "bg-green-100 text-green-600" : "bg-indigo-50 text-indigo-600"
+                    copied ? "bg-green-100 text-green-600" : "bg-[#EEEDFE] text-[#4E4AFC]"
                   )}
                 >
                   {copied ? <CheckIcon className="h-5 w-5" /> : <LinkIcon className="h-5 w-5" />}

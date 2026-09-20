@@ -126,7 +126,7 @@ export const CustomVideoPlayer = memo(({ src, poster, className = "", style = {}
   }, []);
 
   const glassVideoControls: React.CSSProperties = {
-    background: "linear-gradient(to top, rgba(0,0,0,0.85), transparent)",
+    background: "rgba(0, 0, 0, 0.75)",
     backdropFilter: "blur(10px)",
     WebkitBackdropFilter: "blur(10px)",
   };
@@ -175,7 +175,7 @@ export const CustomVideoPlayer = memo(({ src, poster, className = "", style = {}
           onClick={handleSeek}
         >
           <div
-            className="h-full bg-blue-500 rounded-full relative transition-all duration-100"
+            className="h-full bg-[#4E4AFC] rounded-full relative transition-all duration-100"
             style={{ width: `${progress}%` }}
           >
             <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover/progress:opacity-100 transition-opacity shadow-lg" />
