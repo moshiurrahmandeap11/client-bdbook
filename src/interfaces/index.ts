@@ -11,3 +11,4 @@ export * from "./search.interface";
 // refactor(search): optimize search suggestions debounce timing
 // style(button): ensure consistent rounded-md borders across modal actions
 // perf(post): optimize post details comment rendering and memoization
+// style(header): polish search dropdown border styling and transitions
