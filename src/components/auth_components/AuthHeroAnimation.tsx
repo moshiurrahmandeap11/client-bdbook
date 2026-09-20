@@ -52,4 +52,32 @@ export const AuthHeroAnimation: React.FC<AuthHeroAnimationProps> = ({
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#dotted-grid)" />
-// [wip step 2/6]
+        </svg>
+
+        {/* SVG Connection Lines */}
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <line
+            x1="50%"
+            y1="50%"
+            x2="22%"
+            y2="28%"
+            stroke="#cbd5e1"
+            strokeWidth="1.5"
+            strokeDasharray="4 4"
+          />
+          <line
+            x1="50%"
+            y1="50%"
+            x2="78%"
+            y2="25%"
+            stroke="#cbd5e1"
+            strokeWidth="1.5"
+            strokeDasharray="4 4"
+          />
+          <line
+            x1="50%"
+            y1="50%"
+// [wip step 3/6]
