@@ -59,4 +59,19 @@ export default function LoginForm() {
           <div className="flex items-center justify-between mb-1.5">
             <label className="block text-xs font-normal text-slate-700">
               Password
-// [wip step 4/7]
+            </label>
+          </div>
+          <input
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-3.5 py-2.5 text-sm font-normal border border-slate-300 rounded-md bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#4E4AFC] focus:ring-0 focus:outline-none transition-colors"
+            placeholder="••••••••"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+// [wip step 5/7]
