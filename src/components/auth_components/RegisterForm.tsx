@@ -22,8 +22,6 @@ export default function RegisterForm() {
     setLoading(true);
     try {
       const data = await register({ name, email, password });
-      Cookies.set("token", data.accessToken, { expires: 7 });
-      localStorage.setItem("token", data.accessToken);
       setUser(data.user);
       toast.success("Account created successfully!");
       router.push("/");

@@ -15,7 +15,10 @@ export const login = async (payload: LoginPayload): Promise<AuthResponseData> =>
 
 export const register = async (payload: RegisterPayload): Promise<AuthResponseData> => {
   try {
-    const response = await apiClient.post<ApiResponse<AuthResponseData>>("/auth/register", payload);
+    const response = await apiClient.post<ApiResponse<AuthResponseData>>("/auth/register", {
+      ...payload,
+      fullName: payload.name || (payload as any).fullName,
+    });
     return response.data.data;
   } catch (error) {
     return handleApiError(error);
@@ -50,6 +53,15 @@ export const logout = async (): Promise<void> => {
 export const googleAuth = async (payload: { idToken?: string; code?: string; redirectUri?: string }): Promise<AuthResponseData> => {
   try {
     const response = await apiClient.post<ApiResponse<AuthResponseData>>("/auth/google", payload);
+    return response.data.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const refreshAuthToken = async (): Promise<{ accessToken: string }> => {
+  try {
+    const response = await apiClient.post<ApiResponse<{ accessToken: string }>>("/auth/refresh-token");
     return response.data.data;
   } catch (error) {
     return handleApiError(error);

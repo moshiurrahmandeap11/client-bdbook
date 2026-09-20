@@ -21,8 +21,6 @@ export default function LoginForm() {
     setLoading(true);
     try {
       const data = await login({ email, password });
-      Cookies.set("token", data.accessToken, { expires: 7 });
-      localStorage.setItem("token", data.accessToken);
       setUser(data.user);
       toast.success("Logged in successfully!");
       router.push("/");

@@ -22,16 +22,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchUser = async () => {
-    const token = Cookies.get("token") || localStorage.getItem("token");
-    if (!token) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-
     try {
       const data = await getMe();
-      setUser(data);
+      if (data && (data.id || (data as any)._id)) {
+        setUser(data);
+      } else {
+        setUser(null);
+      }
     } catch {
       setUser(null);
     } finally {
@@ -77,4 +74,3 @@ export function useAuth() {
   }
   return context;
 }
-

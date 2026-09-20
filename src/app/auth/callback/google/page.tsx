@@ -40,8 +40,6 @@ function GoogleCallbackContent() {
         const redirectUri = `${window.location.origin}/auth/callback/google`;
         const data = await googleAuth({ code, redirectUri });
 
-        Cookies.set("token", data.accessToken, { expires: 7 });
-        localStorage.setItem("token", data.accessToken);
         setUser(data.user);
 
         toast.success("Signed in with Google!");
