@@ -38,4 +38,14 @@ export default function GoogleSignInButton({
     }
   };
 
-// [wip step 4/7]
+  return (
+    <button
+      type="button"
+      onClick={handleGoogleSignIn}
+      disabled={disabled || loading}
+      className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-white hover:bg-slate-50 text-slate-700 text-sm font-normal border border-slate-300 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+    >
+      <svg className="w-4 h-4" viewBox="0 0 24 24">
+        <path
+          fill="#4285F4"
+// [wip step 5/7]
