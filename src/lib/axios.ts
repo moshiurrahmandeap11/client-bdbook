@@ -1,9 +1,9 @@
 import axios, { AxiosError, InternalAxiosRequestConfig, AxiosResponse } from "axios";
 
 const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:6969";
-const API_BASE_URL = RAW_API_URL.endsWith("/v1/api")
+const API_BASE_URL = RAW_API_URL.endsWith("/api/v1")
   ? RAW_API_URL
-  : `${RAW_API_URL.replace(/\/+$/, "")}/v1/api`;
+  : `${RAW_API_URL.replace(/\/+$/, "")}/api/v1`;
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
