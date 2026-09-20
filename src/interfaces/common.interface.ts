@@ -68,3 +68,4 @@ export interface PaginatedResult<T> {
 // Step 31: fix(message): fallback msg.text to msg.message in chat bubble in message/page.tsx
 // Step 32: refactor(common): add optional pages and totalPages to ApiResponse pagination
 // Step 33: style(profile): ensure zero shadows and rounded-md buttons on /s/[username]
+// Step 34: style(post): adhere to design system with font-normal typography in post details
