@@ -39,4 +39,45 @@ export const Sidebar: React.FC = () => {
     { name: "Popular", href: "/videos", icon: Flame },
     { name: "All", href: "/videos", icon: Layers },
   ];
-// [wip step 1/5]
+
+  const moderationNav = [
+    { name: "Mod Mail", href: "/message", icon: EnvelopeIcon },
+    { name: "Mod Queue", href: "/room", icon: QueueListIcon },
+    { name: "s/Mod", href: "/community", icon: ShieldCheckIcon },
+  ];
+
+  const recentCommunities = [
+    { name: "s/computerscience", href: "/", icon: CodeBracketIcon },
+    { name: "s/technology", href: "/", icon: CpuChipIcon },
+    { name: "s/singularity", href: "/", icon: SparklesIcon },
+    { name: "s/community", href: "/community", icon: UserGroupIcon },
+  ];
+
+  return (
+    <aside className="hidden lg:block w-[260px] shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-3.5 px-3 border-r border-slate-200/80 bg-white select-none">
+      {/* Feeds Section */}
+      <div className="space-y-0.5">
+        {mainNav.map((item) => {
+          const isActive = pathname === item.href;
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-normal transition-all duration-150",
+                isActive
+                  ? "bg-slate-100 text-slate-900 font-normal"
+                  : "text-slate-700 hover:text-slate-950 hover:bg-slate-50"
+              )}
+            >
+              <Icon
+                className={cn(
+                  "h-4.5 w-4.5 transition-colors",
+                  isActive ? "text-slate-900" : "text-slate-500"
+                )}
+              />
+              <span>{item.name}</span>
+            </Link>
+          );
+// [wip step 2/5]
