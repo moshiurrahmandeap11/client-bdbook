@@ -32,6 +32,7 @@ export interface INotificationItem {
   actor?: {
     id: string;
     fullName: string;
+    username?: string;
     profilePicUrl?: string | null;
   } | null;
   data?: {
@@ -40,9 +41,11 @@ export interface INotificationItem {
     requestId?: string | null;
     actorId?: string | null;
     actorName?: string | null;
+    actorUsername?: string | null;
     actorProfilePicture?: string | null;
     message?: string;
     senderId?: string | null;
+    senderUsername?: string | null;
     receiverId?: string | null;
   };
 }
@@ -192,6 +195,10 @@ export const NotificationProvider = ({
 
       const targetPostId =
         notification.data?.postId || notification.postId;
+      const targetSenderUsername =
+        notification.actor?.username ||
+        notification.data?.senderUsername ||
+        notification.data?.actorUsername;
       const targetSenderId =
         notification.data?.senderId ||
         notification.data?.receiverId ||
@@ -208,8 +215,10 @@ export const NotificationProvider = ({
       } else if (notification.type === "friend_request") {
         router.push("/community");
       } else if (notification.type === "friend_accept") {
-        if (targetSenderId) {
-          router.push(`/profile/${targetSenderId}`);
+        if (targetSenderUsername) {
+          router.push(`/s/${targetSenderUsername}`);
+        } else if (targetSenderId) {
+          router.push(`/s/${targetSenderId}`);
         } else {
           router.push("/community");
         }
