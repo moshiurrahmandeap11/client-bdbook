@@ -66,3 +66,4 @@ export interface PaginatedResult<T> {
 // Step 29: refactor(header): update handleProfileNavigate to route to /s/[username] in Header.tsx
 // Step 30: refactor(postcard): add author avatar click navigation to /s/[username] in PostCard.tsx
 // Step 31: fix(message): fallback msg.text to msg.message in chat bubble in message/page.tsx
+// Step 32: refactor(common): add optional pages and totalPages to ApiResponse pagination
