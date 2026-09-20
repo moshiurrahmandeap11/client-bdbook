@@ -62,3 +62,4 @@ export interface PaginatedResult<T> {
 // Step 25: feat(header): render rich user suggestions with avatars and usernames in Header.tsx
 // Step 26: feat(header): add click navigation to /s/[username] from search suggestions in Header.tsx
 // Step 27: feat(header): update mobile search overlay with suggestions list in Header.tsx
+// Step 28: fix(header): add anti-autofill attributes to mobile search input in Header.tsx
