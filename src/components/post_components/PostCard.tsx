@@ -289,4 +289,101 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
         <button
           onClick={() => setIsHidden(false)}
           className="text-[#4E4AFC] hover:underline cursor-pointer"
-// [wip step 3/5]
+        >
+          Undo
+        </button>
+      </article>
+    );
+  }
+
+  return (
+    <article className="py-4 px-4 sm:px-6 hover:bg-slate-50/50 transition-colors border-b border-slate-100 bg-white">
+      {/* Top Header: Subreddit/Author + Time + Follow Button + Options Menu */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <Avatar src={authorPic} name={authorName} size={36} />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => router.push(`/profile/${postUserId}`)}
+                className="font-normal text-xs text-slate-900 hover:text-[#4E4AFC] transition-colors truncate cursor-pointer"
+              >
+                {communityTag}
+              </button>
+              {!isOwner && (
+                <button
+                  onClick={handleFollow}
+                  className={cn(
+                    "px-2.5 py-0.5 text-xs font-normal rounded-md transition-colors cursor-pointer",
+                    isFollowing
+                      ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      : "bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white"
+                  )}
+                >
+                  {isFollowing ? "Joined" : "Follow +"}
+                </button>
+              )}
+            </div>
+            <span className="text-slate-400 text-xs shrink-0">
+              {getTimeAgo(post.createdAt)}
+            </span>
+          </div>
+        </div>
+
+        {!hideMenu && dropdownItems.length > 0 && (
+          <Dropdown
+            align="right"
+            trigger={
+              <button
+                className="w-7 h-7 rounded-md flex items-center justify-center text-slate-700 hover:text-slate-950 hover:bg-slate-100 transition-colors cursor-pointer"
+                aria-label="Post options"
+              >
+                <EllipsisHorizontalIcon className="h-5 w-5 text-slate-700 stroke-[2]" />
+              </button>
+            }
+            items={dropdownItems}
+          />
+        )}
+      </div>
+
+      {/* Post Title & Description (SlothUI Style) */}
+      <div className="mt-2.5">
+        <h2
+          onClick={goToPostDetails}
+          className="font-normal text-base text-slate-900 hover:text-[#4E4AFC] transition-colors cursor-pointer leading-snug"
+        >
+          {post.title || post.description || "Untitled Post"}
+        </h2>
+
+        {post.description && post.title && (
+          <p className="mt-1 text-sm text-slate-600 leading-relaxed line-clamp-3">
+            {post.description}
+          </p>
+        )}
+      </div>
+
+      {/* Media or Shared Post Preview */}
+      {isSharedPost ? (
+        <div className="mt-3">
+          <SharedPostPreview
+            originalPost={originalPost}
+            postUrl={sharePreview.postUrl}
+            onClick={() => {
+              const targetId = originalPost?._id || originalPost?.id || post._id || post.id;
+              if (targetId) router.push(`/post/details/${targetId}`);
+            }}
+          />
+        </div>
+      ) : mediaUrl ? (
+        <div
+          className="mt-3 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 cursor-pointer group"
+          onClick={goToPostDetails}
+        >
+          {mediaType === "video" ? (
+            <CustomVideoPlayer src={mediaUrl} poster={post.mediaThumbnail || post.media?.thumbnailUrl} />
+          ) : (
+            <Image
+              src={mediaUrl}
+              alt={post.description || "Post media"}
+              width={800}
+// [wip step 4/5]
