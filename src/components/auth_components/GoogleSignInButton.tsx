@@ -28,4 +28,14 @@ export default function GoogleSignInButton({
       setLoading(true);
       const redirectUri = `${window.location.origin}/auth/callback/google`;
       const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(
-// [wip step 3/7]
+        redirectUri
+      )}&response_type=code&scope=openid%20email%20profile&prompt=select_account`;
+
+      window.location.href = googleAuthUrl;
+    } catch (err: any) {
+      setLoading(false);
+      toast.error(err.message || "Failed to initialize Google Sign-In");
+    }
+  };
+
+// [wip step 4/7]
