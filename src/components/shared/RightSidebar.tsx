@@ -26,4 +26,32 @@ export const RightSidebar: React.FC = () => {
 
   // Don't show right sidebar on auth pages
   if (isAuthPage) {
-// [wip step 1/4]
+    return null;
+  }
+
+  const recentPosts: IPost[] = postsData || [];
+
+  if (cleared || recentPosts.length === 0) {
+    return (
+      <aside className="hidden xl:block w-80 shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-6 px-6 border-l border-slate-200/80 bg-white">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-normal text-sm text-slate-900">Recent Posts</h3>
+        </div>
+        <p className="text-xs text-slate-400">No recent posts</p>
+      </aside>
+    );
+  }
+
+  return (
+    <aside className="hidden xl:block w-80 shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-6 px-6 border-l border-slate-200/80 bg-white">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-normal text-sm text-slate-900 tracking-tight">Recent Posts</h3>
+        <button
+          onClick={() => setCleared(true)}
+          className="text-xs font-normal text-slate-400 hover:text-slate-600 transition cursor-pointer"
+        >
+          Clear
+        </button>
+      </div>
+
+// [wip step 2/4]
