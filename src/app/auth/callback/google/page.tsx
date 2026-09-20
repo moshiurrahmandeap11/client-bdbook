@@ -19,4 +19,15 @@ function GoogleCallbackContent() {
     const code = searchParams.get("code");
     const error = searchParams.get("error");
 
-// [wip step 2/8]
+    if (error) {
+      processedRef.current = true;
+      toast.error("Google sign-in was cancelled or denied");
+      router.replace("/auth/login");
+      return;
+    }
+
+    if (!code) {
+      processedRef.current = true;
+      toast.error("No authorization code found");
+      router.replace("/auth/login");
+// [wip step 3/8]
