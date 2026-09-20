@@ -162,4 +162,44 @@ export const Sidebar: React.FC = () => {
           )}
         >
           <div className="overflow-hidden">
-// [wip step 4/5]
+            <div
+              className={cn(
+                "space-y-0.5 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                recentOpen ? "translate-y-0" : "-translate-y-2"
+              )}
+            >
+              {recentCommunities.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className="flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-normal text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
+                  >
+                    <Icon className="h-4 w-4 transition-colors text-slate-400" />
+                    <span className="truncate">{item.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* User Profile Quick Link */}
+      {isAuthenticated && currentUserId && (
+        <div className="mt-5 pt-3 border-t border-slate-100">
+          <Link
+            href={`/profile/${currentUserId}`}
+            className="flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-normal text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <UserCircleIcon className="h-4.5 w-4.5 text-slate-400" />
+            <span>My Profile</span>
+          </Link>
+        </div>
+      )}
+    </aside>
+  );
+};
+
+export default Sidebar;
