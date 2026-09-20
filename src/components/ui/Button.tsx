@@ -32,4 +32,38 @@ const sizeStyles: Record<NonNullable<ButtonProps["size"]>, string> = {
   sm: "px-3.5 py-1.5 text-xs font-normal rounded-md gap-1.5",
   md: "px-4 py-2 text-sm font-normal rounded-md gap-2",
   lg: "px-5 py-2.5 text-sm font-normal rounded-md gap-2.5",
-// [wip step 1/3]
+};
+
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  (
+    {
+      className,
+      variant = "primary",
+      size = "md",
+      loading = false,
+      leftIcon,
+      rightIcon,
+      fullWidth = false,
+      disabled,
+      children,
+      ...props
+    },
+    ref
+  ) => {
+    const isDisabled = disabled || loading;
+
+    return (
+      <button
+        ref={ref}
+        disabled={isDisabled}
+        className={cn(
+          "inline-flex items-center justify-center font-normal select-none cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4E4AFC] focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none",
+          variantStyles[variant],
+          sizeStyles[size],
+          fullWidth && "w-full",
+          className
+        )}
+        {...props}
+      >
+        {loading ? (
+// [wip step 2/3]
