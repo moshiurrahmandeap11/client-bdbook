@@ -35,3 +35,4 @@ export interface PaginatedResult<T> {
     totalPages: number;
   };
 }
+// Step 1: feat(interfaces): add pagination structure to ApiResponse
