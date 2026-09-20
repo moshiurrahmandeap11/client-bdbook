@@ -7,3 +7,4 @@ export * from "./message.interface";
 export * from "./auth.interface";
 export * from "./search.interface";
 
+// perf(feed): optimize query caching for user profile posts
