@@ -52,3 +52,4 @@ export interface PaginatedResult<T> {
 // Step 15: feat(search): add Suspense boundary for SearchPage
 // Step 16: feat(post): load post data using postService.getPostById in PostDetailsPage
 // Step 17: feat(post): render PostCard and back button in PostDetailsPage
+// Step 18: feat(post): implement comments list with user avatars and timestamps in PostDetailsPage
