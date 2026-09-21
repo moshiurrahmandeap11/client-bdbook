@@ -1,14 +1,14 @@
-// Share Modal with Enhanced Styling
 "use client";
 
 import { useAuth } from "@/components/providers/AuthProvider";
 import axiosInstance from "@/lib/axios";
 import { CheckIcon, LinkIcon } from "@heroicons/react/24/outline";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Send, Search } from "lucide-react";
 import Image from "next/image";
 import React, { memo, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import { postService } from "@/services/post.service";
 import { BsInstagram } from "react-icons/bs";
 import { FaAppStore, FaFacebook, FaTelegram, FaTwitter, FaWhatsapp } from "react-icons/fa";
 import { FaSignalMessenger } from "react-icons/fa6";
@@ -62,7 +62,7 @@ interface ShareModalProps {
   post: IPost | any;
   user?: IUser | any;
   onClose: () => void;
-  onShareToFeed?: () => void;
+  onShareToFeed?: (description?: string) => void;
   onShareToMessage?: (friendId: string) => void;
   onCopyLink?: (url: string) => void;
   sharePreview?: { postUrl: string; text: string };
@@ -83,8 +83,12 @@ export const ShareModal = ({
 }: ShareModalProps) => {
   const [shareTab, setShareTab] = useState<"feed" | "message" | "external">("feed");
   const [searchFriend, setSearchFriend] = useState("");
+  const [caption, setCaption] = useState("");
   const [copied, setCopied] = useState(false);
+  const [internalSharingFeed, setInternalSharingFeed] = useState(false);
+  const [internalSharingMessage, setInternalSharingMessage] = useState(false);
   const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
 
   const preview = useMemo(() => {
     if (sharePreview) return sharePreview;
@@ -150,12 +154,69 @@ export const ShareModal = ({
     }
   };
 
-  const handleShareToFeed = () => {
-    if (onShareToFeed) onShareToFeed();
+  const handleShareToFeed = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please login to share");
+      return;
+    }
+    onClose();
+    if (onShareToFeed) {
+      onShareToFeed(caption);
+      return;
+    }
+    const pId = post?._id || post?.id;
+    if (!pId) return;
+    toast.success("Post shared to your feed!");
+    try {
+      await postService.sharePost(pId, { description: caption });
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      queryClient.invalidateQueries({ queryKey: ["user-posts"] });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to share post");
+    }
   };
 
-  const handleShareToMessage = (friendId: string) => {
-    if (onShareToMessage) onShareToMessage(friendId);
+  const handleShareToMessage = async (friendId: string) => {
+    if (!isAuthenticated) {
+      toast.error("Please login to send message");
+      return;
+    }
+    if (onShareToMessage) {
+      onShareToMessage(friendId);
+      return;
+    }
+    const pId = post?._id || post?.id;
+    if (!pId) return;
+    try {
+      setInternalSharingMessage(true);
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const postUrl = `${origin}/post/details/${pId}`;
+      await axiosInstance.post(`/messages/send-message/${friendId}`, {
+        message: JSON.stringify({
+          type: "post_share",
+          postId: pId,
+          postUrl,
+          postText: post.description || "Check out this post",
+          postAuthor: post.userName || post.user?.fullName,
+          postAuthorProfilePic: post.userProfilePicture || post.user?.profilePicture?.url,
+          hasMedia: !!(post.mediaUrl || post.media?.url),
+          mediaType: post.mediaType || post.media?.resourceType,
+          mediaUrl: post.mediaUrl || post.media?.url,
+          sharedBy: user?.fullName || user?.name,
+          sharedByProfilePic:
+            typeof user?.profilePicture === "object"
+              ? user?.profilePicture?.url
+              : user?.profilePicture || user?.avatar,
+        }),
+        messageType: "share",
+      });
+      toast.success("Post shared via message!");
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to share via message");
+    } finally {
+      setInternalSharingMessage(false);
+    }
   };
 
   const TABS = [
@@ -241,12 +302,25 @@ export const ShareModal = ({
                   <p className="text-xs text-slate-500">Share immediately to your public timeline</p>
                 </div>
               </div>
+
+              {/* Optional Caption */}
+              <div>
+                <textarea
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  placeholder="Say something about this post... (optional)"
+                  rows={2}
+                  className="w-full text-xs sm:text-sm p-3 bg-slate-50 hover:bg-slate-100/60 focus:bg-white border border-slate-200 focus:border-[#4E4AFC] rounded-xl focus:outline-none transition-colors resize-none placeholder:text-slate-400 font-normal"
+                />
+              </div>
+
               <Button
                 variant="primary"
                 fullWidth
                 size="lg"
                 onClick={handleShareToFeed}
-                loading={isSharingToFeed}
+                loading={isSharingToFeed || internalSharingFeed}
+                disabled={isSharingToFeed || internalSharingFeed}
               >
                 Share to Feed
               </Button>
@@ -281,7 +355,7 @@ export const ShareModal = ({
                         picture={f.friendProfilePicture}
                         name={f.friendName}
                         onSend={handleShareToMessage}
-                        disabled={isSharingToMessage}
+                        disabled={isSharingToMessage || internalSharingMessage}
                       />
                     ))}
                   </div>
@@ -299,7 +373,7 @@ export const ShareModal = ({
                         picture={f.profilePicture?.url || f.profilePicture}
                         name={f.fullName}
                         onSend={handleShareToMessage}
-                        disabled={isSharingToMessage}
+                        disabled={isSharingToMessage || internalSharingMessage}
                       />
                     ))}
                   </div>
