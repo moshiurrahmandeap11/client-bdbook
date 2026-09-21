@@ -1,4 +1,4 @@
-// Integrated followers and following count queries
+// Instant optimistic avatar preview
 "use client";
 
 import { use, useRef, useState } from "react";
