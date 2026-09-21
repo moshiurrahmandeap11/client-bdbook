@@ -1,7 +1,6 @@
-// Comment submission error rollback
 "use client";
 
-import { use, useEffect, useState, useCallback } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { IPost, IComment } from "@/interfaces";
 import { postService } from "@/services/post.service";
@@ -10,6 +9,8 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { ArrowLeft, MessageSquare, Send, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getCachedData, setCachedData } from "@/lib/cache";
 
 function getTimeAgo(dateString: string | Date | undefined): string {
   if (!dateString) return "just now";
@@ -38,29 +39,68 @@ export default function PostDetailsPage({
   const postId = resolvedParams.id;
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
 
-  const [post, setPost] = useState<IPost | null>(null);
-  const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
 
-  const fetchPost = useCallback(async () => {
-    if (!postId) return;
-    try {
-      setLoading(true);
+  // Multi-tier instant cache + React Query
+  const {
+    data: post,
+    isLoading,
+    refetch: fetchPost,
+  } = useQuery<IPost | null>({
+    queryKey: ["post", postId],
+    queryFn: async () => {
+      if (!postId) return null;
       const data = await postService.getPostById(postId);
-      setPost(data);
-    } catch (err) {
-      console.error("Failed to load post details:", err);
-      setPost(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [postId]);
+      if (data) {
+        setCachedData(`post-${postId}`, data);
+      }
+      return data;
+    },
+    initialData: () => {
+      if (!postId) return undefined;
 
-  useEffect(() => {
-    fetchPost();
-  }, [fetchPost]);
+      // Tier 1: Post-specific persistent local cache
+      const cached = getCachedData<IPost>(`post-${postId}`);
+      if (cached) return cached;
+
+      // Tier 2: React Query feed cache in memory
+      const feedPosts = queryClient.getQueryData<any>(["posts"]);
+      if (feedPosts?.pages) {
+        for (const page of feedPosts.pages) {
+          const found = page.data?.find((p: any) => (p.id || p._id) === postId);
+          if (found) {
+            setCachedData(`post-${postId}`, found);
+            return found;
+          }
+        }
+      } else if (Array.isArray(feedPosts)) {
+        const found = feedPosts.find((p: any) => (p.id || p._id) === postId);
+        if (found) {
+          setCachedData(`post-${postId}`, found);
+          return found;
+        }
+      }
+
+      // Tier 3: Persistent home feed cache in localStorage
+      const homeFeed = getCachedData<IPost[]>("home_feed_posts");
+      if (homeFeed && Array.isArray(homeFeed)) {
+        const found = homeFeed.find((p: any) => (p.id || p._id) === postId);
+        if (found) {
+          setCachedData(`post-${postId}`, found);
+          return found;
+        }
+      }
+
+      return undefined;
+    },
+    initialDataUpdatedAt: 0,
+    staleTime: 3 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    enabled: !!postId,
+  });
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,27 +110,84 @@ export default function PostDetailsPage({
       return;
     }
 
-    if (!commentText.trim()) return;
+    const trimmed = commentText.trim();
+    if (!trimmed) return;
+
+    // Optimistic comment insertion (0ms perceived latency)
+    const optimisticComment: IComment = {
+      id: `temp-${Date.now()}`,
+      text: trimmed,
+      createdAt: new Date().toISOString(),
+      user: {
+        id: user?.id || (user as any)?._id || "",
+        fullName: user?.fullName || (user as any)?.name || "User",
+        username: user?.username || "",
+        avatar: user?.avatar || (user as any)?.profilePicUrl,
+        profilePicUrl: user?.avatar || (user as any)?.profilePicUrl,
+      },
+    };
+
+    queryClient.setQueryData(["post", postId], (old: IPost | null | undefined) => {
+      if (!old) return old;
+      const currentComments = old.comments || [];
+      const updated = {
+        ...old,
+        comments: [...currentComments, optimisticComment],
+        commentsCount: (old.commentsCount || currentComments.length) + 1,
+      };
+      setCachedData(`post-${postId}`, updated);
+      return updated;
+    });
+
+    setCommentText("");
 
     try {
       setSubmittingComment(true);
-      await postService.commentPost(postId, commentText.trim());
-      setCommentText("");
+      await postService.commentPost(postId, trimmed);
       toast.success("Comment added!");
-      // Refresh post to show new comment
-      await fetchPost();
+      fetchPost();
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
     } catch (err: any) {
       toast.error(err?.message || "Failed to add comment");
+      fetchPost();
     } finally {
       setSubmittingComment(false);
     }
   };
 
-  if (loading) {
+  // Only show skeleton when there is NO cached data at all (cold visit)
+  if (isLoading && !post) {
     return (
-      <div className="max-w-3xl mx-auto py-16 px-4 text-center">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-slate-200 border-t-[#4E4AFC] mb-3"></div>
-        <p className="text-sm text-slate-500 font-normal">Loading post...</p>
+      <div className="max-w-3xl mx-auto py-6 px-4 space-y-4 animate-pulse">
+        {/* Back Button Skeleton */}
+        <div className="h-4 w-16 bg-slate-200 rounded"></div>
+
+        {/* Post Card Skeleton */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-slate-200 shrink-0"></div>
+            <div className="space-y-1.5 flex-1">
+              <div className="h-4 w-32 bg-slate-200 rounded"></div>
+              <div className="h-3 w-20 bg-slate-100 rounded"></div>
+            </div>
+          </div>
+          <div className="space-y-2 pt-2">
+            <div className="h-4 w-full bg-slate-100 rounded"></div>
+            <div className="h-4 w-4/5 bg-slate-100 rounded"></div>
+          </div>
+          <div className="h-64 w-full bg-slate-100 rounded-xl"></div>
+          <div className="flex gap-2 pt-2 border-t border-slate-100">
+            <div className="h-7 w-16 bg-slate-100 rounded-md"></div>
+            <div className="h-7 w-16 bg-slate-100 rounded-md"></div>
+            <div className="h-7 w-16 bg-slate-100 rounded-md"></div>
+          </div>
+        </div>
+
+        {/* Comments Skeleton */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+          <div className="h-5 w-28 bg-slate-200 rounded"></div>
+          <div className="h-10 w-full bg-slate-100 rounded-md"></div>
+        </div>
       </div>
     );
   }
@@ -131,7 +228,7 @@ export default function PostDetailsPage({
 
       {/* Main Post Card */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <PostCard post={post} onPostUpdate={fetchPost} />
+        <PostCard post={post} onPostUpdate={() => fetchPost()} />
       </div>
 
       {/* Comments Section */}
