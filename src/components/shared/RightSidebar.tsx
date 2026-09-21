@@ -14,19 +14,46 @@ export const RightSidebar: React.FC = () => {
   const [cleared, setCleared] = useState(false);
   const isAuthPage = pathname.startsWith("/auth");
 
-  const { data: postsData } = useQuery({
+  const { data: postsData, isLoading } = useQuery({
     queryKey: ["recent-posts-sidebar"],
     queryFn: async () => {
       const res = await postService.getPosts({ page: 1, limit: 5 });
       return res.data || [];
     },
     enabled: !isAuthPage,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10 minutes cache
+    gcTime: 60 * 60 * 1000,    // 1 hour memory persistence
   });
 
   // Don't show right sidebar on auth pages
   if (isAuthPage) {
     return null;
+  }
+
+  // Loading skeleton on first render before cache is available
+  if (isLoading && !postsData && !cleared) {
+    return (
+      <aside className="hidden xl:block w-80 shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-6 px-6 border-l border-slate-200/80 bg-white animate-pulse">
+        <div className="flex items-center justify-between mb-4">
+          <div className="h-4 w-24 bg-slate-200 rounded"></div>
+        </div>
+        <div className="divide-y divide-slate-100">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="py-3.5 flex items-start gap-3">
+              <div className="flex-1 space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-5 h-5 rounded-full bg-slate-200"></div>
+                  <div className="h-3 w-16 bg-slate-200 rounded"></div>
+                </div>
+                <div className="h-3.5 bg-slate-100 rounded w-full"></div>
+                <div className="h-3 bg-slate-100 rounded w-2/3"></div>
+              </div>
+              <div className="w-16 h-16 rounded-xl bg-slate-100 shrink-0"></div>
+            </div>
+          ))}
+        </div>
+      </aside>
+    );
   }
 
   const recentPosts: IPost[] = postsData || [];
@@ -95,6 +122,7 @@ export const RightSidebar: React.FC = () => {
                         width={64}
                         height={64}
                         className="w-full h-full object-cover"
+                        unoptimized
                       />
                     )}
                   </div>

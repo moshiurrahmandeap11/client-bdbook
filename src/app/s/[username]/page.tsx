@@ -266,24 +266,38 @@ export default function UserProfilePage({
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
+    // 1. Instant local preview (0ms)
+    const localBlobUrl = URL.createObjectURL(file);
+    const prevUserData = user;
+
+    queryClient.setQueryData<IUser | null>(
+      ["user-profile", username.toLowerCase()],
+      (prev) => (prev ? { ...prev, profilePicUrl: localBlobUrl, avatar: localBlobUrl } : prev)
+    );
+    toast.success("Profile picture updated!");
+
+    // 2. Background server upload
     setAvatarUploading(true);
     try {
       const formData = new FormData();
       formData.append("profilePic", file);
       const res = await uploadProfilePicture(formData);
 
-      // Instant optimistic update in React Query cache
+      // 3. Persist permanent server URL in cache
       queryClient.setQueryData<IUser | null>(
         ["user-profile", username.toLowerCase()],
-        (prev) => (prev ? { ...prev, profilePicUrl: res.url } : prev)
+        (prev) => (prev ? { ...prev, profilePicUrl: res.url, avatar: res.url } : prev)
       );
       queryClient.invalidateQueries({ queryKey: ["user-posts"] });
       queryClient.invalidateQueries({ queryKey: ["posts"] });
       await refreshUser();
-      toast.success("Profile picture updated!");
     } catch (err: any) {
-      console.error("Failed to upload profile picture:", err);
-      toast.error(err?.message || "Failed to upload profile picture");
+      // 4. Rollback on failure
+      queryClient.setQueryData<IUser | null>(
+        ["user-profile", username.toLowerCase()],
+        prevUserData
+      );
+      toast.error(err?.response?.data?.message || err?.message || "Failed to upload profile picture");
     } finally {
       setAvatarUploading(false);
     }
@@ -295,22 +309,36 @@ export default function UserProfilePage({
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
+    // 1. Instant local preview (0ms)
+    const localBlobUrl = URL.createObjectURL(file);
+    const prevUserData = user;
+
+    queryClient.setQueryData<IUser | null>(
+      ["user-profile", username.toLowerCase()],
+      (prev) => (prev ? { ...prev, coverPhotoUrl: localBlobUrl, coverImage: localBlobUrl } : prev)
+    );
+    toast.success("Cover photo updated!");
+
+    // 2. Background server upload
     setCoverUploading(true);
     try {
       const formData = new FormData();
       formData.append("coverPhoto", file);
       const res = await uploadCoverPhoto(formData);
 
-      // Instant optimistic update in React Query cache
+      // 3. Persist permanent server URL in cache
       queryClient.setQueryData<IUser | null>(
         ["user-profile", username.toLowerCase()],
-        (prev) => (prev ? { ...prev, coverPhotoUrl: res.url } : prev)
+        (prev) => (prev ? { ...prev, coverPhotoUrl: res.url, coverImage: res.url } : prev)
       );
       await refreshUser();
-      toast.success("Cover photo updated!");
     } catch (err: any) {
-      console.error("Failed to upload cover photo:", err);
-      toast.error(err?.message || "Failed to upload cover photo");
+      // 4. Rollback on failure
+      queryClient.setQueryData<IUser | null>(
+        ["user-profile", username.toLowerCase()],
+        prevUserData
+      );
+      toast.error(err?.response?.data?.message || err?.message || "Failed to upload cover photo");
     } finally {
       setCoverUploading(false);
     }
@@ -396,7 +424,7 @@ export default function UserProfilePage({
           <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 -mt-16 sm:-mt-16 mb-4">
             {/* Avatar */}
             <div className="relative group">
-              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-white bg-white shadow-md overflow-hidden shrink-0">
+              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-white bg-white overflow-hidden shrink-0">
                 {userAvatar ? (
                   <img
                     src={userAvatar}
