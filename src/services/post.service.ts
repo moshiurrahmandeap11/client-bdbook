@@ -64,7 +64,10 @@ export const createComment = async (payload: CreateCommentPayload): Promise<any>
   return commentPost(payload.postId, payload.text);
 };
 
-export const sharePost = async (postId: string): Promise<any> => {
+export const sharePost = async (
+  postId: string,
+  payload?: { description?: string }
+): Promise<any> => {
   try {
     const response = await apiClient.post(`/posts/${postId}/share`);
     return response.data;
