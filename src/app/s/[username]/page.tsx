@@ -1,7 +1,8 @@
 "use client";
 
-import { use, useEffect, useState, useRef } from "react";
+import { use, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { IUser, IPost } from "@/interfaces";
 import {
   getUserByUsername,
@@ -40,27 +41,63 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
+const ProfileSkeleton = () => (
+  <div className="max-w-4xl mx-auto py-6 px-4 space-y-6 animate-pulse">
+    {/* Card Skeleton */}
+    <div className="bg-white rounded-2xl overflow-hidden border border-slate-200">
+      <div className="h-48 sm:h-64 bg-slate-200 w-full"></div>
+      <div className="p-6 pt-0">
+        <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 -mt-16 sm:-mt-16 mb-4">
+          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-white bg-slate-300"></div>
+          <div className="h-9 w-28 bg-slate-200 rounded-xl"></div>
+        </div>
+        <div className="space-y-3">
+          <div className="h-7 w-44 bg-slate-200 rounded-lg"></div>
+          <div className="h-4 w-28 bg-slate-100 rounded-md"></div>
+          <div className="h-12 w-full max-w-xl bg-slate-100 rounded-xl"></div>
+          <div className="flex gap-4 pt-2">
+            <div className="h-4 w-24 bg-slate-100 rounded"></div>
+            <div className="h-4 w-24 bg-slate-100 rounded"></div>
+            <div className="h-4 w-24 bg-slate-100 rounded"></div>
+          </div>
+          <div className="flex gap-6 pt-4 border-t border-slate-100">
+            <div className="h-5 w-20 bg-slate-200 rounded"></div>
+            <div className="h-5 w-20 bg-slate-200 rounded"></div>
+            <div className="h-5 w-20 bg-slate-200 rounded"></div>
+            <div className="h-5 w-16 bg-slate-200 rounded"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Post Skeletons */}
+    <div className="space-y-4">
+      <div className="h-5 w-24 bg-slate-200 rounded"></div>
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-slate-200"></div>
+          <div className="space-y-2">
+            <div className="h-4 w-32 bg-slate-200 rounded"></div>
+            <div className="h-3 w-20 bg-slate-100 rounded"></div>
+          </div>
+        </div>
+        <div className="h-16 bg-slate-100 rounded-xl"></div>
+      </div>
+    </div>
+  </div>
+);
+
 export default function UserProfilePage({
   params,
 }: {
   params: Promise<{ username: string }>;
 }) {
   const resolvedParams = use(params);
-  const username = resolvedParams.username;
+  const rawUsername = resolvedParams.username;
+  const username = rawUsername ? decodeURIComponent(rawUsername) : "";
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user: currentUser, refreshUser } = useAuth();
-
-  const [user, setUser] = useState<IUser | null>(null);
-  const [userPosts, setUserPosts] = useState<IPost[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Stats
-  const [friendsCount, setFriendsCount] = useState(0);
-  const [followersCount, setFollowersCount] = useState(0);
-  const [followingCount, setFollowingCount] = useState(0);
-
-  // Visitor friend status
-  const [friendStatus, setFriendStatus] = useState<string>("none");
 
   // Modals & quick uploads
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -70,6 +107,31 @@ export default function UserProfilePage({
   const quickAvatarInputRef = useRef<HTMLInputElement | null>(null);
   const quickCoverInputRef = useRef<HTMLInputElement | null>(null);
 
+  // 1. TanStack Query: User Profile (Cached for 5 mins)
+  const {
+    data: user,
+    isLoading: isUserLoading,
+    isError: isUserError,
+  } = useQuery<IUser | null>({
+    queryKey: ["user-profile", username.toLowerCase()],
+    queryFn: async () => {
+      if (!username) return null;
+      const userData = await getUserByUsername(username);
+      if (
+        userData?.username &&
+        userData.username.toLowerCase() !== username.toLowerCase()
+      ) {
+        router.replace(`/s/${userData.username}`);
+      }
+      return userData;
+    },
+    enabled: !!username,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  const userId = user?.id || user?._id;
+
   const isOwner = Boolean(
     currentUser &&
       user &&
@@ -78,79 +140,58 @@ export default function UserProfilePage({
         currentUser.username?.toLowerCase() === user.username?.toLowerCase())
   );
 
-  const fetchProfileAndStats = async () => {
-    if (!username) return;
-    setLoading(true);
-
-    try {
-      const userData = await getUserByUsername(username);
-      if (
-        userData?.username &&
-        userData.username.toLowerCase() !== username.toLowerCase()
-      ) {
-        router.replace(`/s/${userData.username}`);
-      }
-      setUser(userData);
-
-      // Fetch posts
+  // 2. TanStack Query: User Posts (Cached for 3 mins)
+  const { data: userPosts = [] } = useQuery<IPost[]>({
+    queryKey: ["user-posts", userId],
+    queryFn: async () => {
+      if (!userId) return [];
       const feedData = await getFeed();
       const posts = feedData.data || [];
-      setUserPosts(
-        posts.filter(
-          (p: any) =>
-            p.userId === userData.id ||
-            p.user?.id === userData.id ||
-            p.user?._id === userData.id ||
-            (userData.username &&
-              p.user?.username?.toLowerCase() ===
-                userData.username.toLowerCase())
-        )
+      return posts.filter(
+        (p: any) =>
+          p.userId === userId ||
+          p.user?.id === userId ||
+          p.user?._id === userId ||
+          (user?.username &&
+            p.user?.username?.toLowerCase() === user.username.toLowerCase())
       );
+    },
+    enabled: !!userId,
+    staleTime: 3 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
 
-      // Fetch stats
-      const [fCount, folCount, folingCount] = await Promise.all([
-        getFriendsCount(userData.id),
-        getFollowersCount(userData.id),
-        getFollowingCount(userData.id),
-      ]);
+  // 3. TanStack Query: Stats (Cached for 2 mins)
+  const { data: friendsCount = 0 } = useQuery<number>({
+    queryKey: ["friends-count", userId],
+    queryFn: () => (userId ? getFriendsCount(userId) : 0),
+    enabled: !!userId,
+    staleTime: 2 * 60 * 1000,
+  });
 
-      setFriendsCount(fCount);
-      setFollowersCount(folCount);
-      setFollowingCount(folingCount);
+  const { data: followersCount = 0 } = useQuery<number>({
+    queryKey: ["followers-count", userId],
+    queryFn: () => (userId ? getFollowersCount(userId) : 0),
+    enabled: !!userId,
+    staleTime: 2 * 60 * 1000,
+  });
 
-      // Fetch visitor status if logged in and not owner
-      if (
-        currentUser &&
-        currentUser.id !== userData.id &&
-        (currentUser as any)._id !== userData.id
-      ) {
-        const status = await getFriendStatus(userData.id);
-        setFriendStatus(status);
-      }
-    } catch (err) {
-      console.error("Failed to load user profile:", err);
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: followingCount = 0 } = useQuery<number>({
+    queryKey: ["following-count", userId],
+    queryFn: () => (userId ? getFollowingCount(userId) : 0),
+    enabled: !!userId,
+    staleTime: 2 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    fetchProfileAndStats();
-  }, [username, router]);
+  // 4. TanStack Query: Friend/Follow Status for visitor
+  const { data: friendStatus = "none" } = useQuery<string>({
+    queryKey: ["friend-status", userId],
+    queryFn: () => (userId ? getFriendStatus(userId) : "none"),
+    enabled: Boolean(currentUser && userId && !isOwner),
+    staleTime: 2 * 60 * 1000,
+  });
 
-  // When currentUser changes or loads, fetch friend status if needed
-  useEffect(() => {
-    if (
-      user &&
-      currentUser &&
-      currentUser.id !== user.id &&
-      (currentUser as any)._id !== user.id
-    ) {
-      getFriendStatus(user.id).then((status) => setFriendStatus(status));
-    }
-  }, [currentUser, user]);
-
+  // Optimistic Friend Action handler
   const handleFriendAction = async () => {
     if (!user || !currentUser) {
       router.push("/auth/login");
@@ -161,8 +202,8 @@ export default function UserProfilePage({
     const prevFriendsCount = friendsCount;
 
     if (friendStatus === "not_friends" || friendStatus === "none") {
-      // 1. Instant Optimistic update
-      setFriendStatus("request_sent");
+      // 1. Instant Optimistic UI Update (0ms)
+      queryClient.setQueryData(["friend-status", user.id], "request_sent");
       toast.success("Friend request sent!");
 
       // 2. Background server call
@@ -170,13 +211,15 @@ export default function UserProfilePage({
         await sendFriendRequest(user.id);
       } catch (err: any) {
         // 3. Rollback on failure
-        setFriendStatus(prevStatus);
-        toast.error(err?.response?.data?.message || err?.message || "Failed to send friend request");
+        queryClient.setQueryData(["friend-status", user.id], prevStatus);
+        toast.error(
+          err?.response?.data?.message || err?.message || "Failed to send request"
+        );
       }
     } else if (friendStatus === "request_received") {
-      // 1. Instant Optimistic update
-      setFriendStatus("friends");
-      setFriendsCount((prev) => prev + 1);
+      // 1. Instant Optimistic UI Update (0ms)
+      queryClient.setQueryData(["friend-status", user.id], "friends");
+      queryClient.setQueryData(["friends-count", user.id], prevFriendsCount + 1);
       toast.success("Friend request accepted!");
 
       try {
@@ -190,22 +233,29 @@ export default function UserProfilePage({
           throw new Error("Pending request not found");
         }
       } catch (err: any) {
-        setFriendStatus(prevStatus);
-        setFriendsCount(prevFriendsCount);
-        toast.error(err?.response?.data?.message || err?.message || "Action failed");
+        queryClient.setQueryData(["friend-status", user.id], prevStatus);
+        queryClient.setQueryData(["friends-count", user.id], prevFriendsCount);
+        toast.error(
+          err?.response?.data?.message || err?.message || "Action failed"
+        );
       }
     } else if (friendStatus === "friends") {
-      // 1. Instant Optimistic update
-      setFriendStatus("not_friends");
-      setFriendsCount((prev) => Math.max(0, prev - 1));
+      // 1. Instant Optimistic UI Update (0ms)
+      queryClient.setQueryData(["friend-status", user.id], "not_friends");
+      queryClient.setQueryData(
+        ["friends-count", user.id],
+        Math.max(0, prevFriendsCount - 1)
+      );
       toast.success("Friend removed");
 
       try {
         await unfriend(user.id);
       } catch (err: any) {
-        setFriendStatus(prevStatus);
-        setFriendsCount(prevFriendsCount);
-        toast.error(err?.response?.data?.message || err?.message || "Action failed");
+        queryClient.setQueryData(["friend-status", user.id], prevStatus);
+        queryClient.setQueryData(["friends-count", user.id], prevFriendsCount);
+        toast.error(
+          err?.response?.data?.message || err?.message || "Action failed"
+        );
       }
     }
   };
@@ -221,7 +271,14 @@ export default function UserProfilePage({
       const formData = new FormData();
       formData.append("profilePic", file);
       const res = await uploadProfilePicture(formData);
-      setUser((prev) => (prev ? { ...prev, profilePicUrl: res.url } : prev));
+
+      // Instant optimistic update in React Query cache
+      queryClient.setQueryData<IUser | null>(
+        ["user-profile", username.toLowerCase()],
+        (prev) => (prev ? { ...prev, profilePicUrl: res.url } : prev)
+      );
+      queryClient.invalidateQueries({ queryKey: ["user-posts"] });
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
       await refreshUser();
       toast.success("Profile picture updated!");
     } catch (err: any) {
@@ -243,7 +300,12 @@ export default function UserProfilePage({
       const formData = new FormData();
       formData.append("coverPhoto", file);
       const res = await uploadCoverPhoto(formData);
-      setUser((prev) => (prev ? { ...prev, coverPhotoUrl: res.url } : prev));
+
+      // Instant optimistic update in React Query cache
+      queryClient.setQueryData<IUser | null>(
+        ["user-profile", username.toLowerCase()],
+        (prev) => (prev ? { ...prev, coverPhotoUrl: res.url } : prev)
+      );
       await refreshUser();
       toast.success("Cover photo updated!");
     } catch (err: any) {
@@ -254,16 +316,12 @@ export default function UserProfilePage({
     }
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto py-16 px-4 text-center">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-slate-200 border-t-[#4E4AFC] mb-3"></div>
-        <p className="text-sm text-slate-500 font-normal">Loading profile...</p>
-      </div>
-    );
+  // Only show skeleton on initial fetch if there is no cached user data
+  if (isUserLoading && !user) {
+    return <ProfileSkeleton />;
   }
 
-  if (!user) {
+  if (!user || isUserError) {
     return (
       <div className="max-w-4xl mx-auto py-16 px-4 text-center">
         <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
@@ -608,7 +666,12 @@ export default function UserProfilePage({
           onClose={() => setIsEditModalOpen(false)}
           user={user}
           onProfileUpdated={(updated) => {
-            setUser(updated);
+            queryClient.setQueryData(
+              ["user-profile", username.toLowerCase()],
+              updated
+            );
+            queryClient.invalidateQueries({ queryKey: ["user-profile"] });
+            queryClient.invalidateQueries({ queryKey: ["user-posts"] });
           }}
         />
       )}
