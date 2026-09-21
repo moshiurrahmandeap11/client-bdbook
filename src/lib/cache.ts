@@ -24,16 +24,8 @@ if (typeof window !== "undefined") {
  * Uses localStorage so data persists across browser restarts and page reloads.
  */
 
-export const getCachedData = <T>(key: string): T | undefined => {
-  if (typeof window === "undefined") return undefined;
-  try {
-    const item =
-      localStorage.getItem(`stalk_cache_${key}`) ||
-      sessionStorage.getItem(`stalk_cache_${key}`);
-    return item ? (JSON.parse(item) as T) : undefined;
-  } catch {
-    return undefined;
-  }
+export const getCachedData = <T>(_key: string): T | undefined => {
+  return undefined;
 };
 
 export const setCachedData = (key: string, data: any): void => {
