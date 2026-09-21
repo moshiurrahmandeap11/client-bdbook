@@ -1,4 +1,4 @@
-// Dedicated user-posts query with gcTime 30m
+// Integrated followers and following count queries
 "use client";
 
 import { use, useRef, useState } from "react";
