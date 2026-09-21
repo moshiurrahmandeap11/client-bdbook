@@ -1,4 +1,4 @@
-// Toast notification on post deletion
+// Rollback on delete error
 "use client";
 
 import { useAuth } from "@/components/providers/AuthProvider";
