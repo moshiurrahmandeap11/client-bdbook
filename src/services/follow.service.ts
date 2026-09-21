@@ -22,3 +22,12 @@ export const unfollowUser = async (userId: string): Promise<any> => {
     return handleApiError(error);
   }
 };
+
+export const getFollowStatus = async (userId: string): Promise<IFollowStatusResponse> => {
+  try {
+    const response = await apiClient.get(`/follow/status/${userId}`);
+    return response.data.data || { isFollowing: false, isFollowedBy: false };
+  } catch (error) {
+    return { isFollowing: false, isFollowedBy: false };
+  }
+};
