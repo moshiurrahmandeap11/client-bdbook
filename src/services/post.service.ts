@@ -69,7 +69,7 @@ export const sharePost = async (
   payload?: { description?: string }
 ): Promise<any> => {
   try {
-    const response = await apiClient.post(`/posts/${postId}/share`);
+    const response = await apiClient.post(`/posts/${postId}/share`, payload || {});
     return response.data;
   } catch (error) {
     return handleApiError(error);
