@@ -106,6 +106,7 @@ export const SharedPostPreview = memo(
                   className="w-full object-cover"
                   style={{ maxHeight: 280 }}
                   loading="lazy"
+                  unoptimized
                 />
               </div>
             )}

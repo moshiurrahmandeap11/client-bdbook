@@ -26,6 +26,7 @@ export const Avatar = memo(({ src, name, size = 40 }: AvatarProps) => (
         height={size} 
         className="object-cover w-full h-full"
         loading="lazy"
+        unoptimized
       />
     ) : (
       <UserIcon 

@@ -157,9 +157,28 @@ export const PostFeed = () => {
       return;
     }
 
-    if (file.size > 50 * 1024 * 1024) {
-      toast.error("File size should be less than 50MB");
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("File size should be less than 100MB");
       return;
+    }
+
+    if (file.type.startsWith("video")) {
+      const videoElement = document.createElement("video");
+      videoElement.preload = "metadata";
+      videoElement.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(videoElement.src);
+        if (videoElement.duration > 120) {
+          const mins = Math.floor(videoElement.duration / 60);
+          const secs = Math.round(videoElement.duration % 60);
+          toast.error(`Video duration cannot exceed 2 minutes (${mins}m ${secs}s selected)`);
+          setSelectedMedia(null);
+          setMediaPreview(null);
+          setMediaType(null);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+          return;
+        }
+      };
+      videoElement.src = URL.createObjectURL(file);
     }
 
     setSelectedMedia(file);

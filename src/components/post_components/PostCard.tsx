@@ -397,6 +397,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
               width={800}
               height={500}
               loading="lazy"
+              unoptimized
               className="w-full object-cover max-h-[480px]"
             />
           )}
