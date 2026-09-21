@@ -1,3 +1,4 @@
+// Tier 1 in-memory post query cache lookup
 "use client";
 
 import { use, useEffect, useState, useCallback } from "react";
