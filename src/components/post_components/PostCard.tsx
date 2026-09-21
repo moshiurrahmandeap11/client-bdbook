@@ -1,4 +1,4 @@
-// Rollback on delete error
+// handleShareToFeed implementation
 "use client";
 
 import { useAuth } from "@/components/providers/AuthProvider";
