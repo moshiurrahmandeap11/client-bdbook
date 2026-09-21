@@ -1,4 +1,3 @@
-// Navigation Header with Notification Counter
 "use client";
 
 import { useSocket } from "@/components/providers/SocketProvider";
@@ -636,7 +635,7 @@ export const Header = () => {
                           onClick={() => setIsProfileMenuOpen(false)}
                         >
                           <UserGroupIcon className="h-4 w-4 text-slate-400" />
-                          <span>Friends</span>
+                          <span>Community</span>
                         </Link>
                         <Link
                           href="/settings"
@@ -792,7 +791,7 @@ export const Header = () => {
                     className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-normal text-slate-700 hover:bg-slate-50"
                   >
                     <UserGroupIcon className="h-5 w-5 text-slate-400" />
-                    <span>Friends</span>
+                    <span>Community</span>
                   </Link>
                   <Link
                     href="/settings"
