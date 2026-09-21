@@ -1,4 +1,4 @@
-// handleShareToFeed implementation
+// Optimistic share pill counter
 "use client";
 
 import { useAuth } from "@/components/providers/AuthProvider";
