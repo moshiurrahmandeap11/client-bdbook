@@ -1,4 +1,4 @@
-// Tier 2 in-memory feed posts cache lookup
+// staleTime 2m, gcTime 30m config
 "use client";
 
 import { use, useEffect, useState, useCallback } from "react";
