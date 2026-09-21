@@ -1,4 +1,3 @@
-// Remove untitled post glitch
 "use client";
 
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -23,7 +22,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { getFriendStatus, sendFriendRequest, unfriend } from "@/services/friend.service";
+import { getFollowStatus, followUser, unfollowUser } from "@/services/follow.service";
 
 import Avatar from "./Avatar";
 import CustomVideoPlayer from "./CustomVideoPlayer";
@@ -81,19 +80,22 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
   const [showEditModal, setShowEditModal] = useState(false);
   const [editDescription, setEditDescription] = useState(post.description || "");
   const [showShareModal, setShowShareModal] = useState(false);
+  const [sharesCount, setSharesCount] = useState(post.sharesCount || 0);
+
+  useEffect(() => {
+    setSharesCount(post.sharesCount || 0);
+  }, [post.sharesCount]);
 
   const postUserId = post.userId || post.user?._id || post.user?.id;
   const isOwner = Boolean(postUserId && currentUserId && postUserId === currentUserId);
   const commentCount = post.commentsCount || post.comments?.length || 0;
 
-  const { data: friendStatus } = useQuery({
-    queryKey: ["friend-status", postUserId],
-    queryFn: () => getFriendStatus(postUserId),
+  const { data: isFollowing = false } = useQuery<boolean>({
+    queryKey: ["follow-status", postUserId],
+    queryFn: () => getFollowStatus(postUserId),
     enabled: Boolean(isAuthenticated && postUserId && !isOwner),
     staleTime: 60 * 1000,
   });
-
-  const isFollowing = friendStatus === "request_sent" || friendStatus === "friends";
 
   const isSharedPost = useMemo(
     () => !!(post.isShare || post.originalPost || post.sharedPost || post.sharedPostId || post.type === "share"),
@@ -171,11 +173,54 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
 
   const deleteMutation = useMutation({
     mutationFn: () => postService.deletePost(post._id || post.id),
-    onSuccess: () => {
+    onMutate: () => {
+      setIsHidden(true);
       toast.success("Post deleted");
+      const targetId = post._id || post.id;
+      queryClient.setQueryData(["posts"], (old: any) => {
+        if (!old) return old;
+        if (old.pages) {
+          return {
+            ...old,
+            pages: old.pages.map((p: any) => ({
+              ...p,
+              data: p.data?.filter((item: any) => (item._id || item.id) !== targetId),
+            })),
+          };
+        }
+        if (Array.isArray(old)) {
+          return old.filter((item: any) => (item._id || item.id) !== targetId);
+        }
+        return old;
+      });
+      const pUserId = post.userId || post.user?._id || post.user?.id;
+      if (pUserId) {
+        queryClient.setQueryData(["user-posts", pUserId], (old: IPost[] | undefined) => {
+          return old?.filter((item: any) => (item._id || item.id) !== targetId) || [];
+        });
+      }
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.removeItem(`stalk_cache_post-${targetId}`);
+          sessionStorage.removeItem(`stalk_cache_post-${targetId}`);
+        } catch {}
+        if (window.location.pathname.includes(targetId)) {
+          router.replace("/");
+        }
+      }
+      queryClient.removeQueries({ queryKey: ["post", targetId] });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      queryClient.invalidateQueries({ queryKey: ["user-posts"] });
       onPostUpdate?.();
     },
-    onError: () => toast.error("Failed to delete post"),
+    onError: () => {
+      setIsHidden(false);
+      toast.error("Failed to delete post");
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      queryClient.invalidateQueries({ queryKey: ["user-posts"] });
+    },
   });
 
   const editMutation = useMutation({
@@ -188,6 +233,137 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
     },
     onError: (err: any) =>
       toast.error(err.response?.data?.message || "Failed to update post"),
+  });
+
+  const shareMutation = useMutation({
+    mutationFn: async (desc?: string) => {
+      const pId = post._id || post.id;
+      return postService.sharePost(pId, { description: desc });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      queryClient.invalidateQueries({ queryKey: ["user-posts"] });
+      onPostUpdate?.();
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to share post");
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      queryClient.invalidateQueries({ queryKey: ["user-posts"] });
+      setSharesCount((prev: number) => Math.max(0, prev - 1));
+    },
+  });
+
+  const handleShareToFeed = useCallback((desc?: string) => {
+    if (!checkAuth()) return;
+    const currentUserId = user?.id || (user as any)?._id;
+    const currentUserName = user?.fullName || (user as any)?.name || "You";
+    const currentUserPic =
+      typeof user?.profilePicture === "object"
+        ? user?.profilePicture?.url
+        : user?.profilePicture || (user as any)?.avatar;
+
+    // 1. INSTANT 0ms OPTIMISTIC UI
+    setShowShareModal(false);
+    toast.success("Post shared to your feed!");
+    setSharesCount((prev: number) => prev + 1);
+
+    // 2. Build complete optimistic post with originalPost attached
+    const targetOriginal = originalPost || {
+      id: post.id || post._id,
+      _id: post.id || post._id,
+      userId: post.userId || post.user?.id || post.user?._id,
+      userName: post.userName || post.user?.fullName || "User",
+      userProfilePicture: post.userProfilePicture || post.user?.profilePicture?.url,
+      description: post.description || "",
+      media: (post.mediaUrl || post.media?.url) ? {
+        url: post.mediaUrl || post.media?.url,
+        resourceType: post.mediaType || post.media?.resourceType || "image",
+      } : null,
+    };
+
+    const optimisticPost: IPost = {
+      id: `temp-share-${Date.now()}`,
+      _id: `temp-share-${Date.now()}`,
+      userId: currentUserId,
+      userName: currentUserName,
+      userProfilePicture: currentUserPic,
+      description: desc || "",
+      isShare: true,
+      isRepost: false,
+      originalPost: targetOriginal,
+      likes: [],
+      likesCount: 0,
+      comments: [],
+      commentsCount: 0,
+      shares: [],
+      sharesCount: 0,
+      reposts: [],
+      repostsCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isActive: true,
+    } as any;
+
+    // 3. Optimistically update React Query in-memory caches
+    queryClient.setQueryData(["posts"], (old: any) => {
+      if (!old) return old;
+      if (old.pages && old.pages.length > 0) {
+        const first = old.pages[0];
+        return {
+          ...old,
+          pages: [
+            { ...first, data: [optimisticPost, ...(first.data || [])] },
+            ...old.pages.slice(1),
+          ],
+        };
+      }
+      if (Array.isArray(old)) {
+        return [optimisticPost, ...old];
+      }
+      return old;
+    });
+
+    if (currentUserId) {
+      queryClient.setQueryData(["user-posts", currentUserId], (old: IPost[] | undefined) => {
+        return [optimisticPost, ...(old || [])];
+      });
+    }
+
+    // 4. Fire mutation in background
+    shareMutation.mutate(desc);
+  }, [checkAuth, user, originalPost, post, queryClient, shareMutation]);
+
+  const shareToMessageMutation = useMutation({
+    mutationFn: async (friendId: string) => {
+      const pId = post._id || post.id;
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const postUrl = `${origin}/post/details/${pId}`;
+      const res = await axiosInstance.post(`/messages/send-message/${friendId}`, {
+        message: JSON.stringify({
+          type: "post_share",
+          postId: pId,
+          postUrl,
+          postText: post.description || "Check out this post",
+          postAuthor: post.userName || post.user?.fullName,
+          postAuthorProfilePic: post.userProfilePicture || post.user?.profilePicture?.url,
+          hasMedia: !!(post.mediaUrl || post.media?.url),
+          mediaType: post.mediaType || post.media?.resourceType,
+          mediaUrl: post.mediaUrl || post.media?.url,
+          sharedBy: user?.fullName || user?.name,
+          sharedByProfilePic:
+            typeof user?.profilePicture === "object"
+              ? user?.profilePicture?.url
+              : user?.profilePicture || user?.avatar,
+        }),
+        messageType: "share",
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      toast.success("Post shared via message!");
+      setShowShareModal(false);
+    },
+    onError: () => toast.error("Failed to share via message"),
   });
 
   const handleLike = useCallback(() => {
@@ -212,7 +388,6 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
   }, [checkAuth]);
 
   const handleDeletePost = useCallback(() => {
-    // Instant deletion without confirm dialog
     deleteMutation.mutate();
   }, [deleteMutation]);
 
@@ -229,24 +404,24 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
     if (!checkAuth()) return;
     if (!postUserId) return;
 
-    // Snapshot previous status for rollback if request fails
-    const previousStatus = queryClient.getQueryData<string>(["friend-status", postUserId]) || "not_friends";
-    const nextStatus = isFollowing ? "not_friends" : "request_sent";
+    const prevFollowing = isFollowing;
+    const nextFollowing = !prevFollowing;
 
-    // 1. Instant Optimistic UI update (0ms latency, exactly like FB/IG)
-    queryClient.setQueryData(["friend-status", postUserId], nextStatus);
-    toast.success(isFollowing ? "Unfollowed" : "Following!");
+    // 1. Instant Optimistic UI update (0ms latency)
+    queryClient.setQueryData(["follow-status", postUserId], nextFollowing);
+    toast.success(nextFollowing ? "Following!" : "Unfollowed");
 
     // 2. Background server synchronization
     try {
-      if (isFollowing) {
-        await unfriend(postUserId);
+      if (nextFollowing) {
+        await followUser(postUserId);
       } else {
-        await sendFriendRequest(postUserId);
+        await unfollowUser(postUserId);
       }
+      queryClient.invalidateQueries({ queryKey: ["follow-status", postUserId] });
     } catch (err: any) {
       // 3. Rollback on failure
-      queryClient.setQueryData(["friend-status", postUserId], previousStatus);
+      queryClient.setQueryData(["follow-status", postUserId], prevFollowing);
       toast.error(err?.response?.data?.message || err?.message || "Failed to update follow status");
     }
   };
@@ -349,6 +524,11 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
               >
                 {communityTag}
               </button>
+              {isSharedPost && (
+                <span className="text-[11px] text-slate-500 font-normal">
+                  shared a post
+                </span>
+              )}
               {!isOwner && (
                 <button
                   onClick={handleFollow}
@@ -386,20 +566,30 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
       </div>
 
       {/* Post Title & Description (SlothUI Style) */}
-      <div className="mt-2.5">
-        <h2
-          onClick={goToPostDetails}
-          className="font-normal text-base text-slate-900 hover:text-[#4E4AFC] transition-colors cursor-pointer leading-snug"
-        >
-          {post.title || post.description || "Untitled Post"}
-        </h2>
+      {!isSharedPost ? (
+        <div className="mt-2.5">
+          {(post.title || post.description) && (
+            <h2
+              onClick={goToPostDetails}
+              className="font-normal text-base text-slate-900 hover:text-[#4E4AFC] transition-colors cursor-pointer leading-snug"
+            >
+              {post.title || post.description}
+            </h2>
+          )}
 
-        {post.description && post.title && (
-          <p className="mt-1 text-sm text-slate-600 leading-relaxed line-clamp-3">
+          {post.description && post.title && (
+            <p className="mt-1 text-sm text-slate-600 leading-relaxed line-clamp-3">
+              {post.description}
+            </p>
+          )}
+        </div>
+      ) : post.description ? (
+        <div className="mt-2.5">
+          <p className="text-sm text-slate-800 leading-relaxed font-normal">
             {post.description}
           </p>
-        )}
-      </div>
+        </div>
+      ) : null}
 
       {/* Media or Shared Post Preview */}
       {isSharedPost ? (
@@ -474,7 +664,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
           className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/80 rounded-md px-3 py-1 text-xs font-normal text-slate-700 transition-colors cursor-pointer"
         >
           <ShareIcon className="h-3.5 w-3.5 stroke-[2]" />
-          <span>Share</span>
+          <span>{sharesCount > 0 ? `${sharesCount} ${sharesCount === 1 ? "Share" : "Shares"}` : "Share"}</span>
         </button>
       </div>
 
@@ -485,6 +675,10 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
           user={user}
           sharePreview={sharePreview}
           onClose={() => setShowShareModal(false)}
+          onShareToFeed={handleShareToFeed}
+          onShareToMessage={(friendId: string) => shareToMessageMutation.mutate(friendId)}
+          isSharingToFeed={false}
+          isSharingToMessage={shareToMessageMutation.isPending}
         />
       )}
 
