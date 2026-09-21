@@ -3,6 +3,7 @@ export type NotificationType =
   | "post_comment"
   | "post_share"
   | "post_repost"
+  | "follow"
   | "friend_request"
   | "friend_accept"
   | "message"
