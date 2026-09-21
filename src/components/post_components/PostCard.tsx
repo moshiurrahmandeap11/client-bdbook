@@ -80,7 +80,6 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
   const [showEditModal, setShowEditModal] = useState(false);
   const [editDescription, setEditDescription] = useState(post.description || "");
   const [showShareModal, setShowShareModal] = useState(false);
-  const [followLoading, setFollowLoading] = useState(false);
 
   const postUserId = post.userId || post.user?._id || post.user?.id;
   const isOwner = Boolean(postUserId && currentUserId && postUserId === currentUserId);
@@ -227,23 +226,27 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
   const handleFollow = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!checkAuth()) return;
-    if (followLoading || !postUserId) return;
+    if (!postUserId) return;
 
-    setFollowLoading(true);
+    // Snapshot previous status for rollback if request fails
+    const previousStatus = queryClient.getQueryData<string>(["friend-status", postUserId]) || "not_friends";
+    const nextStatus = isFollowing ? "not_friends" : "request_sent";
+
+    // 1. Instant Optimistic UI update (0ms latency, exactly like FB/IG)
+    queryClient.setQueryData(["friend-status", postUserId], nextStatus);
+    toast.success(isFollowing ? "Unfollowed" : "Following!");
+
+    // 2. Background server synchronization
     try {
       if (isFollowing) {
         await unfriend(postUserId);
-        queryClient.setQueryData(["friend-status", postUserId], "not_friends");
-        toast.success("Unfollowed");
       } else {
         await sendFriendRequest(postUserId);
-        queryClient.setQueryData(["friend-status", postUserId], "request_sent");
-        toast.success("Following!");
       }
     } catch (err: any) {
-      toast.error(err?.message || "Failed to update follow status");
-    } finally {
-      setFollowLoading(false);
+      // 3. Rollback on failure
+      queryClient.setQueryData(["friend-status", postUserId], previousStatus);
+      toast.error(err?.response?.data?.message || err?.message || "Failed to update follow status");
     }
   };
 
@@ -348,13 +351,11 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
               {!isOwner && (
                 <button
                   onClick={handleFollow}
-                  disabled={followLoading}
                   className={cn(
                     "px-2.5 py-0.5 text-xs font-normal rounded-md transition-colors cursor-pointer flex items-center gap-1",
                     isFollowing
                       ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                      : "bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white",
-                    followLoading && "opacity-60 cursor-not-allowed"
+                      : "bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white"
                   )}
                 >
                   {isFollowing ? "Following" : "Follow +"}

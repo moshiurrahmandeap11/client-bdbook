@@ -61,7 +61,6 @@ export default function UserProfilePage({
 
   // Visitor friend status
   const [friendStatus, setFriendStatus] = useState<string>("none");
-  const [friendActionLoading, setFriendActionLoading] = useState(false);
 
   // Modals & quick uploads
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -158,36 +157,56 @@ export default function UserProfilePage({
       return;
     }
 
-    setFriendActionLoading(true);
-    try {
-      if (friendStatus === "not_friends" || friendStatus === "none") {
+    const prevStatus = friendStatus;
+    const prevFriendsCount = friendsCount;
+
+    if (friendStatus === "not_friends" || friendStatus === "none") {
+      // 1. Instant Optimistic update
+      setFriendStatus("request_sent");
+      toast.success("Friend request sent!");
+
+      // 2. Background server call
+      try {
         await sendFriendRequest(user.id);
-        setFriendStatus("request_sent");
-        toast.success("Friend request sent!");
-      } else if (friendStatus === "request_received") {
+      } catch (err: any) {
+        // 3. Rollback on failure
+        setFriendStatus(prevStatus);
+        toast.error(err?.response?.data?.message || err?.message || "Failed to send friend request");
+      }
+    } else if (friendStatus === "request_received") {
+      // 1. Instant Optimistic update
+      setFriendStatus("friends");
+      setFriendsCount((prev) => prev + 1);
+      toast.success("Friend request accepted!");
+
+      try {
         const pending = await getFriendRequests();
         const request = pending.find(
           (r: any) => r.senderId === user.id || r.sender?.id === user.id
         );
         if (request?.id) {
           await acceptFriendRequest(request.id);
-          setFriendStatus("friends");
-          setFriendsCount((prev) => prev + 1);
-          toast.success("Friend request accepted!");
         } else {
-          toast.error("Could not find pending request.");
+          throw new Error("Pending request not found");
         }
-      } else if (friendStatus === "friends") {
-        await unfriend(user.id);
-        setFriendStatus("not_friends");
-        setFriendsCount((prev) => Math.max(0, prev - 1));
-        toast.success("Friend removed");
+      } catch (err: any) {
+        setFriendStatus(prevStatus);
+        setFriendsCount(prevFriendsCount);
+        toast.error(err?.response?.data?.message || err?.message || "Action failed");
       }
-    } catch (err: any) {
-      console.error("Friend action error:", err);
-      toast.error(err?.message || "Action failed");
-    } finally {
-      setFriendActionLoading(false);
+    } else if (friendStatus === "friends") {
+      // 1. Instant Optimistic update
+      setFriendStatus("not_friends");
+      setFriendsCount((prev) => Math.max(0, prev - 1));
+      toast.success("Friend removed");
+
+      try {
+        await unfriend(user.id);
+      } catch (err: any) {
+        setFriendStatus(prevStatus);
+        setFriendsCount(prevFriendsCount);
+        toast.error(err?.response?.data?.message || err?.message || "Action failed");
+      }
     }
   };
 
@@ -379,68 +398,44 @@ export default function UserProfilePage({
                     <Button
                       type="button"
                       variant="outline"
-                      disabled={friendActionLoading}
                       onClick={handleFriendAction}
                       className="flex items-center gap-1.5 text-xs sm:text-sm text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors group"
                     >
-                      {friendActionLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Check className="h-4 w-4 group-hover:hidden" />
-                          <UserX className="h-4 w-4 hidden group-hover:inline" />
-                          <span className="group-hover:hidden">Friends</span>
-                          <span className="hidden group-hover:inline">Unfriend</span>
-                        </>
-                      )}
+                      <Check className="h-4 w-4 group-hover:hidden" />
+                      <UserX className="h-4 w-4 hidden group-hover:inline" />
+                      <span className="group-hover:hidden">Friends</span>
+                      <span className="hidden group-hover:inline">Unfriend</span>
                     </Button>
                   ) : friendStatus === "request_sent" ? (
                     <Button
                       type="button"
                       variant="outline"
-                      disabled={friendActionLoading}
-                      className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-600 border-slate-200 bg-slate-50"
+                      onClick={handleFriendAction}
+                      className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-600 border-slate-200 bg-slate-50 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors group"
+                      title="Click to cancel request"
                     >
-                      {friendActionLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <UserCheck className="h-4 w-4 text-slate-400" />
-                          <span>Request Sent</span>
-                        </>
-                      )}
+                      <UserCheck className="h-4 w-4 text-slate-400 group-hover:hidden" />
+                      <UserX className="h-4 w-4 hidden group-hover:inline" />
+                      <span className="group-hover:hidden">Request Sent</span>
+                      <span className="hidden group-hover:inline">Cancel Request</span>
                     </Button>
                   ) : friendStatus === "request_received" ? (
                     <Button
                       type="button"
-                      disabled={friendActionLoading}
                       onClick={handleFriendAction}
                       className="flex items-center gap-1.5 text-xs sm:text-sm"
                     >
-                      {friendActionLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <UserPlus className="h-4 w-4" />
-                          <span>Accept Request</span>
-                        </>
-                      )}
+                      <UserPlus className="h-4 w-4" />
+                      <span>Accept Request</span>
                     </Button>
                   ) : (
                     <Button
                       type="button"
-                      disabled={friendActionLoading}
                       onClick={handleFriendAction}
                       className="flex items-center gap-1.5 text-xs sm:text-sm"
                     >
-                      {friendActionLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <UserPlus className="h-4 w-4" />
-                          <span>Add Friend</span>
-                        </>
-                      )}
+                      <UserPlus className="h-4 w-4" />
+                      <span>Add Friend</span>
                     </Button>
                   )}
 
