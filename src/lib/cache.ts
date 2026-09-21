@@ -8,6 +8,14 @@ if (typeof window !== "undefined") {
       }
     }
     keysToRemove.forEach((k) => localStorage.removeItem(k));
+    const sessionKeys: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && key.startsWith("stalk_cache_")) {
+        sessionKeys.push(key);
+      }
+    }
+    sessionKeys.forEach((k) => sessionStorage.removeItem(k));
   } catch {}
 }
 
