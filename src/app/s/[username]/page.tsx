@@ -1,4 +1,4 @@
-// In-Memory TanStack Query for User Profile
+// Dedicated user-posts query with gcTime 30m
 "use client";
 
 import { use, useRef, useState } from "react";
