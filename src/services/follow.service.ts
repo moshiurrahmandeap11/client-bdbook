@@ -13,3 +13,12 @@ export const followUser = async (userId: string): Promise<any> => {
     return handleApiError(error);
   }
 };
+
+export const unfollowUser = async (userId: string): Promise<any> => {
+  try {
+    const response = await apiClient.delete(`/follow/${userId}`);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
