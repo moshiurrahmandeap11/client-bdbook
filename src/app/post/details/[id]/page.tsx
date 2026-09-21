@@ -116,15 +116,22 @@ export default function PostDetailsPage({
     // Optimistic comment insertion (0ms perceived latency)
     const optimisticComment: IComment = {
       id: `temp-${Date.now()}`,
+      postId,
+      userId: user?.id || (user as any)?._id || "",
       text: trimmed,
       createdAt: new Date().toISOString(),
       user: {
         id: user?.id || (user as any)?._id || "",
         fullName: user?.fullName || (user as any)?.name || "User",
+        name: user?.fullName || (user as any)?.name || "User",
         username: user?.username || "",
+        email: user?.email || "",
+        role: (user as any)?.role || "user",
         avatar: user?.avatar || (user as any)?.profilePicUrl,
         profilePicUrl: user?.avatar || (user as any)?.profilePicUrl,
-      },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as any,
     };
 
     queryClient.setQueryData(["post", postId], (old: IPost | null | undefined) => {
