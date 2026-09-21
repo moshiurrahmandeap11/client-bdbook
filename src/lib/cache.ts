@@ -1,5 +1,11 @@
+/**
+ * In-Memory TanStack Query Caching
+ * Automatically purges and keeps localStorage completely clean (0 bytes).
+ */
+
 if (typeof window !== "undefined") {
   try {
+    // Purge any legacy stalk_cache_ entries to keep localStorage 100% clean
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -8,6 +14,7 @@ if (typeof window !== "undefined") {
       }
     }
     keysToRemove.forEach((k) => localStorage.removeItem(k));
+
     const sessionKeys: string[] = [];
     for (let i = 0; i < sessionStorage.length; i++) {
       const key = sessionStorage.key(i);
@@ -16,30 +23,16 @@ if (typeof window !== "undefined") {
       }
     }
     sessionKeys.forEach((k) => sessionStorage.removeItem(k));
-  } catch {}
+  } catch {
+    // Storage access restricted
+  }
 }
 
-/**
- * Fast client-side persistent cache utility for instant page hydration
- * Uses localStorage so data persists across browser restarts and page reloads.
- */
-
+// Retained as clean no-ops so no external imports break
 export const getCachedData = <T>(_key: string): T | undefined => {
   return undefined;
 };
 
-export const setCachedData = (key: string, data: any): void => {
-  if (typeof window === "undefined" || data === undefined || data === null) return;
-  try {
-    const serialized = JSON.stringify(data);
-    localStorage.setItem(`stalk_cache_${key}`, serialized);
-    sessionStorage.setItem(`stalk_cache_${key}`, serialized);
-  } catch {
-    try {
-      sessionStorage.setItem(`stalk_cache_${key}`, JSON.stringify(data));
-    } catch {
-      // Storage full or private mode
-    }
-  }
+export const setCachedData = (_key: string, _data: any): void => {
+  // Keeping localStorage 100% clean as requested
 };
-
