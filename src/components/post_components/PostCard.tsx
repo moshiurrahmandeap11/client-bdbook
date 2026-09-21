@@ -1,4 +1,4 @@
-// Optimistic delete onMutate user-posts cache eviction
+// Single post query cache invalidation on delete
 "use client";
 
 import { useAuth } from "@/components/providers/AuthProvider";
