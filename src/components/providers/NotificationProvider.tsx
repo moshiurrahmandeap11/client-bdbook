@@ -1,4 +1,3 @@
-// In-Memory Notification Provider
 "use client";
 
 import React, {
@@ -212,6 +211,12 @@ export const NotificationProvider = ({
       ) {
         if (targetPostId) {
           router.push(`/post/details/${targetPostId}`);
+        }
+      } else if (notification.type === "follow") {
+        if (targetSenderUsername) {
+          router.push(`/s/${targetSenderUsername}`);
+        } else if (targetSenderId) {
+          router.push(`/s/${targetSenderId}`);
         }
       } else if (notification.type === "friend_request") {
         router.push("/community");
