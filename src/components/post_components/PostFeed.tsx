@@ -80,7 +80,7 @@ export const PostFeed = () => {
     queryFn: async ({ pageParam = 1 }) => {
       const res = await postService.getPosts({ page: pageParam, limit: 8 });
       if (pageParam === 1 && res?.data && res.data.length > 0) {
-        setCachedData("home_feed_posts", res.data);
+        
       }
       return res;
     },
