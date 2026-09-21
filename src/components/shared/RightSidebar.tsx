@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { postService } from "@/services/post.service";
 import { IPost } from "@/types/post.types";
 import Image from "next/image";
@@ -8,22 +8,29 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useState } from "react";
 import Avatar from "../post_components/Avatar";
-import { getCachedData, setCachedData } from "@/lib/cache";
 
 export const RightSidebar: React.FC = () => {
   const pathname = usePathname();
   const [cleared, setCleared] = useState(false);
   const isAuthPage = pathname.startsWith("/auth");
+  const queryClient = useQueryClient();
 
   const { data: postsData, isLoading } = useQuery({
     queryKey: ["recent-posts-sidebar"],
     queryFn: async () => {
       const res = await postService.getPosts({ page: 1, limit: 5 });
-      const posts = res.data || [];
-      setCachedData("recent-posts-sidebar", posts);
-      return posts;
+      return res.data || [];
     },
-    initialData: () => getCachedData<IPost[]>("recent-posts-sidebar"),
+    initialData: () => {
+      const feedPosts = queryClient.getQueryData<any>(["posts"]);
+      if (feedPosts?.pages && feedPosts.pages.length > 0) {
+        const firstPage = feedPosts.pages[0]?.data;
+        if (Array.isArray(firstPage) && firstPage.length > 0) {
+          return firstPage.slice(0, 5);
+        }
+      }
+      return undefined;
+    },
     initialDataUpdatedAt: 0,
     enabled: !isAuthPage,
     staleTime: 5 * 60 * 1000,
