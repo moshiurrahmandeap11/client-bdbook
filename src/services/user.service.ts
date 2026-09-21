@@ -77,6 +77,22 @@ export const uploadCoverPhoto = async (formData: FormData): Promise<{ url: strin
   }
 };
 
+export const removeProfilePicture = async (): Promise<void> => {
+  try {
+    await apiClient.delete<ApiResponse<null>>("/users/remove-profile-pic");
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const removeCoverPhoto = async (): Promise<void> => {
+  try {
+    await apiClient.delete<ApiResponse<null>>("/users/remove-cover-photo");
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
 export const userService = {
   getAllUsers,
   getUserById,
@@ -84,6 +100,8 @@ export const userService = {
   updateProfile,
   uploadProfilePicture,
   uploadCoverPhoto,
+  removeProfilePicture,
+  removeCoverPhoto,
 };
 
 export default userService;

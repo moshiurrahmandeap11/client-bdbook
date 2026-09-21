@@ -197,13 +197,13 @@ export const PostFeed = () => {
   const userName = user?.fullName || user?.name || "User";
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="max-w-4xl mx-auto py-6 px-4 space-y-6">
       {/* Create Post Header Bar (SlothUI Style) */}
       {isAuthenticated && (
-        <div className="p-4 border-b border-slate-100 flex items-center gap-3 bg-white">
+        <div className="p-4 rounded-2xl border border-slate-200 bg-white flex items-center gap-3">
           <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-100 shrink-0 border border-slate-200">
             {userPic ? (
-              <Image src={userPic} alt={userName} width={36} height={36} className="object-cover w-full h-full" />
+              <Image src={userPic} alt={userName} width={36} height={36} className="object-cover w-full h-full" unoptimized />
             ) : (
               <div className="w-full h-full bg-[#EEEDFE] text-[#4E4AFC] flex items-center justify-center">
                 <UserIcon className="h-4 w-4" />
@@ -233,7 +233,7 @@ export const PostFeed = () => {
       {isLoading ? (
         <FeedSkeleton />
       ) : allPosts.length === 0 ? (
-        <div className="py-16 px-6 text-center">
+        <div className="py-16 px-6 text-center bg-white rounded-2xl border border-slate-200">
           <div className="w-16 h-16 bg-[#EEEDFE] text-[#4E4AFC] rounded-2xl flex items-center justify-center mx-auto mb-4">
             <PhotoIcon className="h-8 w-8" />
           </div>
@@ -250,7 +250,7 @@ export const PostFeed = () => {
           )}
         </div>
       ) : (
-        <div className="divide-y divide-slate-100">
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
           {allPosts.map((post: IPost) => (
             <PostCard
               key={post._id || post.id}

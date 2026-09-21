@@ -17,11 +17,12 @@ import {
   ShareIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import { getFriendStatus, sendFriendRequest, unfriend } from "@/services/friend.service";
 
 import Avatar from "./Avatar";
 import CustomVideoPlayer from "./CustomVideoPlayer";
@@ -79,11 +80,20 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
   const [showEditModal, setShowEditModal] = useState(false);
   const [editDescription, setEditDescription] = useState(post.description || "");
   const [showShareModal, setShowShareModal] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   const postUserId = post.userId || post.user?._id || post.user?.id;
-  const isOwner = postUserId === currentUserId;
+  const isOwner = Boolean(postUserId && currentUserId && postUserId === currentUserId);
   const commentCount = post.commentsCount || post.comments?.length || 0;
+
+  const { data: friendStatus } = useQuery({
+    queryKey: ["friend-status", postUserId],
+    queryFn: () => getFriendStatus(postUserId),
+    enabled: Boolean(isAuthenticated && postUserId && !isOwner),
+    staleTime: 60 * 1000,
+  });
+
+  const isFollowing = friendStatus === "request_sent" || friendStatus === "friends";
 
   const isSharedPost = useMemo(
     () => !!(post.isShare || post.originalPost || post.sharedPost || post.sharedPostId || post.type === "share"),
@@ -214,11 +224,27 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
     editMutation.mutate(editDescription);
   }, [editDescription, editMutation]);
 
-  const handleFollow = (e: React.MouseEvent) => {
+  const handleFollow = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!checkAuth()) return;
-    setIsFollowing((prev) => !prev);
-    toast.success(isFollowing ? "Unfollowed" : "Following!");
+    if (followLoading || !postUserId) return;
+
+    setFollowLoading(true);
+    try {
+      if (isFollowing) {
+        await unfriend(postUserId);
+        queryClient.setQueryData(["friend-status", postUserId], "not_friends");
+        toast.success("Unfollowed");
+      } else {
+        await sendFriendRequest(postUserId);
+        queryClient.setQueryData(["friend-status", postUserId], "request_sent");
+        toast.success("Following!");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update follow status");
+    } finally {
+      setFollowLoading(false);
+    }
   };
 
   const [isSaved, setIsSaved] = useState(false);
@@ -322,14 +348,16 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
               {!isOwner && (
                 <button
                   onClick={handleFollow}
+                  disabled={followLoading}
                   className={cn(
-                    "px-2.5 py-0.5 text-xs font-normal rounded-md transition-colors cursor-pointer",
+                    "px-2.5 py-0.5 text-xs font-normal rounded-md transition-colors cursor-pointer flex items-center gap-1",
                     isFollowing
-                      ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      : "bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white"
+                      ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      : "bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white",
+                    followLoading && "opacity-60 cursor-not-allowed"
                   )}
                 >
-                  {isFollowing ? "Joined" : "Follow +"}
+                  {isFollowing ? "Following" : "Follow +"}
                 </button>
               )}
             </div>
