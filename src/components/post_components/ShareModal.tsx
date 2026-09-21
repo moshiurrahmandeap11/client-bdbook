@@ -1,4 +1,4 @@
-// Share Modal with Character Counter
+// Share Modal with Enhanced Styling
 "use client";
 
 import { useAuth } from "@/components/providers/AuthProvider";
