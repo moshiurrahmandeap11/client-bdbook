@@ -1,3 +1,7 @@
+if (typeof window !== "undefined") {
+  // Cleanup check
+}
+
 /**
  * Fast client-side persistent cache utility for instant page hydration
  * Uses localStorage so data persists across browser restarts and page reloads.
