@@ -1,4 +1,4 @@
-// Original post card preview
+// Remove untitled post glitch
 "use client";
 
 import { useAuth } from "@/components/providers/AuthProvider";
