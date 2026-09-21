@@ -1,4 +1,3 @@
-// Instant optimistic cover photo preview
 "use client";
 
 import { use, useRef, useState } from "react";
@@ -32,6 +31,7 @@ import {
   Globe,
   User as UserIcon,
   Cake,
+  Edit3,
   Camera,
   UserPlus,
   UserCheck,
@@ -130,7 +130,6 @@ export default function UserProfilePage({
       return userData;
     },
     initialData: () => getCachedData<IUser>(`user-profile-${username.toLowerCase()}`),
-    initialDataUpdatedAt: 0,
     enabled: !!username,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
@@ -157,7 +156,6 @@ export default function UserProfilePage({
       return posts;
     },
     initialData: () => (userId ? getCachedData<IPost[]>(`user-posts-${userId}`) : undefined),
-    initialDataUpdatedAt: 0,
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
@@ -294,11 +292,6 @@ export default function UserProfilePage({
       ["user-profile", username.toLowerCase()],
       (prev) => (prev ? { ...prev, profilePicUrl: localBlobUrl, avatar: localBlobUrl } : prev)
     );
-    setCachedData(`user-profile-${username.toLowerCase()}`, {
-      ...user,
-      profilePicUrl: localBlobUrl,
-      avatar: localBlobUrl,
-    });
     toast.success("Profile picture updated!");
 
     // 2. Background server upload
@@ -313,11 +306,6 @@ export default function UserProfilePage({
         ["user-profile", username.toLowerCase()],
         (prev) => (prev ? { ...prev, profilePicUrl: res.url, avatar: res.url } : prev)
       );
-      setCachedData(`user-profile-${username.toLowerCase()}`, {
-        ...user,
-        profilePicUrl: res.url,
-        avatar: res.url,
-      });
       queryClient.invalidateQueries({ queryKey: ["user-posts"] });
       queryClient.invalidateQueries({ queryKey: ["posts"] });
       await refreshUser();
@@ -327,7 +315,6 @@ export default function UserProfilePage({
         ["user-profile", username.toLowerCase()],
         prevUserData
       );
-      setCachedData(`user-profile-${username.toLowerCase()}`, prevUserData);
       toast.error(err?.response?.data?.message || err?.message || "Failed to upload profile picture");
     } finally {
       setAvatarUploading(false);
@@ -348,11 +335,6 @@ export default function UserProfilePage({
       ["user-profile", username.toLowerCase()],
       (prev) => (prev ? { ...prev, coverPhotoUrl: localBlobUrl, coverImage: localBlobUrl } : prev)
     );
-    setCachedData(`user-profile-${username.toLowerCase()}`, {
-      ...user,
-      coverPhotoUrl: localBlobUrl,
-      coverImage: localBlobUrl,
-    });
     toast.success("Cover photo updated!");
 
     // 2. Background server upload
@@ -367,11 +349,6 @@ export default function UserProfilePage({
         ["user-profile", username.toLowerCase()],
         (prev) => (prev ? { ...prev, coverPhotoUrl: res.url, coverImage: res.url } : prev)
       );
-      setCachedData(`user-profile-${username.toLowerCase()}`, {
-        ...user,
-        coverPhotoUrl: res.url,
-        coverImage: res.url,
-      });
       await refreshUser();
     } catch (err: any) {
       // 4. Rollback on failure
@@ -379,7 +356,6 @@ export default function UserProfilePage({
         ["user-profile", username.toLowerCase()],
         prevUserData
       );
-      setCachedData(`user-profile-${username.toLowerCase()}`, prevUserData);
       toast.error(err?.response?.data?.message || err?.message || "Failed to upload cover photo");
     } finally {
       setCoverUploading(false);
@@ -514,9 +490,10 @@ export default function UserProfilePage({
                   type="button"
                   variant="outline"
                   onClick={() => setIsEditModalOpen(true)}
-                  className="rounded-xl text-xs sm:text-sm font-medium border-slate-300 hover:bg-slate-50"
+                  className="flex items-center gap-2 rounded-xl text-xs sm:text-sm font-medium border-slate-300 hover:bg-slate-50"
                 >
-                  Edit Profile
+                  <Edit3 className="h-4 w-4 text-slate-500" />
+                  <span>Edit Profile</span>
                 </Button>
               ) : (
                 <div className="flex items-center gap-2">
@@ -739,7 +716,6 @@ export default function UserProfilePage({
               ["user-profile", username.toLowerCase()],
               updated
             );
-            setCachedData(`user-profile-${username.toLowerCase()}`, updated);
             queryClient.invalidateQueries({ queryKey: ["user-profile"] });
             queryClient.invalidateQueries({ queryKey: ["user-posts"] });
           }}

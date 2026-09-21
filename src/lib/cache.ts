@@ -36,10 +36,3 @@ export const getCachedData = <T>(_key: string): T | undefined => {
 export const setCachedData = (_key: string, _data: any): void => {
   // Keeping localStorage 100% clean as requested
 };
-
-
-
-
-
-
-
