@@ -1,4 +1,4 @@
-// Instant optimistic avatar preview
+// Instant optimistic cover photo preview
 "use client";
 
 import { use, useRef, useState } from "react";
