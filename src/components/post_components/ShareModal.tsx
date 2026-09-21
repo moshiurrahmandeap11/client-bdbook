@@ -1,4 +1,4 @@
-// Share Modal with Caption Input
+// Share Modal with Character Counter
 "use client";
 
 import { useAuth } from "@/components/providers/AuthProvider";
