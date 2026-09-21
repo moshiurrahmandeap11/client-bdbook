@@ -1,4 +1,4 @@
-// Prepend shared post to feed cache
+// Prepend shared post to profile cache
 "use client";
 
 import { useAuth } from "@/components/providers/AuthProvider";
