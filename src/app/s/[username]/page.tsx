@@ -695,13 +695,15 @@ export default function UserProfilePage({
           </h3>
         </div>
         {userPosts.length === 0 ? (
-          <div className="text-center py-12 text-sm text-slate-400 bg-white rounded-2xl border border-slate-200 font-normal">
+          <div className="text-center py-12 text-sm text-slate-400 bg-white font-normal">
             No posts published by this user yet.
           </div>
         ) : (
-          userPosts.map((post) => (
-            <PostCard key={post.id || post._id} post={post} />
-          ))
+          <div className="bg-white divide-y divide-slate-100">
+            {userPosts.map((post) => (
+              <PostCard key={post.id || post._id} post={post} />
+            ))}
+          </div>
         )}
       </div>
 

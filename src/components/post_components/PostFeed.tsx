@@ -23,29 +23,29 @@ import { Button } from "@/components/ui/Button";
 import { TextArea } from "@/components/ui/TextArea";
 
 const PostSkeleton = () => (
-  <div className="p-5 border-b border-slate-100 animate-pulse bg-white">
+  <div className="p-5 rounded-xl animate-pulse bg-slate-100">
     <div className="flex items-center gap-3">
       <div className="w-8 h-8 rounded-full bg-slate-200"></div>
       <div className="flex-1">
         <div className="h-3.5 bg-slate-200 rounded w-32 mb-1.5"></div>
-        <div className="h-2.5 bg-slate-100 rounded w-20"></div>
+        <div className="h-2.5 bg-slate-200/60 rounded w-20"></div>
       </div>
     </div>
     <div className="mt-3 space-y-2">
       <div className="h-4 bg-slate-200 rounded w-4/5"></div>
-      <div className="h-3.5 bg-slate-100 rounded w-full"></div>
+      <div className="h-3.5 bg-slate-200/60 rounded w-full"></div>
     </div>
-    <div className="mt-4 aspect-video bg-slate-100 rounded-2xl"></div>
+    <div className="mt-4 aspect-video bg-slate-200 rounded-xl"></div>
     <div className="flex gap-2 mt-4">
-      <div className="h-7 bg-slate-100 rounded-full w-20"></div>
-      <div className="h-7 bg-slate-100 rounded-full w-16"></div>
-      <div className="h-7 bg-slate-100 rounded-full w-16"></div>
+      <div className="h-7 bg-white rounded-full w-20"></div>
+      <div className="h-7 bg-white rounded-full w-16"></div>
+      <div className="h-7 bg-white rounded-full w-16"></div>
     </div>
   </div>
 );
 
 const FeedSkeleton = () => (
-  <div className="divide-y divide-slate-100">
+  <div className="space-y-4">
     {[...Array(3)].map((_, i) => (
       <PostSkeleton key={i} />
     ))}
@@ -197,11 +197,11 @@ export const PostFeed = () => {
   const userName = user?.fullName || user?.name || "User";
 
   return (
-    <div className="max-w-4xl mx-auto py-6 px-4 space-y-6">
-      {/* Create Post Header Bar (SlothUI Style) */}
+    <div className="max-w-4xl mx-auto py-4 px-2 sm:px-4 space-y-4">
+      {/* Create Post Header Bar - Facebook style */}
       {isAuthenticated && (
-        <div className="p-4 rounded-2xl border border-slate-200 bg-white flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-100 shrink-0 border border-slate-200">
+        <div className="px-4 py-3 bg-slate-100 rounded-xl flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full overflow-hidden bg-white shrink-0">
             {userPic ? (
               <Image src={userPic} alt={userName} width={36} height={36} className="object-cover w-full h-full" unoptimized />
             ) : (
@@ -212,7 +212,7 @@ export const PostFeed = () => {
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex-1 text-left px-4 py-2 bg-slate-100 hover:bg-slate-200/80 rounded-full text-slate-500 hover:text-slate-800 transition-colors text-sm cursor-pointer"
+            className="flex-1 text-left px-4 py-2 bg-white hover:bg-white/80 rounded-full text-slate-500 hover:text-slate-800 transition-colors text-sm cursor-pointer shadow-none"
           >
             Create a post...
           </button>
@@ -221,7 +221,7 @@ export const PostFeed = () => {
               setShowCreateModal(true);
               setTimeout(() => fileInputRef.current?.click(), 100);
             }}
-            className="p-2 text-slate-500 hover:text-[#4E4AFC] hover:bg-[#EEEDFE] rounded-full transition-colors cursor-pointer"
+            className="p-2 text-slate-500 hover:text-[#4E4AFC] hover:bg-white rounded-full transition-colors cursor-pointer shrink-0"
             title="Upload Media"
           >
             <PhotoIcon className="h-5 w-5" />
@@ -229,11 +229,11 @@ export const PostFeed = () => {
         </div>
       )}
 
-      {/* Posts Feed List */}
+      {/* Posts Feed List - Facebook style gap between posts */}
       {isLoading && allPosts.length === 0 ? (
         <FeedSkeleton />
       ) : allPosts.length === 0 ? (
-        <div className="py-16 px-6 text-center bg-white rounded-2xl border border-slate-200">
+        <div className="py-16 px-6 text-center bg-slate-100 rounded-xl">
           <div className="w-16 h-16 bg-[#EEEDFE] text-[#4E4AFC] rounded-2xl flex items-center justify-center mx-auto mb-4">
             <PhotoIcon className="h-8 w-8" />
           </div>
@@ -250,7 +250,7 @@ export const PostFeed = () => {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
+        <div className="space-y-4">
           {allPosts.map((post: IPost) => (
             <PostCard
               key={post._id || post.id}

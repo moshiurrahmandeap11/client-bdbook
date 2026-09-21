@@ -493,7 +493,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
 
   if (isHidden) {
     return (
-      <article className="py-3 px-4 sm:px-6 text-xs text-slate-500 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+      <article className="py-3 px-4 sm:px-5 text-xs text-slate-500 bg-slate-100 rounded-xl flex items-center justify-between">
         <span>Post hidden from feed</span>
         <button
           onClick={() => setIsHidden(false)}
@@ -506,9 +506,9 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
   }
 
   return (
-    <article className="py-4 px-4 sm:px-6 hover:bg-slate-50/50 transition-colors border-b border-slate-100 bg-white">
+    <article className="py-3.5 transition-colors bg-slate-100 rounded-xl overflow-hidden">
       {/* Top Header: Subreddit/Author + Time + Follow Button + Options Menu */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 px-4 sm:px-5">
         <div className="flex items-center gap-2.5 min-w-0">
           <div
             onClick={() => router.push(`/s/${authorUsername}`)}
@@ -535,7 +535,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
                   className={cn(
                     "px-2.5 py-0.5 text-xs font-normal rounded-md transition-colors cursor-pointer flex items-center gap-1",
                     isFollowing
-                      ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      ? "bg-white text-slate-700 hover:bg-slate-200"
                       : "bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white"
                   )}
                 >
@@ -554,7 +554,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
             align="right"
             trigger={
               <button
-                className="w-7 h-7 rounded-md flex items-center justify-center text-slate-700 hover:text-slate-950 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="w-7 h-7 rounded-md flex items-center justify-center text-slate-700 hover:text-slate-950 hover:bg-slate-200 transition-colors cursor-pointer"
                 aria-label="Post options"
               >
                 <EllipsisHorizontalIcon className="h-5 w-5 text-slate-700 stroke-[2]" />
@@ -567,7 +567,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
 
       {/* Post Title & Description (SlothUI Style) */}
       {!isSharedPost ? (
-        <div className="mt-2.5">
+        <div className="mt-2 px-4 sm:px-5">
           {(post.title || post.description) && (
             <h2
               onClick={goToPostDetails}
@@ -584,7 +584,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
           )}
         </div>
       ) : post.description ? (
-        <div className="mt-2.5">
+        <div className="mt-2 px-4 sm:px-5">
           <p className="text-sm text-slate-800 leading-relaxed font-normal">
             {post.description}
           </p>
@@ -593,7 +593,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
 
       {/* Media or Shared Post Preview */}
       {isSharedPost ? (
-        <div className="mt-3">
+        <div className="mt-2.5 px-4 sm:px-5">
           <SharedPostPreview
             originalPost={originalPost}
             postUrl={sharePreview.postUrl}
@@ -605,29 +605,33 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
         </div>
       ) : mediaUrl ? (
         <div
-          className="mt-3 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 cursor-pointer group"
+          className="mt-2.5 w-full overflow-hidden bg-slate-950 flex items-center justify-center cursor-pointer group"
           onClick={goToPostDetails}
         >
           {mediaType === "video" ? (
-            <CustomVideoPlayer src={mediaUrl} poster={post.mediaThumbnail || post.media?.thumbnailUrl} />
+            <CustomVideoPlayer
+              src={mediaUrl}
+              poster={post.mediaThumbnail || post.media?.thumbnailUrl}
+              className="rounded-none w-full"
+            />
           ) : (
             <Image
               src={mediaUrl}
               alt={post.description || "Post media"}
-              width={800}
-              height={500}
+              width={1000}
+              height={600}
               loading="lazy"
               unoptimized
-              className="w-full object-cover max-h-[480px]"
+              className="w-full object-contain max-h-[520px] bg-slate-950"
             />
           )}
         </div>
       ) : null}
 
-      {/* SlothUI / Reddit-Style Pill Actions Bar */}
-      <div className="flex items-center gap-2 mt-3.5">
+      {/* Action Bar Pills */}
+      <div className="flex items-center gap-2 mt-3 px-4 sm:px-5">
         {/* Upvote/Downvote Pill */}
-        <div className="inline-flex items-center bg-slate-100 hover:bg-slate-200/80 rounded-md px-3 py-1 text-xs font-normal text-slate-700 transition-colors">
+        <div className="inline-flex items-center bg-white hover:bg-slate-200/80 rounded-md px-3 py-1 text-xs font-normal text-slate-700 transition-colors shadow-none">
           <button
             onClick={handleLike}
             disabled={likeMutation.isPending}
@@ -652,7 +656,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
         {/* Comment Pill */}
         <button
           onClick={handleComment}
-          className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/80 rounded-md px-3 py-1 text-xs font-normal text-slate-700 transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-200/80 rounded-md px-3 py-1 text-xs font-normal text-slate-700 transition-colors cursor-pointer shadow-none"
         >
           <ChatBubbleLeftIcon className="h-3.5 w-3.5 stroke-[2]" />
           <span>{commentCount}</span>
@@ -661,7 +665,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
         {/* Share Pill */}
         <button
           onClick={handleSharePost}
-          className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200/80 rounded-md px-3 py-1 text-xs font-normal text-slate-700 transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-200/80 rounded-md px-3 py-1 text-xs font-normal text-slate-700 transition-colors cursor-pointer shadow-none"
         >
           <ShareIcon className="h-3.5 w-3.5 stroke-[2]" />
           <span>{sharesCount > 0 ? `${sharesCount} ${sharesCount === 1 ? "Share" : "Shares"}` : "Share"}</span>

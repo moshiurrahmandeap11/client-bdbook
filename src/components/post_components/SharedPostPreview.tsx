@@ -17,13 +17,13 @@ export const SharedPostPreview = memo(
   ({ originalPost, postUrl, onClick, className = "" }: SharedPostPreviewProps) => {
     if (!originalPost) {
       return (
-        <button
+        <div
           onClick={onClick}
-          className={`w-full text-left mt-3 rounded-xl overflow-hidden transition-all duration-200 bg-slate-50 border border-slate-200/80 hover:bg-slate-100/70 cursor-pointer ${className}`}
+          className={`w-full text-left transition-all duration-200 bg-white rounded-xl border border-slate-200/80 hover:bg-slate-50 cursor-pointer overflow-hidden ${className}`}
         >
-          <div className="flex items-center gap-3 p-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-[#EEEDFE] text-[#4E4AFC]">
-              <LinkIcon className="h-5 w-5" />
+          <div className="flex items-center gap-3 px-3.5 py-3">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-[#EEEDFE] text-[#4E4AFC]">
+              <LinkIcon className="h-4 w-4" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-normal text-slate-900">
@@ -36,7 +36,7 @@ export const SharedPostPreview = memo(
               )}
             </div>
           </div>
-        </button>
+        </div>
       );
     }
 
@@ -44,12 +44,12 @@ export const SharedPostPreview = memo(
     const mediaType = originalPost.mediaType || originalPost.media?.resourceType || "image";
 
     return (
-      <button
+      <div
         onClick={onClick}
-        className={`w-full text-left mt-3 rounded-xl overflow-hidden transition-all duration-200 bg-slate-50 border border-slate-200/80 hover:border-slate-300 cursor-pointer ${className}`}
+        className={`w-full text-left transition-all duration-200 bg-white rounded-xl border border-slate-200/80 hover:border-slate-300 cursor-pointer overflow-hidden ${className}`}
       >
         {/* Header */}
-        <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2.5 border-b border-slate-200/60 bg-white/60">
+        <div className="flex items-center gap-2.5 px-3.5 pt-2.5 pb-2 border-b border-slate-100 bg-white">
           <Avatar
             src={
               originalPost.userProfilePicture ||
@@ -62,17 +62,17 @@ export const SharedPostPreview = memo(
               originalPost.user?.fullName ||
               originalPost.user?.name
             }
-            size={32}
+            size={30}
           />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-normal text-slate-900 leading-tight truncate">
+            <p className="text-xs font-medium text-slate-900 leading-tight truncate">
               {originalPost.userName || originalPost.user?.fullName || "Unknown User"}
             </p>
             <p className="text-[11px] text-slate-500">
               Original post
             </p>
           </div>
-          <span className="text-[11px] font-normal px-2 py-0.5 rounded-full flex-shrink-0 bg-[#EEEDFE] text-[#4E4AFC] border border-[#4E4AFC]/20">
+          <span className="text-[10px] font-normal px-2 py-0.5 rounded-full flex-shrink-0 bg-[#EEEDFE] text-[#4E4AFC] border border-[#4E4AFC]/20">
             Original
           </span>
         </div>
@@ -86,25 +86,23 @@ export const SharedPostPreview = memo(
 
         {/* Media */}
         {mediaUrl && (
-          <div className="w-full overflow-hidden bg-slate-100 border-y border-slate-200/60" style={{ maxHeight: 280 }}>
+          <div className="w-full overflow-hidden bg-slate-950 flex items-center justify-center">
             {mediaType === "video" ? (
               <video
                 src={mediaUrl}
-                className="w-full object-cover"
-                style={{ maxHeight: 280 }}
+                className="w-full max-h-[480px] object-contain bg-black"
                 preload="metadata"
                 onClick={(e) => e.stopPropagation()}
                 controls
               />
             ) : (
-              <div className="relative w-full" style={{ minHeight: 140 }}>
+              <div className="relative w-full flex items-center justify-center bg-slate-950">
                 <Image
                   src={mediaUrl}
                   alt="Original post media"
-                  width={600}
-                  height={300}
-                  className="w-full object-cover"
-                  style={{ maxHeight: 280 }}
+                  width={900}
+                  height={500}
+                  className="w-full object-contain max-h-[480px]"
                   loading="lazy"
                   unoptimized
                 />
@@ -114,11 +112,11 @@ export const SharedPostPreview = memo(
         )}
 
         {/* Footer */}
-        <div className="flex items-center gap-1.5 px-3.5 py-2 text-slate-500 bg-white/40">
+        <div className="flex items-center gap-1.5 px-3.5 py-2 text-slate-500 bg-slate-50/70 border-t border-slate-100">
           <LinkIcon className="h-3.5 w-3.5 flex-shrink-0" />
           <span className="text-xs font-normal">Tap to view full post</span>
         </div>
-      </button>
+      </div>
     );
   }
 );

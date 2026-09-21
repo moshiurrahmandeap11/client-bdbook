@@ -234,7 +234,7 @@ export default function PostDetailsPage({
       </button>
 
       {/* Main Post Card */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div className="bg-white">
         <PostCard post={post} onPostUpdate={() => fetchPost()} />
       </div>
 
