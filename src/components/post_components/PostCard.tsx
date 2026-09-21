@@ -1,4 +1,4 @@
-// Render author shared header
+// Original post card preview
 "use client";
 
 import { useAuth } from "@/components/providers/AuthProvider";
