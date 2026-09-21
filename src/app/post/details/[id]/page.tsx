@@ -1,4 +1,4 @@
-// Instant comment list update
+// Comment submission error rollback
 "use client";
 
 import { use, useEffect, useState, useCallback } from "react";
