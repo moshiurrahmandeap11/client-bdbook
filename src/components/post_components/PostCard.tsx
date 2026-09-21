@@ -1,4 +1,4 @@
-// Prepend shared post to profile cache
+// Render author shared header
 "use client";
 
 import { useAuth } from "@/components/providers/AuthProvider";
