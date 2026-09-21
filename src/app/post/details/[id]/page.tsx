@@ -1,4 +1,4 @@
-// Optimistic comment insertion
+// Instant comment list update
 "use client";
 
 import { use, useEffect, useState, useCallback } from "react";
