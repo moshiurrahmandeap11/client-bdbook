@@ -1,4 +1,4 @@
-// Tier 1 in-memory post query cache lookup
+// Tier 2 in-memory feed posts cache lookup
 "use client";
 
 import { use, useEffect, useState, useCallback } from "react";
