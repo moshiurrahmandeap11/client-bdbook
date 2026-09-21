@@ -9,7 +9,7 @@ import {
   uploadProfilePicture,
   uploadCoverPhoto,
 } from "@/services/user.service";
-import { getFeed } from "@/services/post.service";
+import { getUserPosts } from "@/services/post.service";
 import {
   getFriendsCount,
   getFollowersCount,
@@ -24,13 +24,13 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import PostCard from "@/components/post_components/PostCard";
 import EditProfileModal from "@/components/profile_components/EditProfileModal";
 import { Button } from "@/components/ui/Button";
+import { getCachedData, setCachedData } from "@/lib/cache";
 import {
   Calendar,
   MapPin,
   Globe,
   User as UserIcon,
   Cake,
-  Edit3,
   Camera,
   UserPlus,
   UserCheck,
@@ -107,7 +107,7 @@ export default function UserProfilePage({
   const quickAvatarInputRef = useRef<HTMLInputElement | null>(null);
   const quickCoverInputRef = useRef<HTMLInputElement | null>(null);
 
-  // 1. TanStack Query: User Profile (Cached for 5 mins)
+  // 1. TanStack Query: User Profile (Instant Cache Hydration + 5 mins StaleTime)
   const {
     data: user,
     isLoading: isUserLoading,
@@ -123,8 +123,13 @@ export default function UserProfilePage({
       ) {
         router.replace(`/s/${userData.username}`);
       }
+      if (userData) {
+        setCachedData(`user-profile-${username.toLowerCase()}`, userData);
+      }
       return userData;
     },
+    initialData: () => getCachedData<IUser>(`user-profile-${username.toLowerCase()}`),
+    initialDataUpdatedAt: 0,
     enabled: !!username,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
@@ -140,45 +145,59 @@ export default function UserProfilePage({
         currentUser.username?.toLowerCase() === user.username?.toLowerCase())
   );
 
-  // 2. TanStack Query: User Posts (Cached for 3 mins)
+  // 2. TanStack Query: User Posts via dedicated fast endpoint (Instant Cache + 5 mins StaleTime)
   const { data: userPosts = [] } = useQuery<IPost[]>({
     queryKey: ["user-posts", userId],
     queryFn: async () => {
       if (!userId) return [];
-      const feedData = await getFeed();
-      const posts = feedData.data || [];
-      return posts.filter(
-        (p: any) =>
-          p.userId === userId ||
-          p.user?.id === userId ||
-          p.user?._id === userId ||
-          (user?.username &&
-            p.user?.username?.toLowerCase() === user.username.toLowerCase())
-      );
+      const res = await getUserPosts(userId);
+      const posts = res.data || [];
+      setCachedData(`user-posts-${userId}`, posts);
+      return posts;
     },
+    initialData: () => (userId ? getCachedData<IPost[]>(`user-posts-${userId}`) : undefined),
+    initialDataUpdatedAt: 0,
     enabled: !!userId,
-    staleTime: 3 * 60 * 1000,
-    gcTime: 15 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
-  // 3. TanStack Query: Stats (Cached for 2 mins)
+  // 3. TanStack Query: Stats (Instant Cache Hydration)
   const { data: friendsCount = 0 } = useQuery<number>({
     queryKey: ["friends-count", userId],
-    queryFn: () => (userId ? getFriendsCount(userId) : 0),
+    queryFn: async () => {
+      if (!userId) return 0;
+      const count = await getFriendsCount(userId);
+      setCachedData(`friends-count-${userId}`, count);
+      return count;
+    },
+    initialData: () => (userId ? getCachedData<number>(`friends-count-${userId}`) : 0),
     enabled: !!userId,
     staleTime: 2 * 60 * 1000,
   });
 
   const { data: followersCount = 0 } = useQuery<number>({
     queryKey: ["followers-count", userId],
-    queryFn: () => (userId ? getFollowersCount(userId) : 0),
+    queryFn: async () => {
+      if (!userId) return 0;
+      const count = await getFollowersCount(userId);
+      setCachedData(`followers-count-${userId}`, count);
+      return count;
+    },
+    initialData: () => (userId ? getCachedData<number>(`followers-count-${userId}`) : 0),
     enabled: !!userId,
     staleTime: 2 * 60 * 1000,
   });
 
   const { data: followingCount = 0 } = useQuery<number>({
     queryKey: ["following-count", userId],
-    queryFn: () => (userId ? getFollowingCount(userId) : 0),
+    queryFn: async () => {
+      if (!userId) return 0;
+      const count = await getFollowingCount(userId);
+      setCachedData(`following-count-${userId}`, count);
+      return count;
+    },
+    initialData: () => (userId ? getCachedData<number>(`following-count-${userId}`) : 0),
     enabled: !!userId,
     staleTime: 2 * 60 * 1000,
   });
@@ -274,6 +293,11 @@ export default function UserProfilePage({
       ["user-profile", username.toLowerCase()],
       (prev) => (prev ? { ...prev, profilePicUrl: localBlobUrl, avatar: localBlobUrl } : prev)
     );
+    setCachedData(`user-profile-${username.toLowerCase()}`, {
+      ...user,
+      profilePicUrl: localBlobUrl,
+      avatar: localBlobUrl,
+    });
     toast.success("Profile picture updated!");
 
     // 2. Background server upload
@@ -288,6 +312,11 @@ export default function UserProfilePage({
         ["user-profile", username.toLowerCase()],
         (prev) => (prev ? { ...prev, profilePicUrl: res.url, avatar: res.url } : prev)
       );
+      setCachedData(`user-profile-${username.toLowerCase()}`, {
+        ...user,
+        profilePicUrl: res.url,
+        avatar: res.url,
+      });
       queryClient.invalidateQueries({ queryKey: ["user-posts"] });
       queryClient.invalidateQueries({ queryKey: ["posts"] });
       await refreshUser();
@@ -297,6 +326,7 @@ export default function UserProfilePage({
         ["user-profile", username.toLowerCase()],
         prevUserData
       );
+      setCachedData(`user-profile-${username.toLowerCase()}`, prevUserData);
       toast.error(err?.response?.data?.message || err?.message || "Failed to upload profile picture");
     } finally {
       setAvatarUploading(false);
@@ -317,6 +347,11 @@ export default function UserProfilePage({
       ["user-profile", username.toLowerCase()],
       (prev) => (prev ? { ...prev, coverPhotoUrl: localBlobUrl, coverImage: localBlobUrl } : prev)
     );
+    setCachedData(`user-profile-${username.toLowerCase()}`, {
+      ...user,
+      coverPhotoUrl: localBlobUrl,
+      coverImage: localBlobUrl,
+    });
     toast.success("Cover photo updated!");
 
     // 2. Background server upload
@@ -331,6 +366,11 @@ export default function UserProfilePage({
         ["user-profile", username.toLowerCase()],
         (prev) => (prev ? { ...prev, coverPhotoUrl: res.url, coverImage: res.url } : prev)
       );
+      setCachedData(`user-profile-${username.toLowerCase()}`, {
+        ...user,
+        coverPhotoUrl: res.url,
+        coverImage: res.url,
+      });
       await refreshUser();
     } catch (err: any) {
       // 4. Rollback on failure
@@ -338,6 +378,7 @@ export default function UserProfilePage({
         ["user-profile", username.toLowerCase()],
         prevUserData
       );
+      setCachedData(`user-profile-${username.toLowerCase()}`, prevUserData);
       toast.error(err?.response?.data?.message || err?.message || "Failed to upload cover photo");
     } finally {
       setCoverUploading(false);
@@ -377,7 +418,7 @@ export default function UserProfilePage({
   return (
     <div className="max-w-4xl mx-auto py-6 px-4 space-y-6">
       {/* Banner & Header Card */}
-      <div className="bg-white rounded-2xl overflow-hidden border border-slate-200/90 shadow-sm">
+      <div className="bg-white rounded-2xl overflow-hidden border border-slate-200">
         {/* Cover Photo */}
         <div className="h-48 sm:h-64 bg-slate-200 relative overflow-hidden group">
           {userCover ? (
@@ -422,7 +463,7 @@ export default function UserProfilePage({
         {/* Profile Info Header */}
         <div className="p-6 relative pt-0">
           <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 -mt-16 sm:-mt-16 mb-4">
-            {/* Avatar */}
+            {/* Avatar (clean flat white border, no shadow) */}
             <div className="relative group">
               <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-white bg-white overflow-hidden shrink-0">
                 {userAvatar ? (
@@ -472,10 +513,9 @@ export default function UserProfilePage({
                   type="button"
                   variant="outline"
                   onClick={() => setIsEditModalOpen(true)}
-                  className="flex items-center gap-2 rounded-xl text-xs sm:text-sm font-medium border-slate-300 hover:bg-slate-50"
+                  className="rounded-xl text-xs sm:text-sm font-medium border-slate-300 hover:bg-slate-50"
                 >
-                  <Edit3 className="h-4 w-4 text-slate-500" />
-                  <span>Edit Profile</span>
+                  Edit Profile
                 </Button>
               ) : (
                 <div className="flex items-center gap-2">
@@ -698,6 +738,7 @@ export default function UserProfilePage({
               ["user-profile", username.toLowerCase()],
               updated
             );
+            setCachedData(`user-profile-${username.toLowerCase()}`, updated);
             queryClient.invalidateQueries({ queryKey: ["user-profile"] });
             queryClient.invalidateQueries({ queryKey: ["user-posts"] });
           }}

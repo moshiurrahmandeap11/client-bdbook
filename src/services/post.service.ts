@@ -14,6 +14,15 @@ export const getPosts = async (params?: QueryParams): Promise<ApiResponse<IPost[
 
 export const getFeed = getPosts;
 
+export const getUserPosts = async (userId: string): Promise<ApiResponse<IPost[]>> => {
+  try {
+    const response = await apiClient.get<ApiResponse<IPost[]>>(`/posts/user/${userId}`);
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
 export const getPostById = async (id: string): Promise<IPost> => {
   try {
     const response = await apiClient.get<ApiResponse<IPost>>(`/posts/${id}`);
@@ -85,6 +94,7 @@ export const deletePost = async (postId: string): Promise<any> => {
 export const postService = {
   getPosts,
   getFeed,
+  getUserPosts,
   getPostById,
   createPost,
   likePost,

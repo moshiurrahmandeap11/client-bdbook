@@ -8,6 +8,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useState } from "react";
 import Avatar from "../post_components/Avatar";
+import { getCachedData, setCachedData } from "@/lib/cache";
 
 export const RightSidebar: React.FC = () => {
   const pathname = usePathname();
@@ -18,11 +19,15 @@ export const RightSidebar: React.FC = () => {
     queryKey: ["recent-posts-sidebar"],
     queryFn: async () => {
       const res = await postService.getPosts({ page: 1, limit: 5 });
-      return res.data || [];
+      const posts = res.data || [];
+      setCachedData("recent-posts-sidebar", posts);
+      return posts;
     },
+    initialData: () => getCachedData<IPost[]>("recent-posts-sidebar"),
+    initialDataUpdatedAt: 0,
     enabled: !isAuthPage,
-    staleTime: 10 * 60 * 1000, // 10 minutes cache
-    gcTime: 60 * 60 * 1000,    // 1 hour memory persistence
+    staleTime: 5 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 
   // Don't show right sidebar on auth pages
@@ -30,8 +35,10 @@ export const RightSidebar: React.FC = () => {
     return null;
   }
 
-  // Loading skeleton on first render before cache is available
-  if (isLoading && !postsData && !cleared) {
+  const recentPosts: IPost[] = postsData || [];
+
+  // Loading skeleton ONLY if there is absolutely no cached data
+  if (isLoading && recentPosts.length === 0 && !cleared) {
     return (
       <aside className="hidden xl:block w-80 shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-6 px-6 border-l border-slate-200/80 bg-white animate-pulse">
         <div className="flex items-center justify-between mb-4">
@@ -55,8 +62,6 @@ export const RightSidebar: React.FC = () => {
       </aside>
     );
   }
-
-  const recentPosts: IPost[] = postsData || [];
 
   if (cleared || recentPosts.length === 0) {
     return (

@@ -21,6 +21,7 @@ import PostCard from "./PostCard";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { TextArea } from "@/components/ui/TextArea";
+import { getCachedData, setCachedData } from "@/lib/cache";
 
 const PostSkeleton = () => (
   <div className="p-5 border-b border-slate-100 animate-pulse bg-white">
@@ -77,11 +78,38 @@ export const PostFeed = () => {
     queryKey: ["posts"],
     initialPageParam: 1,
     queryFn: async ({ pageParam = 1 }) => {
-      return postService.getPosts({ page: pageParam, limit: 8 });
+      const res = await postService.getPosts({ page: pageParam, limit: 8 });
+      if (pageParam === 1 && res?.data && res.data.length > 0) {
+        setCachedData("home_feed_posts", res.data);
+      }
+      return res;
     },
+    initialData: () => {
+      const cached = getCachedData<IPost[]>("home_feed_posts");
+      if (cached && cached.length > 0) {
+        return {
+          pages: [
+            {
+              data: cached,
+              success: true,
+              message: "Cached posts",
+              meta: {
+                page: 1,
+                limit: 8,
+                total: cached.length,
+                totalPages: 2,
+              },
+            },
+          ],
+          pageParams: [1],
+        };
+      }
+      return undefined;
+    },
+    initialDataUpdatedAt: 0,
     getNextPageParam: (lastPage: any) => {
       const page = lastPage.pagination?.page || lastPage.meta?.page || 1;
-      const pages = lastPage.pagination?.pages || lastPage.meta?.totalPage || 1;
+      const pages = lastPage.pagination?.pages || lastPage.meta?.totalPages || lastPage.meta?.totalPage || 1;
       if (page < pages) return page + 1;
       return undefined;
     },
@@ -230,7 +258,7 @@ export const PostFeed = () => {
       )}
 
       {/* Posts Feed List */}
-      {isLoading ? (
+      {isLoading && allPosts.length === 0 ? (
         <FeedSkeleton />
       ) : allPosts.length === 0 ? (
         <div className="py-16 px-6 text-center bg-white rounded-2xl border border-slate-200">
