@@ -1,3 +1,4 @@
+// Navigation Header with Notification Counter
 "use client";
 
 import { useSocket } from "@/components/providers/SocketProvider";
