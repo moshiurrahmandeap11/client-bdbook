@@ -1,4 +1,3 @@
-// Notification Drawer
 "use client";
 
 import React, { useCallback, useEffect, useRef } from "react";
@@ -34,6 +33,12 @@ const getNotificationTypeConfig = (type: string) => {
         badgeBg: "bg-[#4E4AFC]",
         icon: <MessageSquare className="w-3 h-3 text-white fill-white" />,
         label: "Comment",
+      };
+    case "follow":
+      return {
+        badgeBg: "bg-[#4E4AFC]",
+        icon: <UserCheck className="w-3 h-3 text-white" />,
+        label: "Follow",
       };
     case "friend_request":
       return {
