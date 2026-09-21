@@ -1,4 +1,4 @@
-// Optimistic share pill counter
+// Prepend shared post to feed cache
 "use client";
 
 import { useAuth } from "@/components/providers/AuthProvider";
