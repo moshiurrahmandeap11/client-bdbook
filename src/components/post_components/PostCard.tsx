@@ -1,4 +1,4 @@
-// Single post query cache invalidation on delete
+// Toast notification on post deletion
 "use client";
 
 import { useAuth } from "@/components/providers/AuthProvider";
