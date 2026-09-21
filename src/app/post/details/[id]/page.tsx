@@ -1,4 +1,4 @@
-// staleTime 2m, gcTime 30m config
+// Optimistic comment insertion
 "use client";
 
 import { use, useEffect, useState, useCallback } from "react";
