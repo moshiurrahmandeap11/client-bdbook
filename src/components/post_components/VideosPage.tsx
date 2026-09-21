@@ -841,9 +841,7 @@ export const VideosPage = () => {
                     onInterested={() => interestedMutation.mutate({ postId: vId })}
                     onNotInterested={() => notInterestedMutation.mutate({ postId: vId })}
                     onDelete={() => {
-                      if (confirm("Are you sure you want to delete this video?")) {
-                        deleteVideoMutation.mutate({ postId: vId, index });
-                      }
+                      deleteVideoMutation.mutate({ postId: vId, index });
                     }}
                   />
                 </div>
