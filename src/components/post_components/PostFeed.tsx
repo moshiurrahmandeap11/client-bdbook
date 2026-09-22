@@ -23,23 +23,23 @@ import { Button } from "@/components/ui/Button";
 import { TextArea } from "@/components/ui/TextArea";
 
 const PostSkeleton = () => (
-  <div className="p-5 rounded-xl animate-pulse bg-slate-100">
+  <div className="p-5 fb-card animate-pulse">
     <div className="flex items-center gap-3">
-      <div className="w-8 h-8 rounded-full bg-slate-200"></div>
+      <div className="w-10 h-10 rounded-full bg-fb-btn"></div>
       <div className="flex-1">
-        <div className="h-3.5 bg-slate-200 rounded w-32 mb-1.5"></div>
-        <div className="h-2.5 bg-slate-200/60 rounded w-20"></div>
+        <div className="h-3.5 bg-fb-btn rounded w-32 mb-1.5"></div>
+        <div className="h-2.5 bg-fb-input rounded w-20"></div>
       </div>
     </div>
     <div className="mt-3 space-y-2">
-      <div className="h-4 bg-slate-200 rounded w-4/5"></div>
-      <div className="h-3.5 bg-slate-200/60 rounded w-full"></div>
+      <div className="h-4 bg-fb-btn rounded w-4/5"></div>
+      <div className="h-3.5 bg-fb-input rounded w-full"></div>
     </div>
-    <div className="mt-4 aspect-video bg-slate-200 rounded-xl"></div>
-    <div className="flex gap-2 mt-4">
-      <div className="h-7 bg-white rounded-full w-20"></div>
-      <div className="h-7 bg-white rounded-full w-16"></div>
-      <div className="h-7 bg-white rounded-full w-16"></div>
+    <div className="mt-4 aspect-video bg-fb-input rounded-xl"></div>
+    <div className="flex gap-2 mt-4 pt-3 border-t border-border">
+      <div className="h-8 bg-fb-input rounded-md flex-1"></div>
+      <div className="h-8 bg-fb-input rounded-md flex-1"></div>
+      <div className="h-8 bg-fb-input rounded-md flex-1"></div>
     </div>
   </div>
 );
@@ -197,34 +197,35 @@ export const PostFeed = () => {
   const userName = user?.fullName || user?.name || "User";
 
   return (
-    <div className="max-w-4xl mx-auto py-4 px-2 sm:px-4 space-y-4">
+    <div className="max-w-2xl mx-auto py-5 px-2 sm:px-4 space-y-4">
       {/* Create Post Header Bar - Facebook style */}
       {isAuthenticated && (
-        <div className="px-4 py-3 bg-slate-100 rounded-xl flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full overflow-hidden bg-white shrink-0">
+        <div className="p-3 fb-card flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full overflow-hidden bg-canvas shrink-0">
             {userPic ? (
-              <Image src={userPic} alt={userName} width={36} height={36} className="object-cover w-full h-full" unoptimized />
+              <Image src={userPic} alt={userName} width={40} height={40} className="object-cover w-full h-full" unoptimized />
             ) : (
-              <div className="w-full h-full bg-[#EEEDFE] text-[#4E4AFC] flex items-center justify-center">
-                <UserIcon className="h-4 w-4" />
+              <div className="w-full h-full bg-primary-light text-primary flex items-center justify-center">
+                <UserIcon className="h-5 w-5" />
               </div>
             )}
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex-1 text-left px-4 py-2 bg-white hover:bg-white/80 rounded-full text-slate-500 hover:text-slate-800 transition-colors text-sm cursor-pointer shadow-none"
+            className="flex-1 text-left px-4 py-2.5 fb-input-pill text-[15px] cursor-pointer"
           >
-            Create a post...
+            What&apos;s on your mind?
           </button>
           <button
             onClick={() => {
               setShowCreateModal(true);
               setTimeout(() => fileInputRef.current?.click(), 100);
             }}
-            className="p-2 text-slate-500 hover:text-[#4E4AFC] hover:bg-white rounded-full transition-colors cursor-pointer shrink-0"
-            title="Upload Media"
+            className="p-2 text-emerald-500 hover:bg-fb-input rounded-full transition-colors cursor-pointer shrink-0 flex items-center gap-1.5"
+            title="Photo/video"
           >
-            <PhotoIcon className="h-5 w-5" />
+            <PhotoIcon className="h-6 w-6 text-emerald-500" />
+            <span className="hidden sm:inline text-xs font-semibold text-muted">Photo</span>
           </button>
         </div>
       )}
@@ -233,12 +234,12 @@ export const PostFeed = () => {
       {isLoading && allPosts.length === 0 ? (
         <FeedSkeleton />
       ) : allPosts.length === 0 ? (
-        <div className="py-16 px-6 text-center bg-slate-100 rounded-xl">
-          <div className="w-16 h-16 bg-[#EEEDFE] text-[#4E4AFC] rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <div className="py-16 px-6 text-center fb-card">
+          <div className="w-16 h-16 bg-primary-light text-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
             <PhotoIcon className="h-8 w-8" />
           </div>
-          <h3 className="text-base font-normal text-slate-900 mb-1">No Posts Yet</h3>
-          <p className="text-slate-400 text-xs mb-5">Be the first to share something with the community!</p>
+          <h3 className="text-base font-semibold text-foreground mb-1">No Posts Yet</h3>
+          <p className="text-muted text-xs mb-5">Be the first to share something with the community!</p>
           {isAuthenticated ? (
             <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)}>
               Create First Post
@@ -262,7 +263,7 @@ export const PostFeed = () => {
 
           {isFetchingNextPage && (
             <div className="flex justify-center py-6">
-              <div className="w-6 h-6 border-2 border-slate-200 border-t-[#4E4AFC] rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-border-inner border-t-primary rounded-full animate-spin" />
             </div>
           )}
 
@@ -272,8 +273,8 @@ export const PostFeed = () => {
 
           {!hasNextPage && allPosts.length > 0 && (
             <div className="text-center py-10">
-              <CheckCircleIcon className="h-8 w-8 text-[#4E4AFC] mx-auto mb-2" />
-              <p className="text-slate-400 text-xs font-normal">You&apos;ve reached the end! 🎉</p>
+              <CheckCircleIcon className="h-8 w-8 text-primary mx-auto mb-2" />
+              <p className="text-muted text-xs font-normal">You&apos;ve reached the end! 🎉</p>
             </div>
           )}
         </div>
@@ -304,7 +305,7 @@ export const PostFeed = () => {
       >
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#4E4AFC] flex items-center justify-center overflow-hidden shrink-0">
+            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center overflow-hidden shrink-0">
               {userPic ? (
                 <Image src={userPic} alt={userName} width={40} height={40} className="object-cover" />
               ) : (
@@ -312,8 +313,8 @@ export const PostFeed = () => {
               )}
             </div>
             <div>
-              <p className="font-normal text-sm text-slate-900">{userName}</p>
-              <span className="text-xs text-slate-400">Posting to stalk feed</span>
+              <p className="font-semibold text-sm text-foreground">{userName}</p>
+              <span className="text-xs text-muted">Posting to stalk feed</span>
             </div>
           </div>
 
@@ -326,7 +327,7 @@ export const PostFeed = () => {
           />
 
           {mediaPreview && (
-            <div className="relative rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+            <div className="relative rounded-xl overflow-hidden bg-canvas border border-border-inner">
               {mediaType === "video" ? (
                 <video src={mediaPreview} controls className="w-full max-h-64" />
               ) : (
@@ -337,28 +338,28 @@ export const PostFeed = () => {
                   setSelectedMedia(null);
                   setMediaPreview(null);
                 }}
-                className="absolute top-2 right-2 p-1.5 bg-slate-900/70 hover:bg-slate-900 rounded-full text-white transition cursor-pointer"
+                className="absolute top-2 right-2 p-1.5 bg-black/70 hover:bg-black rounded-full text-white transition cursor-pointer"
               >
                 <XMarkIcon className="h-4 w-4" />
               </button>
             </div>
           )}
 
-          <div className="border border-slate-200/90 rounded-xl p-3 bg-slate-50/50">
-            <p className="text-xs font-normal text-slate-600 mb-2">Add media</p>
+          <div className="border border-border-inner rounded-xl p-3 bg-canvas/50">
+            <p className="text-xs font-semibold text-muted mb-2">Add to your post</p>
             <div className="flex gap-2">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-normal cursor-pointer"
+                className="flex-1 py-2 bg-card hover:bg-fb-input border border-border-inner rounded-lg text-foreground transition flex items-center justify-center gap-2 text-xs font-medium cursor-pointer"
               >
                 <PhotoIcon className="h-4 w-4 text-emerald-500" />
                 <span>Photo</span>
               </button>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-normal cursor-pointer"
+                className="flex-1 py-2 bg-card hover:bg-fb-input border border-border-inner rounded-lg text-foreground transition flex items-center justify-center gap-2 text-xs font-medium cursor-pointer"
               >
-                <VideoCameraIcon className="h-4 w-4 text-red-500" />
+                <VideoCameraIcon className="h-4 w-4 text-rose-500" />
                 <span>Video</span>
               </button>
               <input

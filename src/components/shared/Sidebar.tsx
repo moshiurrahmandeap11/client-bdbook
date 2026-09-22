@@ -54,7 +54,7 @@ export const Sidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="hidden lg:block w-[260px] shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-3.5 px-3 border-r border-slate-200/80 bg-white select-none">
+    <aside className="hidden lg:block w-[260px] shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-3.5 px-3 border-r border-border bg-card select-none">
       {/* Feeds Section */}
       <div className="space-y-0.5">
         {mainNav.map((item) => {
@@ -65,16 +65,14 @@ export const Sidebar: React.FC = () => {
               key={item.name}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-normal transition-all duration-150",
-                isActive
-                  ? "bg-slate-100 text-slate-900 font-normal"
-                  : "text-slate-700 hover:text-slate-950 hover:bg-slate-50"
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 fb-nav-item",
+                isActive && "fb-nav-item-active"
               )}
             >
               <Icon
                 className={cn(
-                  "h-4.5 w-4.5 transition-colors",
-                  isActive ? "text-slate-900" : "text-slate-500"
+                  "h-5 w-5 transition-colors",
+                  isActive ? "text-primary" : "text-muted"
                 )}
               />
               <span>{item.name}</span>
@@ -87,12 +85,12 @@ export const Sidebar: React.FC = () => {
       <div className="mt-3.5">
         <button
           onClick={() => setModOpen(!modOpen)}
-          className="w-full flex items-center justify-between px-3 py-1 text-xs font-normal text-slate-500 hover:text-slate-700 cursor-pointer"
+          className="w-full flex items-center justify-between px-3 py-1 text-xs font-semibold text-muted hover:text-foreground cursor-pointer"
         >
           <span>Moderation</span>
           <ChevronDownIcon
             className={cn(
-              "h-3.5 w-3.5 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] text-slate-400",
+              "h-3.5 w-3.5 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] text-muted",
               !modOpen && "-rotate-90"
             )}
           />
@@ -119,16 +117,14 @@ export const Sidebar: React.FC = () => {
                     key={item.name}
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-normal transition-all duration-150",
-                      isActive
-                        ? "bg-slate-100 text-slate-900 font-normal"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 fb-nav-item",
+                      isActive && "fb-nav-item-active"
                     )}
                   >
                     <Icon
                       className={cn(
-                        "h-4 w-4 transition-colors",
-                        isActive ? "text-slate-900" : "text-slate-400"
+                        "h-4.5 w-4.5 transition-colors",
+                        isActive ? "text-primary" : "text-muted"
                       )}
                     />
                     <span>{item.name}</span>
@@ -144,12 +140,12 @@ export const Sidebar: React.FC = () => {
       <div className="mt-3.5">
         <button
           onClick={() => setRecentOpen(!recentOpen)}
-          className="w-full flex items-center justify-between px-3 py-1 text-xs font-normal text-slate-500 hover:text-slate-700 cursor-pointer"
+          className="w-full flex items-center justify-between px-3 py-1 text-xs font-semibold text-muted hover:text-foreground cursor-pointer"
         >
           <span>Recent</span>
           <ChevronDownIcon
             className={cn(
-              "h-3.5 w-3.5 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] text-slate-400",
+              "h-3.5 w-3.5 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] text-muted",
               !recentOpen && "-rotate-90"
             )}
           />
@@ -174,9 +170,9 @@ export const Sidebar: React.FC = () => {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className="flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-normal text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium fb-nav-item"
                   >
-                    <Icon className="h-4 w-4 transition-colors text-slate-400" />
+                    <Icon className="h-4.5 w-4.5 transition-colors text-muted" />
                     <span className="truncate">{item.name}</span>
                   </Link>
                 );
@@ -188,12 +184,12 @@ export const Sidebar: React.FC = () => {
 
       {/* User Profile Quick Link */}
       {isAuthenticated && (user?.username || currentUserId) && (
-        <div className="mt-5 pt-3 border-t border-slate-100">
+        <div className="mt-5 pt-3 border-t border-border">
           <Link
             href={`/s/${user?.username || currentUserId}`}
-            className="flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-normal text-slate-700 hover:bg-slate-50 transition-colors"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium fb-nav-item"
           >
-            <UserCircleIcon className="h-4.5 w-4.5 text-slate-400" />
+            <UserCircleIcon className="h-5 w-5 text-muted" />
             <span>My Profile</span>
           </Link>
         </div>

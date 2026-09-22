@@ -47,22 +47,22 @@ export const RightSidebar: React.FC = () => {
   // Loading skeleton ONLY if there is absolutely no cached data
   if (isLoading && recentPosts.length === 0 && !cleared) {
     return (
-      <aside className="hidden xl:block w-80 shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-6 px-6 border-l border-slate-200/80 bg-white animate-pulse">
+      <aside className="hidden xl:block w-80 shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-6 px-6 border-l border-border bg-card animate-pulse">
         <div className="flex items-center justify-between mb-4">
-          <div className="h-4 w-24 bg-slate-200 rounded"></div>
+          <div className="h-4 w-24 bg-fb-input rounded"></div>
         </div>
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-border">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="py-3.5 flex items-start gap-3">
               <div className="flex-1 space-y-2">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-full bg-slate-200"></div>
-                  <div className="h-3 w-16 bg-slate-200 rounded"></div>
+                  <div className="w-5 h-5 rounded-full bg-fb-input"></div>
+                  <div className="h-3 w-16 bg-fb-input rounded"></div>
                 </div>
-                <div className="h-3.5 bg-slate-100 rounded w-full"></div>
-                <div className="h-3 bg-slate-100 rounded w-2/3"></div>
+                <div className="h-3.5 bg-fb-input rounded w-full"></div>
+                <div className="h-3 bg-fb-input rounded w-2/3"></div>
               </div>
-              <div className="w-16 h-16 rounded-xl bg-slate-100 shrink-0"></div>
+              <div className="w-16 h-16 rounded-xl bg-fb-input shrink-0"></div>
             </div>
           ))}
         </div>
@@ -72,28 +72,28 @@ export const RightSidebar: React.FC = () => {
 
   if (cleared || recentPosts.length === 0) {
     return (
-      <aside className="hidden xl:block w-80 shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-6 px-6 border-l border-slate-200/80 bg-white">
+      <aside className="hidden xl:block w-80 shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-6 px-6 border-l border-border bg-card">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-normal text-sm text-slate-900">Recent Posts</h3>
+          <h3 className="font-semibold text-sm text-muted">Recent Posts</h3>
         </div>
-        <p className="text-xs text-slate-400">No recent posts</p>
+        <p className="text-xs text-muted">No recent posts</p>
       </aside>
     );
   }
 
   return (
-    <aside className="hidden xl:block w-80 shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-6 px-6 border-l border-slate-200/80 bg-white">
+    <aside className="hidden xl:block w-80 shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto py-6 px-6 border-l border-border bg-card">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-normal text-sm text-slate-900 tracking-tight">Recent Posts</h3>
+        <h3 className="font-semibold text-sm text-muted tracking-tight">Recent Posts</h3>
         <button
           onClick={() => setCleared(true)}
-          className="text-xs font-normal text-slate-400 hover:text-slate-600 transition cursor-pointer"
+          className="text-xs font-normal text-muted hover:text-foreground transition cursor-pointer"
         >
           Clear
         </button>
       </div>
 
-      <div className="divide-y divide-slate-100">
+      <div className="divide-y divide-border">
         {recentPosts.map((post) => {
           const authorName = post.userName || post.user?.fullName || "User";
           const authorPic =
@@ -114,17 +114,17 @@ export const RightSidebar: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-1">
                     <Avatar src={authorPic} name={authorName} size={18} />
-                    <span className="text-xs font-normal text-slate-700 truncate">
+                    <span className="text-xs font-medium text-muted truncate">
                       s/{authorName.toLowerCase().replace(/\s+/g, "")}
                     </span>
                   </div>
-                  <p className="text-xs font-normal text-slate-900 group-hover:text-[#4E4AFC] line-clamp-2 leading-snug transition-colors">
+                  <p className="text-xs font-medium text-foreground group-hover:text-primary line-clamp-2 leading-snug transition-colors">
                     {post.description || "Shared a post"}
                   </p>
                 </div>
 
                 {mediaUrl && (
-                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-slate-200/80">
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-fb-input shrink-0 border border-border-inner">
                     {mediaType === "video" ? (
                       <video src={mediaUrl} className="w-full h-full object-cover" />
                     ) : (

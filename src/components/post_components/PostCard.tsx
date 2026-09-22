@@ -2,19 +2,18 @@
 
 import { useAuth } from "@/components/providers/AuthProvider";
 import axiosInstance from "@/lib/axios";
+import { IPost, IUser } from "@/interfaces";
 import { postService } from "@/services/post.service";
-import { IPost } from "@/types/post.types";
-import { IUser } from "@/types/user.types";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
-  BookmarkIcon,
   ChatBubbleLeftIcon,
   EllipsisHorizontalIcon,
+  ShareIcon,
+  BookmarkIcon,
   EyeSlashIcon,
   LinkIcon,
   PencilIcon,
-  ShareIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -450,7 +449,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
     const items: DropdownItemProps[] = [
       {
         label: isSaved ? "Unsave Post" : "Save Post",
-        icon: <BookmarkIcon className={cn("h-4 w-4", isSaved && "text-[#4E4AFC]")} />,
+        icon: <BookmarkIcon className={cn("h-4 w-4", isSaved && "text-primary")} />,
         onClick: handleSavePost,
       },
       {
@@ -478,26 +477,28 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
         danger: true,
       });
     }
-    return items;
-  }, [isSaved, handleSavePost, handleHidePost, handleCopyPostLink, isOwner, user?.role, handleDeletePost]);
 
-  const authorName = post.userName || post.user?.fullName || "User";
-  const authorUsername =
-    post.user?.username ||
-    post.username ||
-    authorName.toLowerCase().replace(/\s+/g, "");
-  const communityTag = `s/${authorUsername}`;
-  const authorPic = post.userProfilePicture || post.user?.profilePicture?.url;
+    return items;
+  }, [isSaved, isOwner, user?.role, handleSavePost, handleHidePost, handleCopyPostLink, handleDeletePost]);
+
+  const authorName = post.userName || post.user?.fullName || post.user?.name || "Anonymous";
+  const authorUsername = post.user?.username || post.userId || post.user?._id || "user";
+  const authorPic =
+    post.userProfilePicture ||
+    (typeof post.user?.profilePicture === "object"
+      ? post.user?.profilePicture?.url
+      : post.user?.profilePicture || post.user?.avatar);
   const mediaUrl = post.mediaUrl || post.media?.url;
   const mediaType = post.mediaType || post.media?.resourceType || "image";
+  const communityTag = `s/${authorUsername}`;
 
   if (isHidden) {
     return (
-      <article className="py-3 px-4 sm:px-5 text-xs text-slate-500 bg-slate-100 rounded-xl flex items-center justify-between">
-        <span>Post hidden from feed</span>
+      <article className="py-3 px-4 fb-card flex items-center justify-between text-xs text-muted">
+        <span>Post hidden</span>
         <button
           onClick={() => setIsHidden(false)}
-          className="text-[#4E4AFC] hover:underline cursor-pointer"
+          className="text-primary hover:underline font-normal cursor-pointer"
         >
           Undo
         </button>
@@ -506,7 +507,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
   }
 
   return (
-    <article className="py-3.5 transition-colors bg-slate-100 rounded-xl overflow-hidden">
+    <article className="py-3.5 fb-card overflow-hidden">
       {/* Top Header: Subreddit/Author + Time + Follow Button + Options Menu */}
       <div className="flex items-center justify-between gap-3 px-4 sm:px-5">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -514,18 +515,18 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
             onClick={() => router.push(`/s/${authorUsername}`)}
             className="cursor-pointer shrink-0"
           >
-            <Avatar src={authorPic} name={authorName} size={36} />
+            <Avatar src={authorPic} name={authorName} size={40} />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => router.push(`/s/${authorUsername}`)}
-                className="font-normal text-xs text-slate-900 hover:text-[#4E4AFC] transition-colors truncate cursor-pointer"
+                className="font-semibold text-[14px] text-foreground hover:underline transition-colors truncate cursor-pointer"
               >
                 {communityTag}
               </button>
               {isSharedPost && (
-                <span className="text-[11px] text-slate-500 font-normal">
+                <span className="text-[11px] text-muted font-normal">
                   shared a post
                 </span>
               )}
@@ -533,17 +534,17 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
                 <button
                   onClick={handleFollow}
                   className={cn(
-                    "px-2.5 py-0.5 text-xs font-normal rounded-md transition-colors cursor-pointer flex items-center gap-1",
+                    "px-2.5 py-0.5 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1",
                     isFollowing
-                      ? "bg-white text-slate-700 hover:bg-slate-200"
-                      : "bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white"
+                      ? "bg-fb-btn text-foreground hover:bg-fb-btn-hover"
+                      : "bg-primary hover:bg-primary-hover text-white"
                   )}
                 >
                   {isFollowing ? "Following" : "Follow +"}
                 </button>
               )}
             </div>
-            <span className="text-slate-400 text-xs shrink-0">
+            <span className="text-muted text-xs shrink-0">
               {getTimeAgo(post.createdAt)}
             </span>
           </div>
@@ -554,10 +555,10 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
             align="right"
             trigger={
               <button
-                className="w-7 h-7 rounded-md flex items-center justify-center text-slate-700 hover:text-slate-950 hover:bg-slate-200 transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-foreground hover:bg-fb-input transition-colors cursor-pointer"
                 aria-label="Post options"
               >
-                <EllipsisHorizontalIcon className="h-5 w-5 text-slate-700 stroke-[2]" />
+                <EllipsisHorizontalIcon className="h-5 w-5 stroke-[2]" />
               </button>
             }
             items={dropdownItems}
@@ -565,27 +566,27 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
         )}
       </div>
 
-      {/* Post Title & Description (SlothUI Style) */}
+      {/* Post Title & Description */}
       {!isSharedPost ? (
         <div className="mt-2 px-4 sm:px-5">
           {(post.title || post.description) && (
             <h2
               onClick={goToPostDetails}
-              className="font-normal text-base text-slate-900 hover:text-[#4E4AFC] transition-colors cursor-pointer leading-snug"
+              className="font-normal text-[15px] text-foreground hover:text-primary transition-colors cursor-pointer leading-snug"
             >
               {post.title || post.description}
             </h2>
           )}
 
           {post.description && post.title && (
-            <p className="mt-1 text-sm text-slate-600 leading-relaxed line-clamp-3">
+            <p className="mt-1 text-sm text-muted leading-relaxed line-clamp-3">
               {post.description}
             </p>
           )}
         </div>
       ) : post.description ? (
         <div className="mt-2 px-4 sm:px-5">
-          <p className="text-sm text-slate-800 leading-relaxed font-normal">
+          <p className="text-[15px] text-foreground leading-relaxed font-normal">
             {post.description}
           </p>
         </div>
@@ -628,47 +629,47 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
         </div>
       ) : null}
 
-      {/* Action Bar Pills */}
-      <div className="flex items-center gap-2 mt-3 px-4 sm:px-5">
-        {/* Upvote/Downvote Pill */}
-        <div className="inline-flex items-center bg-white hover:bg-slate-200/80 rounded-md px-3 py-1 text-xs font-normal text-slate-700 transition-colors shadow-none">
+      {/* Facebook Style Action Bar */}
+      <div className="border-t border-border mt-3 pt-1 px-4 sm:px-5 flex items-center justify-between">
+        {/* Upvote/Downvote Action */}
+        <div className="flex-1 py-1.5 flex items-center justify-center gap-1.5 rounded-md hover:bg-fb-input text-muted transition-colors cursor-pointer">
           <button
             onClick={handleLike}
             disabled={likeMutation.isPending}
             className={cn(
-              "hover:text-[#4E4AFC] transition-colors p-0.5 cursor-pointer",
-              isLiked && "text-[#4E4AFC] font-normal"
+              "hover:text-primary transition-colors p-0.5 cursor-pointer flex items-center gap-1.5",
+              isLiked && "text-primary font-semibold"
             )}
             aria-label="Upvote"
           >
-            <ArrowUpIcon className="h-3.5 w-3.5 stroke-[2.5]" />
+            <ArrowUpIcon className="h-4 w-4 stroke-[2.5]" />
+            <span className="text-xs">{likeCount}</span>
           </button>
-          <span className="px-2 min-w-[20px] text-center">{likeCount}</span>
           <button
             onClick={handleLike}
-            className="hover:text-red-600 transition-colors p-0.5 cursor-pointer"
+            className="hover:text-rose-600 transition-colors p-0.5 cursor-pointer ml-1"
             aria-label="Downvote"
           >
-            <ArrowDownIcon className="h-3.5 w-3.5 stroke-[2.5]" />
+            <ArrowDownIcon className="h-4 w-4 stroke-[2.5]" />
           </button>
         </div>
 
-        {/* Comment Pill */}
+        {/* Comment Button */}
         <button
           onClick={handleComment}
-          className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-200/80 rounded-md px-3 py-1 text-xs font-normal text-slate-700 transition-colors cursor-pointer shadow-none"
+          className="flex-1 py-1.5 flex items-center justify-center gap-1.5 rounded-md hover:bg-fb-input text-muted hover:text-foreground text-xs font-semibold transition-colors cursor-pointer"
         >
-          <ChatBubbleLeftIcon className="h-3.5 w-3.5 stroke-[2]" />
-          <span>{commentCount}</span>
+          <ChatBubbleLeftIcon className="h-4 w-4 stroke-[2]" />
+          <span>{commentCount > 0 ? `${commentCount} Comments` : "Comment"}</span>
         </button>
 
-        {/* Share Pill */}
+        {/* Share Button */}
         <button
           onClick={handleSharePost}
-          className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-200/80 rounded-md px-3 py-1 text-xs font-normal text-slate-700 transition-colors cursor-pointer shadow-none"
+          className="flex-1 py-1.5 flex items-center justify-center gap-1.5 rounded-md hover:bg-fb-input text-muted hover:text-foreground text-xs font-semibold transition-colors cursor-pointer"
         >
-          <ShareIcon className="h-3.5 w-3.5 stroke-[2]" />
-          <span>{sharesCount > 0 ? `${sharesCount} ${sharesCount === 1 ? "Share" : "Shares"}` : "Share"}</span>
+          <ShareIcon className="h-4 w-4 stroke-[2]" />
+          <span>{sharesCount > 0 ? `${sharesCount} Shares` : "Share"}</span>
         </button>
       </div>
 

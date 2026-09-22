@@ -26,7 +26,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         suppressHydrationWarning
-        className={`${inter.className} bg-white text-slate-900 min-h-screen flex flex-col`}
+        className={`${inter.className} bg-background text-foreground min-h-screen flex flex-col`}
       >
         <QueryProvider>
           <AuthProvider>
@@ -36,7 +36,7 @@ export default function RootLayout({
                 <Header />
                 <div className="flex-1 flex w-full pt-14 sm:pt-16">
                   <Sidebar />
-                  <main className="flex-1 min-w-0 bg-white">
+                  <main className="flex-1 min-w-0 bg-background">
                     {children}
                   </main>
                   <RightSidebar />

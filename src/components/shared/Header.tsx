@@ -313,7 +313,7 @@ export const Header = () => {
         toast.custom(
           (t) => (
             <div
-              className="bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl p-3.5 cursor-pointer max-w-sm"
+              className="bg-card/95 backdrop-blur-xl border border-border rounded-2xl p-3.5 cursor-pointer max-w-sm shadow-md"
               onClick={() => {
                 toast.dismiss(t.id);
                 router.push("/message");
@@ -327,15 +327,15 @@ export const Header = () => {
                     className="w-10 h-10 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-[#4E4AFC] flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
                     <MessageCircle className="h-5 w-5 text-white" />
                   </div>
                 )}
                 <div className="flex-1">
-                  <p className="text-slate-900 text-sm font-normal">
+                  <p className="text-foreground text-sm font-semibold">
                     {message.senderName || "Someone"}
                   </p>
-                  <p className="text-slate-500 text-xs truncate">
+                  <p className="text-muted text-xs truncate">
                     {message.message || "Sent you a message"}
                   </p>
                 </div>
@@ -406,7 +406,7 @@ export const Header = () => {
 
   if (!initialLoadDone) {
     return (
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-md border-b border-border">
         <div className="w-full px-4 sm:px-6 lg:px-6">
           <div className="flex items-center justify-between h-14 sm:h-16">
             <div className="flex items-center shrink-0">{BrandLogo}</div>
@@ -428,22 +428,22 @@ export const Header = () => {
 
   return (
     <>
-      {/* DESKTOP HEADER (SLOTHUI / REDDIT STYLE) */}
+      {/* DESKTOP HEADER (FACEBOOK STYLE) */}
       <header
         className={`hidden md:block fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${
           isScrolled
-            ? "backdrop-blur-xl bg-white/95 border-b border-slate-200/90 shadow-xs"
-            : "bg-white border-b border-slate-200/80"
+            ? "backdrop-blur-xl bg-card/95 border-b border-border shadow-xs"
+            : "bg-card border-b border-border"
         }`}
       >
         <div className="w-full px-4 sm:px-6 lg:px-6">
           <div className="flex items-center justify-between h-14 sm:h-16 gap-6">
-            {/* Left: Brand Logo & Name */}
+            {/* Left: Brand Logo */}
             <div className="flex items-center shrink-0">
               {BrandLogo}
             </div>
 
-            {/* Center: Centered Rounded Pill Search Bar */}
+            {/* Center: Search Bar */}
             <div className="flex-1 max-w-xl relative" ref={searchRef}>
               <form onSubmit={handleSearchSubmit} className="w-full relative">
                 <div className="relative flex items-center">
@@ -462,32 +462,32 @@ export const Header = () => {
                       searchQuery.trim().length >= 2 && setShowSearchDropdown(true)
                     }
                     placeholder="Search stalk"
-                    className="w-full bg-slate-100 hover:bg-slate-200/70 text-slate-900 rounded-full py-2 pl-4 pr-10 placeholder:text-slate-400 border border-slate-200/80 focus:bg-white focus:border-slate-300 focus:ring-0 transition-all text-sm outline-none"
+                    className="w-full fb-input-pill py-2 pl-4 pr-10 border border-transparent focus:bg-card focus:border-border-inner focus:ring-0 transition-all text-sm outline-none"
                   />
-                  <MagnifyingGlassIcon className="absolute right-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
-                  
+                  <MagnifyingGlassIcon className="absolute right-3.5 h-4 w-4 text-muted pointer-events-none" />
+
                   {searchQuery && (
                     <button
                       type="button"
                       onClick={clearSearch}
-                      className="absolute right-9 p-0.5 hover:bg-slate-200 rounded-full transition cursor-pointer"
+                      className="absolute right-9 p-0.5 hover:bg-fb-btn-hover rounded-full transition cursor-pointer"
                     >
-                      <XMarkIcon className="h-3.5 w-3.5 text-slate-500" />
+                      <XMarkIcon className="h-3.5 w-3.5 text-muted" />
                     </button>
                   )}
                 </div>
 
                 {(showSearchDropdown || isSearching) &&
                   searchQuery.trim().length >= 2 && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-200 overflow-hidden z-50 max-h-80 overflow-y-auto animate-fadeInDown">
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-2xl border border-border shadow-lg overflow-hidden z-50 max-h-80 overflow-y-auto animate-fadeInDown">
                       {isSearching ? (
-                        <div className="p-4 text-center text-slate-400 text-sm font-normal">
+                        <div className="p-4 text-center text-muted text-sm font-normal">
                           Searching...
                         </div>
                       ) : suggestions.length > 0 ? (
                         <>
-                          <div className="px-4 py-2 border-b border-slate-100 bg-slate-50">
-                            <span className="text-slate-400 text-xs font-normal tracking-wider">
+                          <div className="px-4 py-2 border-b border-border bg-canvas">
+                            <span className="text-muted text-xs font-normal tracking-wider">
                               Users
                             </span>
                           </div>
@@ -510,9 +510,9 @@ export const Header = () => {
                                   setSearchQuery("");
                                   router.push(`/s/${uUsername}`);
                                 }}
-                                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition text-left cursor-pointer"
+                                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-fb-input transition text-left cursor-pointer"
                               >
-                                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden shrink-0 border border-slate-200">
+                                <div className="w-8 h-8 rounded-full bg-canvas flex items-center justify-center overflow-hidden shrink-0 border border-border-inner">
                                   {uAvatar ? (
                                     <img
                                       src={uAvatar}
@@ -520,17 +520,17 @@ export const Header = () => {
                                       className="w-full h-full object-cover"
                                     />
                                   ) : (
-                                    <span className="text-xs font-normal text-[#4E4AFC]">
+                                    <span className="text-xs font-medium text-primary">
                                       {uName.charAt(0).toUpperCase()}
                                     </span>
                                   )}
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-normal text-slate-900 truncate">
+                                  <p className="text-sm font-semibold text-foreground truncate">
                                     {uName}
                                   </p>
                                   {sUser.username && (
-                                    <p className="text-xs text-slate-400 truncate font-normal">
+                                    <p className="text-xs text-muted truncate font-normal">
                                       @{sUser.username}
                                     </p>
                                   )}
@@ -540,7 +540,7 @@ export const Header = () => {
                           })}
                         </>
                       ) : (
-                        <div className="px-4 py-6 text-center text-slate-400 text-sm font-normal">
+                        <div className="px-4 py-6 text-center text-muted text-sm font-normal">
                           No results found
                         </div>
                       )}
@@ -550,11 +550,11 @@ export const Header = () => {
             </div>
 
             {/* Right: + Create Button + Action Icons + Profile Avatar */}
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2.5 shrink-0">
               {/* + Create Button */}
               <button
                 onClick={handleOpenCreateModal}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-normal text-white bg-[#4E4AFC] hover:bg-[#3F3BE6] transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold text-white bg-primary hover:bg-primary-hover transition-colors cursor-pointer shadow-xs"
               >
                 <PlusIcon className="h-4 w-4 stroke-[2.5]" />
                 <span>Create</span>
@@ -563,7 +563,7 @@ export const Header = () => {
               {/* Direct Messages Icon */}
               <Link
                 href="/message"
-                className="p-2 rounded-full hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition relative"
+                className="w-10 h-10 rounded-full fb-btn-circle transition relative"
                 aria-label="Messages"
               >
                 <MessageCircle className="h-5 w-5" />
@@ -581,19 +581,19 @@ export const Header = () => {
               {!isAuthenticated ? (
                 <button
                   onClick={handleGetStarted}
-                  className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-normal text-black bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer"
+                  className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-foreground bg-fb-btn hover:bg-fb-btn-hover transition-colors cursor-pointer"
                 >
-                  <span className="text-black">Log in</span>
+                  <span>Log in</span>
                 </button>
               ) : (
                 <div className="relative" ref={profileMenuRef}>
                   <button
                     onClick={handleProfileClick}
-                    className="flex items-center p-0.5 rounded-full hover:ring-2 hover:ring-[#4E4AFC]/30 transition-all cursor-pointer"
+                    className="flex items-center p-0.5 rounded-full hover:ring-2 hover:ring-primary/30 transition-all cursor-pointer"
                     aria-label="Profile"
                   >
                     {userPic ? (
-                      <div className="relative w-8 h-8 rounded-full overflow-hidden border border-slate-200">
+                      <div className="relative w-8 h-8 rounded-full overflow-hidden border border-border">
                         <Image
                           src={userPic}
                           alt={userName}
@@ -602,20 +602,20 @@ export const Header = () => {
                         />
                       </div>
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-[#EEEDFE] text-[#4E4AFC] flex items-center justify-center font-normal text-xs border border-[#4E4AFC]/20">
+                      <div className="w-8 h-8 rounded-full bg-primary-light text-primary flex items-center justify-center font-semibold text-xs border border-primary/20">
                         {userName.charAt(0).toUpperCase()}
                       </div>
                     )}
                   </button>
 
                   {isProfileMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white border border-slate-200 overflow-hidden animate-fadeInDown z-50">
+                    <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-card border border-border shadow-lg overflow-hidden animate-fadeInDown z-50">
                       <div className="py-2">
-                        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50">
-                          <p className="text-slate-900 font-normal text-sm">
+                        <div className="px-4 py-3 border-b border-border bg-canvas">
+                          <p className="text-foreground font-semibold text-sm">
                             {userName}
                           </p>
-                          <p className="text-slate-500 text-xs mt-0.5 truncate">
+                          <p className="text-muted text-xs mt-0.5 truncate">
                             {user?.email || ""}
                           </p>
                         </div>
@@ -624,36 +624,36 @@ export const Header = () => {
                             setIsProfileMenuOpen(false);
                             handleProfileNavigate();
                           }}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors text-left text-sm cursor-pointer"
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-foreground hover:bg-fb-input transition-colors text-left text-sm cursor-pointer"
                         >
-                          <UserCircleIcon className="h-4 w-4 text-slate-400" />
+                          <UserCircleIcon className="h-4 w-4 text-muted" />
                           <span>Profile</span>
                         </button>
                         <Link
                           href="/community"
-                          className="flex items-center gap-3 px-4 py-2.5 text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors text-sm"
+                          className="flex items-center gap-3 px-4 py-2.5 text-foreground hover:bg-fb-input transition-colors text-sm"
                           onClick={() => setIsProfileMenuOpen(false)}
                         >
-                          <UserGroupIcon className="h-4 w-4 text-slate-400" />
+                          <UserGroupIcon className="h-4 w-4 text-muted" />
                           <span>Community</span>
                         </Link>
                         <Link
                           href="/settings"
-                          className="flex items-center gap-3 px-4 py-2.5 text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors text-sm"
+                          className="flex items-center gap-3 px-4 py-2.5 text-foreground hover:bg-fb-input transition-colors text-sm"
                           onClick={() => setIsProfileMenuOpen(false)}
                         >
-                          <Cog6ToothIcon className="h-4 w-4 text-slate-400" />
+                          <Cog6ToothIcon className="h-4 w-4 text-muted" />
                           <span>Settings</span>
                         </Link>
                         <Link
                           href="/help"
-                          className="flex items-center gap-3 px-4 py-2.5 text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition-colors text-sm"
+                          className="flex items-center gap-3 px-4 py-2.5 text-foreground hover:bg-fb-input transition-colors text-sm"
                           onClick={() => setIsProfileMenuOpen(false)}
                         >
-                          <QuestionMarkCircleIcon className="h-4 w-4 text-slate-400" />
+                          <QuestionMarkCircleIcon className="h-4 w-4 text-muted" />
                           <span>Help & Support</span>
                         </Link>
-                        <div className="border-t border-slate-100 my-1"></div>
+                        <div className="border-t border-border my-1"></div>
                         <button
                           onClick={handleLogout}
                           className="w-full flex items-center gap-3 px-4 py-2.5 text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors text-left text-sm cursor-pointer"
@@ -672,14 +672,14 @@ export const Header = () => {
       </header>
 
       {/* MOBILE HEADER */}
-      <header className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200/80">
+      <header className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
         <div className="px-4 h-14 flex items-center justify-between">
           {BrandLogo}
 
           <div className="flex items-center gap-2">
             <button
               onClick={openMobileSearch}
-              className="p-2 rounded-full hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition cursor-pointer"
+              className="p-2 rounded-full hover:bg-fb-input text-muted hover:text-foreground transition cursor-pointer"
               aria-label="Search"
             >
               <MagnifyingGlassIcon className="h-5 w-5" />
@@ -688,7 +688,7 @@ export const Header = () => {
             {/* Mobile + Create button */}
             <button
               onClick={handleOpenCreateModal}
-              className="p-2 rounded-md bg-[#4E4AFC] text-white hover:bg-[#3F3BE6] transition-colors cursor-pointer"
+              className="p-2 rounded-full bg-primary text-white hover:bg-primary-hover transition-colors cursor-pointer"
               aria-label="Create Post"
             >
               <PlusIcon className="h-4 w-4 stroke-[2.5]" />
@@ -696,7 +696,7 @@ export const Header = () => {
 
             <Link
               href="/message"
-              className="p-2 rounded-full hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition relative"
+              className="p-2 rounded-full hover:bg-fb-input text-muted hover:text-foreground transition relative"
               aria-label="Messages"
             >
               <MessageCircle className="h-5 w-5" />
@@ -711,7 +711,7 @@ export const Header = () => {
 
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 rounded-full hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition mobile-menu-button cursor-pointer"
+              className="p-2 rounded-full hover:bg-fb-input text-muted hover:text-foreground transition mobile-menu-button cursor-pointer"
               aria-label="Menu"
             >
               {isMenuOpen ? (
@@ -727,16 +727,16 @@ export const Header = () => {
       {/* MOBILE DRAWER MENU */}
       {isMenuOpen && (
         <div
-          className="md:hidden fixed inset-0 z-[55] bg-slate-900/40 backdrop-blur-xs flex justify-end"
+          className="md:hidden fixed inset-0 z-[55] bg-black/40 backdrop-blur-xs flex justify-end"
           ref={mobileMenuRef}
         >
-          <div className="w-64 bg-white h-full p-4 flex flex-col justify-between border-l border-slate-200 animate-slideDown">
+          <div className="w-64 bg-card h-full p-4 flex flex-col justify-between border-l border-border animate-slideDown">
             <div>
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
-                <span className="text-slate-900 font-normal text-lg">Menu</span>
+              <div className="flex items-center justify-between pb-4 border-b border-border mb-4">
+                <span className="text-foreground font-semibold text-lg">Menu</span>
                 <button
                   onClick={() => setIsMenuOpen(false)}
-                  className="p-1 rounded-full text-slate-400 hover:text-slate-700 cursor-pointer"
+                  className="p-1 rounded-full text-muted hover:text-foreground cursor-pointer"
                 >
                   <XMarkIcon className="h-6 w-6" />
                 </button>
@@ -753,10 +753,10 @@ export const Header = () => {
                       key={item.name}
                       href={item.href}
                       onClick={() => setIsMenuOpen(false)}
-                      className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-normal transition ${
+                      className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm transition ${
                         isActive
-                          ? "bg-[#EEEDFE] text-[#4E4AFC] font-normal"
-                          : "text-slate-700 hover:text-slate-900 hover:bg-slate-50"
+                          ? "fb-nav-item-active"
+                          : "fb-nav-item"
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -774,39 +774,39 @@ export const Header = () => {
               </div>
 
               {isAuthenticated && (
-                <div className="mt-6 pt-4 border-t border-slate-100 space-y-1">
+                <div className="mt-6 pt-4 border-t border-border space-y-1">
                   <button
                     onClick={() => {
                       setIsMenuOpen(false);
                       handleProfileNavigate();
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-normal text-slate-700 hover:bg-slate-50 text-left cursor-pointer"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm fb-nav-item text-left cursor-pointer"
                   >
-                    <UserCircleIcon className="h-5 w-5 text-slate-400" />
+                    <UserCircleIcon className="h-5 w-5 text-muted" />
                     <span>Profile</span>
                   </button>
                   <Link
                     href="/community"
                     onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-normal text-slate-700 hover:bg-slate-50"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm fb-nav-item"
                   >
-                    <UserGroupIcon className="h-5 w-5 text-slate-400" />
+                    <UserGroupIcon className="h-5 w-5 text-muted" />
                     <span>Community</span>
                   </Link>
                   <Link
                     href="/settings"
                     onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-normal text-slate-700 hover:bg-slate-50"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm fb-nav-item"
                   >
-                    <Cog6ToothIcon className="h-5 w-5 text-slate-400" />
+                    <Cog6ToothIcon className="h-5 w-5 text-muted" />
                     <span>Settings</span>
                   </Link>
                   <Link
                     href="/help"
                     onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-normal text-slate-700 hover:bg-slate-50"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm fb-nav-item"
                   >
-                    <QuestionMarkCircleIcon className="h-5 w-5 text-slate-400" />
+                    <QuestionMarkCircleIcon className="h-5 w-5 text-muted" />
                     <span>Help & Support</span>
                   </Link>
                 </div>
@@ -814,7 +814,7 @@ export const Header = () => {
             </div>
 
             {isAuthenticated && (
-              <div className="pt-4 border-t border-slate-100">
+              <div className="pt-4 border-t border-border">
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-normal text-red-600 hover:bg-red-50 text-left cursor-pointer"
@@ -830,13 +830,13 @@ export const Header = () => {
 
       {/* MOBILE SEARCH OVERLAY */}
       {showMobileSearch && (
-        <div className="md:hidden fixed inset-0 z-[60] bg-white flex flex-col">
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200">
+        <div className="md:hidden fixed inset-0 z-[60] bg-card flex flex-col">
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
             <button
               onClick={closeMobileSearch}
-              className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition cursor-pointer"
+              className="p-2 -ml-2 rounded-full hover:bg-fb-input transition cursor-pointer"
             >
-              <ArrowLeftIcon className="h-5 w-5 text-slate-700" />
+              <ArrowLeftIcon className="h-5 w-5 text-foreground" />
             </button>
             <div className="flex-1 relative">
               <input
@@ -852,17 +852,17 @@ export const Header = () => {
                 value={searchQuery}
                 onChange={handleSearchChange}
                 placeholder="Search stalk..."
-                className="w-full bg-slate-100 text-slate-900 rounded-full py-2.5 pl-4 pr-10 placeholder:text-slate-400 border border-slate-200 focus:outline-none focus:ring-0 focus:border-slate-300 text-sm"
+                className="w-full fb-input-pill py-2.5 pl-4 pr-10 border border-transparent focus:bg-card focus:border-border-inner text-sm outline-none"
                 autoFocus
               />
-              <MagnifyingGlassIcon className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <MagnifyingGlassIcon className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={clearSearch}
-                  className="absolute right-9 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-200 rounded-full cursor-pointer"
+                  className="absolute right-9 top-1/2 -translate-y-1/2 p-1 hover:bg-fb-btn-hover rounded-full cursor-pointer"
                 >
-                  <XMarkIcon className="h-4 w-4 text-slate-500" />
+                  <XMarkIcon className="h-4 w-4 text-muted" />
                 </button>
               )}
             </div>
@@ -870,13 +870,13 @@ export const Header = () => {
 
           <div className="flex-1 overflow-y-auto">
             {isSearching ? (
-              <div className="p-6 text-center text-slate-400 text-sm font-normal">
+              <div className="p-6 text-center text-muted text-sm font-normal">
                 Searching...
               </div>
             ) : suggestions.length > 0 ? (
-              <div className="divide-y divide-slate-100">
-                <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
-                  <span className="text-slate-400 text-xs font-normal tracking-wider">
+              <div className="divide-y divide-border">
+                <div className="px-4 py-2 bg-canvas border-b border-border">
+                  <span className="text-muted text-xs font-normal tracking-wider">
                     Users
                   </span>
                 </div>
@@ -898,9 +898,9 @@ export const Header = () => {
                         setSearchQuery("");
                         router.push(`/s/${uUsername}`);
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition text-left cursor-pointer"
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-fb-input transition text-left cursor-pointer"
                     >
-                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden shrink-0 border border-slate-200">
+                      <div className="w-10 h-10 rounded-full bg-canvas flex items-center justify-center overflow-hidden shrink-0 border border-border-inner">
                         {uAvatar ? (
                           <img
                             src={uAvatar}
@@ -908,17 +908,17 @@ export const Header = () => {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <span className="text-sm font-normal text-[#4E4AFC]">
+                          <span className="text-sm font-medium text-primary">
                             {uName.charAt(0).toUpperCase()}
                           </span>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-normal text-slate-900 truncate">
+                        <p className="text-sm font-semibold text-foreground truncate">
                           {uName}
                         </p>
                         {sUser.username && (
-                          <p className="text-xs text-slate-400 truncate font-normal">
+                          <p className="text-xs text-muted truncate font-normal">
                             @{sUser.username}
                           </p>
                         )}
@@ -928,7 +928,7 @@ export const Header = () => {
                 })}
               </div>
             ) : searchQuery.trim().length >= 2 ? (
-              <div className="p-8 text-center text-slate-400 text-sm font-normal">
+              <div className="p-8 text-center text-muted text-sm font-normal">
                 No results found
               </div>
             ) : null}
@@ -962,7 +962,7 @@ export const Header = () => {
       >
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#4E4AFC] flex items-center justify-center overflow-hidden flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center overflow-hidden flex-shrink-0">
               {userPic ? (
                 <Image
                   src={userPic}
@@ -976,8 +976,8 @@ export const Header = () => {
               )}
             </div>
             <div>
-              <p className="font-normal text-sm text-slate-900">{userName}</p>
-              <span className="text-xs text-slate-500">Public</span>
+              <p className="font-semibold text-sm text-foreground">{userName}</p>
+              <span className="text-xs text-muted">Public</span>
             </div>
           </div>
 
@@ -990,7 +990,7 @@ export const Header = () => {
           />
 
           {mediaPreview && (
-            <div className="relative rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+            <div className="relative rounded-xl overflow-hidden bg-canvas border border-border-inner">
               {mediaType === "video" ? (
                 <video src={mediaPreview} controls className="w-full max-h-64" />
               ) : (
@@ -1007,33 +1007,33 @@ export const Header = () => {
                   setSelectedMedia(null);
                   setMediaPreview(null);
                 }}
-                className="absolute top-2 right-2 p-1.5 bg-slate-900/70 hover:bg-slate-900 rounded-full text-white transition-colors cursor-pointer"
+                className="absolute top-2 right-2 p-1.5 bg-black/70 hover:bg-black rounded-full text-white transition cursor-pointer"
               >
                 <XMarkIcon className="h-4 w-4" />
               </button>
             </div>
           )}
 
-          <div className="border border-slate-200/90 rounded-xl p-3 bg-slate-50/50">
-            <p className="text-xs font-normal text-slate-600 mb-2">Add to your post</p>
+          <div className="border border-border-inner rounded-xl p-3 bg-canvas/50">
+            <p className="text-xs font-semibold text-muted mb-2">Add to your post</p>
             <div className="flex gap-2">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-normal cursor-pointer"
+                className="flex-1 py-2 bg-card hover:bg-fb-input border border-border-inner rounded-lg text-foreground transition flex items-center justify-center gap-2 text-xs font-medium cursor-pointer"
               >
                 <PhotoIcon className="h-4 w-4 text-emerald-500" />
                 <span>Photo</span>
               </button>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-normal cursor-pointer"
+                className="flex-1 py-2 bg-card hover:bg-fb-input border border-border-inner rounded-lg text-foreground transition flex items-center justify-center gap-2 text-xs font-medium cursor-pointer"
               >
-                <VideoCameraIcon className="h-4 w-4 text-red-500" />
+                <VideoCameraIcon className="h-4 w-4 text-rose-500" />
                 <span>Video</span>
               </button>
               <button
                 type="button"
-                className="flex-1 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 transition flex items-center justify-center gap-2 text-xs font-normal cursor-pointer"
+                className="flex-1 py-2 bg-card hover:bg-fb-input border border-border-inner rounded-lg text-foreground transition flex items-center justify-center gap-2 text-xs font-medium cursor-pointer"
               >
                 <FaceSmileIcon className="h-4 w-4 text-amber-500" />
                 <span>Feeling</span>
