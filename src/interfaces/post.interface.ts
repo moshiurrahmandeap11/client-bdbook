@@ -39,12 +39,15 @@ export interface IPost {
   userId: string;
   description?: string | null;
   mediaUrl?: string | null;
+  mediaThumbnail?: string | null;
   mediaPublicId?: string | null;
   mediaType?: MediaType | null;
   mediaMimeType?: string | null;
   mediaSize?: number | null;
   media?: {
     url?: string;
+    thumbnail?: string;
+    thumbnailUrl?: string;
     resourceType?: string;
     publicId?: string;
   };

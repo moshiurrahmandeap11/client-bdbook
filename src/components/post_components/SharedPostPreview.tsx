@@ -5,6 +5,7 @@ import Image from "next/image";
 import { memo } from "react";
 import Avatar from "./Avatar";
 import { IPost } from "@/types/post.types";
+import { CustomVideoPlayer } from "@/components/ui";
 
 interface SharedPostPreviewProps {
   originalPost?: IPost | null;
@@ -88,12 +89,11 @@ export const SharedPostPreview = memo(
         {mediaUrl && (
           <div className="w-full overflow-hidden bg-slate-950 flex items-center justify-center">
             {mediaType === "video" ? (
-              <video
+              <CustomVideoPlayer
                 src={mediaUrl}
-                className="w-full max-h-[480px] object-contain bg-black"
-                preload="metadata"
-                onClick={(e) => e.stopPropagation()}
-                controls
+                poster={originalPost.mediaThumbnail || originalPost.media?.thumbnail || originalPost.media?.thumbnailUrl || undefined}
+                maxHeight={480}
+                className="w-full"
               />
             ) : (
               <div className="relative w-full flex items-center justify-center bg-slate-950">

@@ -39,6 +39,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { TextArea } from "@/components/ui/TextArea";
 import { Logo } from "@/components/ui/Logo";
+import { CustomVideoPlayer } from "@/components/ui/CustomVideoPlayer";
 
 export const Header = () => {
   const { user, logout, isAuthenticated, initialLoadDone } = useAuth();
@@ -992,7 +993,12 @@ export const Header = () => {
           {mediaPreview && (
             <div className="relative rounded-xl overflow-hidden bg-canvas border border-border-inner">
               {mediaType === "video" ? (
-                <video src={mediaPreview} controls className="w-full max-h-64" />
+                <CustomVideoPlayer
+                  src={mediaPreview}
+                  maxHeight={260}
+                  compact
+                  className="w-full"
+                />
               ) : (
                 <Image
                   src={mediaPreview}

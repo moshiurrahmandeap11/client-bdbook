@@ -117,7 +117,7 @@ const ThreeDotMenu = ({ video, index, onSave, onInterested, onNotInterested, onD
   const menuItems = [
     { 
       label: isSaved ? "Saved" : "Save", 
-      icon: <BookmarkIcon className={`h-4 w-4 ${isSaved ? 'text-[#4E4AFC]' : ''}`} />, 
+      icon: <BookmarkIcon className={`h-4 w-4 ${isSaved ? 'text-primary' : ''}`} />, 
       action: onSave 
     },
     { 
@@ -286,7 +286,7 @@ const LikesModal = ({ video, onClose }: { video: IPost | any; onClose: () => voi
         </div>
         <div className="overflow-y-auto flex-1 p-2">
           {isLoading ? (
-            <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-[#4E4AFC] border-t-transparent rounded-full animate-spin" /></div>
+            <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
           ) : displayLikes.length === 0 ? (
             <div className="text-center py-12">
               <HeartIcon className="h-12 w-12 text-white/20 mx-auto mb-2" />
@@ -295,7 +295,7 @@ const LikesModal = ({ video, onClose }: { video: IPost | any; onClose: () => voi
           ) : (
             displayLikes.map((person: any, i: number) => (
               <div key={person._id || i} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition">
-                <div className="w-10 h-10 rounded-full bg-[#4E4AFC] flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center overflow-hidden flex-shrink-0">
                   {person.profilePicture?.url || person.profilePicture ? (
                     <Image src={person.profilePicture?.url || person.profilePicture} alt={person.fullName || person.name || "User"} width={40} height={40} className="object-cover" />
                   ) : (<UserIcon className="h-5 w-5 text-white" />)}
@@ -414,19 +414,19 @@ const VideoPlayer = ({ video, isMuted, isActive, onDoubleTap, onVideoRef }: Vide
         <div className="absolute bottom-16 md:bottom-0 left-0 right-0 bg-black/75 p-4 pb-3 transition-opacity duration-300">
           <div className="w-full mb-3">
             <div className="w-full h-1.5 bg-white/30 rounded-full cursor-pointer relative overflow-hidden" onClick={handleSeek}>
-              <div className="absolute left-0 top-0 h-full bg-[#4E4AFC] rounded-full" style={{ width: `${progress}%` }}>
+              <div className="absolute left-0 top-0 h-full bg-primary rounded-full" style={{ width: `${progress}%` }}>
                 <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full -translate-x-1/2" />
               </div>
             </div>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <button onClick={togglePlay} className="text-white hover:text-[#4E4AFC] transition-colors p-1">
+              <button onClick={togglePlay} className="text-white hover:text-primary transition-colors p-1">
                 {isPlaying ? <PauseIcon className="h-6 w-6" /> : <PlayIcon className="h-6 w-6" />}
               </button>
               <span className="text-white text-xs font-mono">{formatTime(videoRef.current?.currentTime || 0)} / {formatTime(duration)}</span>
             </div>
-            <button onClick={() => { if (videoRef.current) videoRef.current.muted = !videoRef.current.muted; }} className="text-white hover:text-[#4E4AFC] transition-colors p-1">
+            <button onClick={() => { if (videoRef.current) videoRef.current.muted = !videoRef.current.muted; }} className="text-white hover:text-primary transition-colors p-1">
               {isMuted ? <SpeakerXMarkIcon className="h-5 w-5" /> : <SpeakerWaveIcon className="h-5 w-5" />}
             </button>
           </div>
@@ -763,7 +763,7 @@ export const VideosPage = () => {
           <VideoCameraIcon className="h-20 w-20 text-white/30 mx-auto mb-4" />
           <p className="text-white/60 text-lg mb-4">No videos yet</p>
           {isAuthenticated && (
-            <Link href="/" className="inline-block px-6 py-2 bg-[#4E4AFC] hover:bg-[#3F3BE6] text-white font-normal rounded-xl transition-colors">
+            <Link href="/" className="inline-block px-6 py-2 bg-primary hover:bg-primary-hover text-white font-normal rounded-xl transition-colors">
               Create First Video Post
             </Link>
           )}
@@ -850,7 +850,7 @@ export const VideosPage = () => {
                 <div className="absolute bottom-36 sm:bottom-20 left-3 right-16 z-10">
                   <Link href={`/s/${videoOwnerUsername}`}>
                     <div className="flex items-center gap-2.5 mb-2">
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#4E4AFC] flex items-center justify-center overflow-hidden ring-2 ring-white/20 flex-shrink-0">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary flex items-center justify-center overflow-hidden ring-2 ring-white/20 flex-shrink-0">
                         {videoUserPic ? (
                           <Image src={videoUserPic} alt={videoUserName} width={40} height={40} className="object-cover" loading="lazy" />
                         ) : (<UserIcon className="h-5 w-5 text-white" />)}
@@ -869,13 +869,13 @@ export const VideosPage = () => {
             );
           })}
           
-          {isFetchingNextPage && (<div className="relative bg-black flex items-center justify-center" style={{ height: "100vh", width: "100vw" }}><div className="w-8 h-8 border-2 border-[#4E4AFC] border-t-transparent rounded-full animate-spin" /></div>)}
+          {isFetchingNextPage && (<div className="relative bg-black flex items-center justify-center" style={{ height: "100vh", width: "100vw" }}><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>)}
           {!hasNextPage && allVideos.length > 0 && (
             <div className="relative bg-black flex items-center justify-center" style={{ height: "100vh", width: "100vw" }}>
               <div className="text-center px-6">
                 <VideoCameraIcon className="h-16 w-16 text-white/30 mx-auto mb-3" />
                 <p className="text-white/60 mb-4">You've seen all videos! 🎉</p>
-                <button onClick={() => window.location.reload()} className="px-6 py-2 bg-[#4E4AFC] hover:bg-[#3F3BE6] rounded-md text-white text-sm font-normal transition-colors">Watch Again</button>
+                <button onClick={() => window.location.reload()} className="px-6 py-2 bg-primary hover:bg-primary-hover rounded-md text-white text-sm font-normal transition-colors">Watch Again</button>
               </div>
             </div>
           )}
@@ -892,7 +892,7 @@ export const VideosPage = () => {
                 </button>
               </div>
               <div className="p-4 border-b border-white/10 flex gap-3">
-                <div className="w-12 h-12 rounded-full bg-[#4E4AFC] flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center overflow-hidden flex-shrink-0">
                   {commentModal.video?.userProfilePicture || commentModal.video?.user?.profilePicture?.url ? (
                     <Image src={commentModal.video.userProfilePicture || commentModal.video.user.profilePicture.url} alt={commentModal.video.userName || "User"} width={48} height={48} className="object-cover" loading="lazy" />
                   ) : (<UserIcon className="h-6 w-6 text-white" />)}
@@ -904,14 +904,14 @@ export const VideosPage = () => {
               </div>
               <div className="p-4 border-t border-white/10">
                 <div className="flex gap-2">
-                  <input type="text" value={commentText} onChange={(e) => setCommentText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleCommentSubmit()} placeholder="Write a comment..." className="flex-1 bg-white/10 border border-white/20 rounded-md px-4 py-2 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#4E4AFC]" autoFocus />
-                  <button onClick={handleCommentSubmit} disabled={!commentText.trim()} className="px-4 py-2 bg-[#4E4AFC] hover:bg-[#3F3BE6] rounded-md text-white text-sm font-normal disabled:opacity-50 transition-colors">
+                  <input type="text" value={commentText} onChange={(e) => setCommentText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleCommentSubmit()} placeholder="Write a comment..." className="flex-1 bg-white/10 border border-white/20 rounded-md px-4 py-2 text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-primary" autoFocus />
+                  <button onClick={handleCommentSubmit} disabled={!commentText.trim()} className="px-4 py-2 bg-primary hover:bg-primary-hover rounded-md text-white text-sm font-normal disabled:opacity-50 transition-colors">
                     <PaperAirplaneIcon className="h-5 w-5" />
                   </button>
                 </div>
               </div>
               <div className="p-4 text-center border-t border-white/10">
-                <button onClick={() => { setCommentModal({ isOpen: false, video: null, index: null }); window.location.href = `/post/details/${commentModal.video?._id || commentModal.video?.id}`; }} className="text-[#4E4AFC] text-sm hover:underline transition-colors">
+                <button onClick={() => { setCommentModal({ isOpen: false, video: null, index: null }); window.location.href = `/post/details/${commentModal.video?._id || commentModal.video?.id}`; }} className="text-primary text-sm hover:underline transition-colors">
                   View all {commentModal.video?.commentsCount || commentModal.video?.comments?.length || 0} comments
                 </button>
               </div>

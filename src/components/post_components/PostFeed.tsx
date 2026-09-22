@@ -21,6 +21,7 @@ import PostCard from "./PostCard";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { TextArea } from "@/components/ui/TextArea";
+import { CustomVideoPlayer } from "@/components/ui/CustomVideoPlayer";
 
 const PostSkeleton = () => (
   <div className="p-5 fb-card animate-pulse">
@@ -329,7 +330,7 @@ export const PostFeed = () => {
           {mediaPreview && (
             <div className="relative rounded-xl overflow-hidden bg-canvas border border-border-inner">
               {mediaType === "video" ? (
-                <video src={mediaPreview} controls className="w-full max-h-64" />
+                <CustomVideoPlayer src={mediaPreview} maxHeight={260} compact className="w-full" />
               ) : (
                 <Image src={mediaPreview} alt="Preview" width={500} height={300} className="w-full object-cover max-h-64" />
               )}

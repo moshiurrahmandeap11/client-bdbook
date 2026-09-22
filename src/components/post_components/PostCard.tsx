@@ -612,7 +612,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
           {mediaType === "video" ? (
             <CustomVideoPlayer
               src={mediaUrl}
-              poster={post.mediaThumbnail || post.media?.thumbnailUrl}
+              poster={post.mediaThumbnail || post.media?.thumbnailUrl || post.media?.thumbnail}
               className="rounded-none w-full"
             />
           ) : (
