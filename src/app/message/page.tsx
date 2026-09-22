@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useSocket } from "@/components/providers/SocketProvider";
+import { useCall } from "@/components/providers/CallProvider";
 import {
   getConversations,
   getMessages,
@@ -214,6 +215,7 @@ function MessageContainer() {
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const { socket, isUserOnline } = useSocket();
+  const { startCall, callState } = useCall();
 
   const currentUserId = user?.id || (user as any)?._id;
 
@@ -1194,16 +1196,34 @@ function MessageContainer() {
                       <button
                         type="button"
                         title="Audio call"
-                        onClick={() => toast("Calling feature coming soon!")}
-                        className="fb-btn-circle w-9 h-9 text-muted hover:text-primary transition"
+                        onClick={() => {
+                          if (!selectedUserId || !selectedUser) return;
+                          startCall({
+                            partnerId: selectedUserId,
+                            partnerName: selectedUser.name,
+                            partnerAvatar: selectedUser.avatar,
+                            type: "audio",
+                          });
+                        }}
+                        disabled={callState !== "idle"}
+                        className="fb-btn-circle w-9 h-9 text-muted hover:text-primary transition disabled:opacity-40 cursor-pointer"
                       >
                         <Phone className="w-4 h-4" />
                       </button>
                       <button
                         type="button"
                         title="Video call"
-                        onClick={() => toast("Video call coming soon!")}
-                        className="fb-btn-circle w-9 h-9 text-muted hover:text-primary transition"
+                        onClick={() => {
+                          if (!selectedUserId || !selectedUser) return;
+                          startCall({
+                            partnerId: selectedUserId,
+                            partnerName: selectedUser.name,
+                            partnerAvatar: selectedUser.avatar,
+                            type: "video",
+                          });
+                        }}
+                        disabled={callState !== "idle"}
+                        className="fb-btn-circle w-9 h-9 text-muted hover:text-primary transition disabled:opacity-40 cursor-pointer"
                       >
                         <VideoIcon className="w-4 h-4" />
                       </button>
