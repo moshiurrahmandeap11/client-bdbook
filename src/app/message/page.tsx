@@ -19,6 +19,9 @@ import {
   Video as VideoIcon,
   Loader2,
   FileText,
+  Smile,
+  Users,
+  Plus,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useSocket } from "@/components/providers/SocketProvider";
@@ -31,11 +34,14 @@ import {
   uploadMessageMedia,
   acceptMessageRequest,
   declineMessageRequest,
+  reactToMessage,
 } from "@/services/message.service";
 import { getUserById } from "@/services/user.service";
 import apiClient from "@/lib/axios";
-import { IConversation, IMessage } from "@/types/message.types";
+import { IConversation, IMessage, IMessageReaction } from "@/types/message.types";
 import { IUser } from "@/types/user.types";
+import ReactionPicker from "@/components/message/ReactionPicker";
+import CreateGroupModal from "@/components/message/CreateGroupModal";
 
 interface SharedPostData {
   type?: string;
@@ -245,6 +251,9 @@ function MessageContainer() {
   const [searchResults, setSearchResults] = useState<IUser[]>([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
 
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  const [activeReactionPickerMessageId, setActiveReactionPickerMessageId] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -396,12 +405,22 @@ function MessageContainer() {
     if (!socket) return;
 
     const handleReceiveMessage = (msg: IMessage) => {
-      const partnerId = msg.senderId === currentUserId ? msg.receiverId : msg.senderId;
+      const isGroupMessage = Boolean(
+        msg.conversationId && (!msg.receiverId || msg.receiverId === "null")
+      );
+      const partnerId = isGroupMessage
+        ? msg.conversationId!
+        : msg.senderId === currentUserId
+        ? msg.receiverId!
+        : msg.senderId;
 
       // If message is in currently active chat
       if (
         selectedUserId &&
-        (msg.senderId === selectedUserId || msg.receiverId === selectedUserId)
+        (partnerId === selectedUserId ||
+          msg.senderId === selectedUserId ||
+          msg.receiverId === selectedUserId ||
+          msg.conversationId === selectedUserId)
       ) {
         setMessages((prev) => {
           // Prevent duplicates
@@ -414,7 +433,7 @@ function MessageContainer() {
         });
 
         // If message is from partner, mark as read ONLY if not a message request
-        if (msg.senderId === selectedUserId) {
+        if (msg.senderId !== currentUserId) {
           setConversations((prev) => {
             const partnerConv = prev.find(
               (c) => c.friendId === selectedUserId || c.id === selectedUserId
@@ -484,14 +503,27 @@ function MessageContainer() {
       }
     };
 
+    const handleMessageReaction = (data: {
+      messageId: string;
+      reactions: IMessageReaction[];
+    }) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === data.messageId ? { ...m, reactions: data.reactions } : m
+        )
+      );
+    };
+
     socket.on("receive_message", handleReceiveMessage);
     socket.on("user_typing", handleUserTyping);
     socket.on("messages_read", handleMessagesRead);
+    socket.on("message_reaction", handleMessageReaction);
 
     return () => {
       socket.off("receive_message", handleReceiveMessage);
       socket.off("user_typing", handleUserTyping);
       socket.off("messages_read", handleMessagesRead);
+      socket.off("message_reaction", handleMessageReaction);
     };
   }, [socket, selectedUserId, currentUserId, scrollToBottom]);
 
@@ -760,6 +792,71 @@ function MessageContainer() {
     }
   };
 
+  // Handle reaction on message
+  const handleReaction = async (messageId: string, emoji: string) => {
+    if (!currentUserId) return;
+
+    // 1. Optimistic update
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.id !== messageId) return m;
+        const currentReactions = m.reactions || [];
+        const existingIdx = currentReactions.findIndex((r) => r.userId === currentUserId);
+
+        let newReactions: IMessageReaction[];
+        if (existingIdx !== -1) {
+          if (currentReactions[existingIdx].reaction === emoji) {
+            // Remove reaction (toggle off)
+            newReactions = currentReactions.filter((r) => r.userId !== currentUserId);
+          } else {
+            // Update to new emoji
+            newReactions = [...currentReactions];
+            newReactions[existingIdx] = {
+              ...newReactions[existingIdx],
+              reaction: emoji,
+            };
+          }
+        } else {
+          // Add new
+          newReactions = [
+            ...currentReactions,
+            {
+              id: `temp-${Date.now()}`,
+              messageId,
+              userId: currentUserId,
+              userName: user?.fullName || (user as any)?.name || "You",
+              userAvatar:
+                (user as any)?.profilePicUrl ||
+                (user as any)?.avatar ||
+                null,
+              reaction: emoji,
+            },
+          ];
+        }
+        return { ...m, reactions: newReactions };
+      })
+    );
+
+    setActiveReactionPickerMessageId(null);
+
+    // 2. Call backend & Socket
+    try {
+      if (socket) {
+        socket.emit("react_message", { messageId, reaction: emoji });
+      }
+      const res = await reactToMessage(messageId, emoji);
+      if (res?.reactions) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId ? { ...m, reactions: res.reactions } : m
+          )
+        );
+      }
+    } catch {
+      // Non-blocking
+    }
+  };
+
   // Current active conversation helper
   const selectedConversation = useMemo(() => {
     if (!selectedUserId) return null;
@@ -852,6 +949,14 @@ function MessageContainer() {
                   </span>
                 )}
               </div>
+              <button
+                type="button"
+                onClick={() => setIsGroupModalOpen(true)}
+                title="Create Group Chat"
+                className="fb-btn-circle w-8 h-8 text-muted hover:text-primary transition cursor-pointer flex items-center justify-center hover:bg-fb-btn"
+              >
+                <Users className="w-4 h-4" />
+              </button>
             </div>
 
             {/* Search Bar */}
@@ -998,11 +1103,15 @@ function MessageContainer() {
                               alt={conv.friendName || "User"}
                               className="w-full h-full object-cover"
                             />
+                          ) : conv.isGroup ? (
+                            <div className="w-full h-full bg-gradient-to-tr from-primary to-indigo-500 flex items-center justify-center text-white">
+                              <Users className="w-6 h-6" />
+                            </div>
                           ) : (
                             (conv.friendName || "U").charAt(0).toUpperCase()
                           )}
                         </div>
-                        {isOnline && (
+                        {!conv.isGroup && isOnline && (
                           <span
                             className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-card ring-1 ring-emerald-500/20"
                             title="Active now"
@@ -1146,7 +1255,7 @@ function MessageContainer() {
                     <ArrowLeft className="w-5 h-5" />
                   </button>
 
-                  {/* Partner Avatar */}
+                  {/* Partner / Group Avatar */}
                   <div className="relative shrink-0">
                     <div className="w-10 h-10 rounded-full bg-primary/20 text-primary font-semibold flex items-center justify-center overflow-hidden border border-border/80">
                       {selectedUser?.avatar ? (
@@ -1155,25 +1264,39 @@ function MessageContainer() {
                           alt={selectedUser.name}
                           className="w-full h-full object-cover"
                         />
+                      ) : selectedConversation?.isGroup ? (
+                        <div className="w-full h-full bg-gradient-to-tr from-primary to-indigo-500 flex items-center justify-center text-white">
+                          <Users className="w-5 h-5" />
+                        </div>
                       ) : (
                         (selectedUser?.name || "U").charAt(0).toUpperCase()
                       )}
                     </div>
-                    {isUserOnline(selectedUserId) && (
+                    {!selectedConversation?.isGroup && isUserOnline(selectedUserId) && (
                       <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-card" />
                     )}
                   </div>
 
-                  {/* Partner Info */}
+                  {/* Partner / Group Info */}
                   <div className="min-w-0">
-                    <Link
-                      href={`/s/${selectedUserId}`}
-                      className="text-sm font-semibold text-foreground hover:underline truncate block"
-                    >
-                      {selectedUser?.name || "User"}
-                    </Link>
+                    {selectedConversation?.isGroup ? (
+                      <h3 className="text-sm font-semibold text-foreground truncate block">
+                        {selectedUser?.name || "Group Chat"}
+                      </h3>
+                    ) : (
+                      <Link
+                        href={`/s/${selectedUserId}`}
+                        className="text-sm font-semibold text-foreground hover:underline truncate block"
+                      >
+                        {selectedUser?.name || "User"}
+                      </Link>
+                    )}
                     <p className="text-[11px] text-muted flex items-center gap-1.5">
-                      {isPartnerTyping ? (
+                      {selectedConversation?.isGroup ? (
+                        <span>
+                          {selectedConversation.participants?.length || 2} members
+                        </span>
+                      ) : isPartnerTyping ? (
                         <span className="text-primary font-medium animate-pulse">
                           Typing...
                         </span>
@@ -1191,7 +1314,7 @@ function MessageContainer() {
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-1">
-                  {!isSelectedUserRequest && (
+                  {!isSelectedUserRequest && !selectedConversation?.isGroup && (
                     <>
                       <button
                         type="button"
@@ -1229,13 +1352,15 @@ function MessageContainer() {
                       </button>
                     </>
                   )}
-                  <Link
-                    href={`/s/${selectedUserId}`}
-                    title="View Profile"
-                    className="fb-btn-circle w-9 h-9 text-muted hover:text-foreground transition ml-1"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </Link>
+                  {!selectedConversation?.isGroup && (
+                    <Link
+                      href={`/s/${selectedUserId}`}
+                      title="View Profile"
+                      className="fb-btn-circle w-9 h-9 text-muted hover:text-foreground transition ml-1"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </Link>
+                  )}
                 </div>
               </div>
 
@@ -1295,97 +1420,157 @@ function MessageContainer() {
                             ? parseSharedPost(msg.message || msg.text)
                             : null;
 
+                        const partnerAvatar = selectedConversation?.isGroup
+                          ? msg.senderProfilePicture || (msg.sender as any)?.profilePicUrl || null
+                          : selectedUser?.avatar;
+
+                        const partnerDisplayName = selectedConversation?.isGroup
+                          ? msg.senderName || (msg.sender as any)?.fullName || "Member"
+                          : selectedUser?.name || "User";
+
+                        const hasReactions = Boolean(msg.reactions && msg.reactions.length > 0);
+                        const userReaction = (msg.reactions || []).find(
+                          (r) => r.userId === currentUserId
+                        );
+
                         return (
                           <div
                             key={msg.id || msg._id || idx}
-                            className={`flex ${isMine ? "justify-end" : "justify-start"} items-end gap-2`}
+                            className={`group relative flex ${
+                              isMine ? "justify-end" : "justify-start"
+                            } items-end gap-1.5 my-1`}
                           >
                             {/* Partner avatar beside message if received */}
                             {!isMine && (
                               <div className="w-7 h-7 rounded-full bg-primary/20 text-primary text-xs font-semibold flex items-center justify-center overflow-hidden shrink-0 mb-1 border border-border">
-                                {selectedUser?.avatar ? (
+                                {partnerAvatar ? (
                                   <img
-                                    src={selectedUser.avatar}
-                                    alt={selectedUser.name}
+                                    src={partnerAvatar}
+                                    alt={partnerDisplayName}
                                     className="w-full h-full object-cover"
                                   />
                                 ) : (
-                                  (selectedUser?.name || "U").charAt(0).toUpperCase()
+                                  partnerDisplayName.charAt(0).toUpperCase()
                                 )}
                               </div>
                             )}
 
+                            {/* Message Bubble Column */}
                             <div
                               className={`flex flex-col ${
                                 isMine ? "items-end" : "items-start"
                               } max-w-[85%] sm:max-w-md`}
                             >
-                              {/* Rich Shared Post Card */}
-                              {sharedPost ? (
-                                <SharedPostBubble data={sharedPost} isMine={isMine} />
-                              ) : (
-                                <div
-                                  className={`rounded-2xl px-4 py-2 text-sm shadow-2xs break-words ${
-                                    isMine
-                                      ? "bg-primary text-white rounded-br-xs"
-                                      : "bg-card border border-border text-foreground rounded-bl-xs"
-                                  }`}
-                                >
-                                  {/* Media Image */}
-                                  {msg.messageType === "image" && msg.mediaUrl && (
-                                    <div className="rounded-xl overflow-hidden mb-1.5 max-h-72">
-                                      <img
-                                        src={msg.mediaUrl}
-                                        alt="Uploaded media"
-                                        className="w-full h-full object-cover rounded-xl cursor-pointer hover:opacity-95 transition"
-                                        onClick={() => window.open(msg.mediaUrl!, "_blank")}
-                                      />
-                                    </div>
-                                  )}
-
-                                  {/* Media Video */}
-                                  {msg.messageType === "video" && msg.mediaUrl && (
-                                    <div className="rounded-xl overflow-hidden mb-1.5 max-h-72">
-                                      <video
-                                        src={msg.mediaUrl}
-                                        controls
-                                        className="w-full h-full object-cover rounded-xl"
-                                      />
-                                    </div>
-                                  )}
-
-                                  {/* Media File */}
-                                  {msg.messageType === "file" && msg.mediaUrl && (
-                                    <a
-                                      href={msg.mediaUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className={`flex items-center gap-2 p-2 rounded-xl text-xs font-medium mb-1 ${
-                                        isMine
-                                          ? "bg-white/20 text-white hover:bg-white/30"
-                                          : "bg-fb-btn hover:bg-fb-btn-hover text-foreground"
-                                      }`}
-                                    >
-                                      <FileText className="w-4 h-4 shrink-0" />
-                                      <span className="truncate flex-1">
-                                        {msg.fileName || "Download Attachment"}
-                                      </span>
-                                    </a>
-                                  )}
-
-                                  {/* Message Text */}
-                                  {msg.text || msg.message ? (
-                                    <p className="whitespace-pre-wrap leading-relaxed">
-                                      {msg.text || msg.message}
-                                    </p>
-                                  ) : null}
-                                </div>
+                              {/* Group Member Name */}
+                              {!isMine && selectedConversation?.isGroup && (
+                                <span className="text-[11px] font-semibold text-muted ml-1 mb-0.5 truncate max-w-[200px]">
+                                  {partnerDisplayName}
+                                </span>
                               )}
+
+                              {/* Relative wrapper for bubble + reaction badge */}
+                              <div className={`relative ${hasReactions ? "mb-2.5" : ""}`}>
+                                {/* Rich Shared Post Card */}
+                                {sharedPost ? (
+                                  <SharedPostBubble data={sharedPost} isMine={isMine} />
+                                ) : (
+                                  <div
+                                    className={`rounded-2xl px-4 py-2 text-sm shadow-2xs break-words ${
+                                      isMine
+                                        ? "bg-primary text-white rounded-br-xs"
+                                        : "bg-card border border-border text-foreground rounded-bl-xs"
+                                    }`}
+                                  >
+                                    {/* Media Image */}
+                                    {msg.messageType === "image" && msg.mediaUrl && (
+                                      <div className="rounded-xl overflow-hidden mb-1.5 max-h-72">
+                                        <img
+                                          src={msg.mediaUrl}
+                                          alt="Uploaded media"
+                                          className="w-full h-full object-cover rounded-xl cursor-pointer hover:opacity-95 transition"
+                                          onClick={() => window.open(msg.mediaUrl!, "_blank")}
+                                        />
+                                      </div>
+                                    )}
+
+                                    {/* Media Video */}
+                                    {msg.messageType === "video" && msg.mediaUrl && (
+                                      <div className="rounded-xl overflow-hidden mb-1.5 max-h-72">
+                                        <video
+                                          src={msg.mediaUrl}
+                                          controls
+                                          className="w-full h-full object-cover rounded-xl"
+                                        />
+                                      </div>
+                                    )}
+
+                                    {/* Media File */}
+                                    {msg.messageType === "file" && msg.mediaUrl && (
+                                      <a
+                                        href={msg.mediaUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={`flex items-center gap-2 p-2 rounded-xl text-xs font-medium mb-1 ${
+                                          isMine
+                                            ? "bg-white/20 text-white hover:bg-white/30"
+                                            : "bg-fb-btn hover:bg-fb-btn-hover text-foreground"
+                                        }`}
+                                      >
+                                        <FileText className="w-4 h-4 shrink-0" />
+                                        <span className="truncate flex-1">
+                                          {msg.fileName || "Download Attachment"}
+                                        </span>
+                                      </a>
+                                    )}
+
+                                    {/* Message Text */}
+                                    {msg.text || msg.message ? (
+                                      <p className="whitespace-pre-wrap leading-relaxed">
+                                        {msg.text || msg.message}
+                                      </p>
+                                    ) : null}
+                                  </div>
+                                )}
+
+                                {/* Reactions Summary Badge */}
+                                {hasReactions && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (userReaction) {
+                                        handleReaction(msg.id, userReaction.reaction);
+                                      } else {
+                                        setActiveReactionPickerMessageId(
+                                          activeReactionPickerMessageId === msg.id ? null : msg.id
+                                        );
+                                      }
+                                    }}
+                                    title={msg.reactions
+                                      ?.map((r) => `${r.userName}: ${r.reaction}`)
+                                      .join(", ")}
+                                    className={`absolute -bottom-2.5 ${
+                                      isMine ? "right-2" : "left-2"
+                                    } bg-card border border-border/80 shadow-2xs rounded-full px-1.5 py-0.5 flex items-center gap-1 hover:scale-105 transition cursor-pointer select-none z-10`}
+                                  >
+                                    <span className="text-xs leading-none">
+                                      {Array.from(new Set(msg.reactions!.map((r) => r.reaction)))
+                                        .slice(0, 3)
+                                        .join("")}
+                                    </span>
+                                    {msg.reactions!.length > 1 && (
+                                      <span className="text-[10px] font-semibold text-muted">
+                                        {msg.reactions!.length}
+                                      </span>
+                                    )}
+                                  </button>
+                                )}
+                              </div>
 
                               {/* Timestamp & Read Receipt */}
                               <div className="flex items-center gap-1 mt-0.5 px-1 text-[10px] text-muted">
                                 <span>{formatMessageTime(msg.createdAt)}</span>
-                                {isMine && isLatestMessage && (
+                                {isMine && isLatestMessage && !selectedConversation?.isGroup && (
                                   msg.isRead ? (
                                     <span className="flex items-center text-primary font-medium gap-0.5">
                                       <CheckCheck className="w-3 h-3 inline" />
@@ -1396,6 +1581,36 @@ function MessageContainer() {
                                   )
                                 )}
                               </div>
+                            </div>
+
+                            {/* Floating Reaction Trigger Button */}
+                            <div
+                              className={`relative ${
+                                isMine ? "order-first" : "order-last"
+                              } self-center pb-2`}
+                            >
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveReactionPickerMessageId(
+                                    activeReactionPickerMessageId === msg.id ? null : msg.id
+                                  );
+                                }}
+                                title="React"
+                                className="p-1 rounded-full text-muted hover:text-foreground hover:bg-fb-btn transition opacity-0 group-hover:opacity-100 cursor-pointer"
+                              >
+                                <Smile className="w-4 h-4" />
+                              </button>
+
+                              {/* Reaction Picker Popup */}
+                              {activeReactionPickerMessageId === msg.id && (
+                                <ReactionPicker
+                                  position={isMine ? "top-right" : "top-left"}
+                                  currentReaction={userReaction?.reaction}
+                                  onSelect={(emoji) => handleReaction(msg.id, emoji)}
+                                />
+                              )}
                             </div>
                           </div>
                         );
@@ -1575,6 +1790,23 @@ function MessageContainer() {
           )}
         </div>
       </div>
+
+      {/* Create Group Modal */}
+      <CreateGroupModal
+        isOpen={isGroupModalOpen}
+        onClose={() => setIsGroupModalOpen(false)}
+        onGroupCreated={(newGroup) => {
+          setConversations((prev) => [newGroup, ...prev]);
+          setSelectedUserId(newGroup.id);
+          setSelectedUser({
+            id: newGroup.id,
+            name: newGroup.friendName || "Group",
+            avatar: newGroup.friendProfilePicture,
+          });
+        }}
+        currentUserId={currentUserId}
+        existingConversations={conversations}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import {
   IMessage,
   SendMessagePayload,
   IUploadMessageMediaResponse,
+  ICreateGroupPayload,
 } from "@/types/message.types";
 
 export const getConversations = async (): Promise<IConversation[]> => {
@@ -28,7 +29,9 @@ export const getConversations = async (): Promise<IConversation[]> => {
         createdAt: item.createdAt || item.updatedAt || new Date().toISOString(),
         updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
         isRequest: Boolean(item.isRequest),
-        participants: [
+        isGroup: Boolean(item.isGroup),
+        adminId: item.adminId || null,
+        participants: item.participants || [
           {
             id: friendId,
             userId: friendId,
@@ -58,6 +61,7 @@ export const getMessages = async (friendId: string): Promise<IMessage[]> => {
       id: m.id || m._id || "",
       text: m.message || m.text || "",
       message: m.message || m.text || "",
+      reactions: m.reactions || [],
     }));
   } catch (error) {
     return handleApiError(error);
@@ -85,6 +89,49 @@ export const sendMessage = async (payload: SendMessagePayload): Promise<IMessage
       id: m.id || m._id || "",
       text: m.message || m.text || "",
       message: m.message || m.text || "",
+      reactions: m.reactions || [],
+    };
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const reactToMessage = async (
+  messageId: string,
+  reaction: string
+): Promise<{ messageId: string; reactions: any[] }> => {
+  try {
+    const response = await apiClient.post<
+      ApiResponse<{ messageId: string; reactions: any[] }>
+    >(`/messages/messages/react/${messageId}`, { reaction });
+    return response.data.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const createGroup = async (
+  payload: ICreateGroupPayload
+): Promise<IConversation> => {
+  try {
+    const response = await apiClient.post<ApiResponse<any>>("/messages/group", payload);
+    const item = response.data.data;
+    const friendId = item.friendId || item.id || item._id;
+    return {
+      id: friendId,
+      _id: friendId,
+      friendId,
+      friendName: item.friendName || item.name || "Group",
+      friendProfilePicture: item.friendProfilePicture || item.avatar || null,
+      lastMessage: item.lastMessage || null,
+      lastMessageTime: item.updatedAt || item.createdAt || null,
+      unreadCount: 0,
+      createdAt: item.createdAt || new Date().toISOString(),
+      updatedAt: item.updatedAt || new Date().toISOString(),
+      isRequest: false,
+      isGroup: true,
+      adminId: item.adminId || null,
+      participants: item.participants || [],
     };
   } catch (error) {
     return handleApiError(error);

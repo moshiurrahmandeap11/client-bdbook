@@ -16,6 +16,7 @@ import { CallState, CallType, ICallContext, ICallPartner } from "@/types/call.ty
 import { toneGenerator } from "@/lib/audio-tones";
 import IncomingCallModal from "../call/IncomingCallModal";
 import ActiveCallModal from "../call/ActiveCallModal";
+import PermissionGuideModal from "../call/PermissionGuideModal";
 import { sendMessage } from "@/services/message.service";
 
 const ICE_SERVERS = {
@@ -58,6 +59,8 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [permissionType, setPermissionType] = useState<CallType>("audio");
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const incomingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
@@ -67,6 +70,12 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const partnerRef = useRef<ICallPartner | null>(null);
   const callTypeRef = useRef<CallType>("audio");
   const callStateRef = useRef<CallState>("idle");
+  const lastCallParamsRef = useRef<{
+    partnerId: string;
+    partnerName: string;
+    partnerAvatar?: string | null;
+    type: CallType;
+  } | null>(null);
 
   // Keep refs synced with states for access in async socket callbacks
   useEffect(() => {
@@ -159,6 +168,13 @@ export function CallProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      lastCallParamsRef.current = {
+        partnerId,
+        partnerName,
+        partnerAvatar,
+        type,
+      };
+
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
@@ -216,8 +232,13 @@ export function CallProvider({ children }: { children: ReactNode }) {
         });
       } catch (err: any) {
         cleanUpCall();
-        if (err.name === "NotAllowedError") {
-          toast.error("Microphone/Camera permission denied.");
+        if (
+          err.name === "NotAllowedError" ||
+          err.name === "PermissionDeniedError" ||
+          err.name === "NotFoundError"
+        ) {
+          setPermissionType(type);
+          setShowPermissionModal(true);
         } else {
           toast.error("Could not access camera/microphone.");
         }
@@ -300,7 +321,16 @@ export function CallProvider({ children }: { children: ReactNode }) {
       if (partnerRef.current) {
         socket.emit("reject_call", { to: partnerRef.current.id });
       }
-      toast.error("Failed to connect call");
+      if (
+        err.name === "NotAllowedError" ||
+        err.name === "PermissionDeniedError" ||
+        err.name === "NotFoundError"
+      ) {
+        setPermissionType(callTypeRef.current);
+        setShowPermissionModal(true);
+      } else {
+        toast.error("Failed to connect call");
+      }
     }
   }, [socket, cleanUpCall]);
 
@@ -362,6 +392,24 @@ export function CallProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [localStream]);
+
+  // Retry permission request
+  const handleRetryPermission = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: permissionType === "video",
+      });
+      stream.getTracks().forEach((t) => t.stop());
+      setShowPermissionModal(false);
+      toast.success("Permission granted!");
+      if (lastCallParamsRef.current) {
+        startCall(lastCallParamsRef.current);
+      }
+    } catch {
+      toast.error("Permission still blocked. Please allow in browser address bar.");
+    }
+  }, [permissionType, startCall]);
 
   // Socket Event Listeners for Call Signaling
   useEffect(() => {
@@ -534,6 +582,14 @@ export function CallProvider({ children }: { children: ReactNode }) {
           onToggleVideo={toggleVideo}
         />
       )}
+
+      {/* Permission Guide Modal */}
+      <PermissionGuideModal
+        isOpen={showPermissionModal}
+        callType={permissionType}
+        onClose={() => setShowPermissionModal(false)}
+        onRetry={handleRetryPermission}
+      />
     </CallContext.Provider>
   );
 }
