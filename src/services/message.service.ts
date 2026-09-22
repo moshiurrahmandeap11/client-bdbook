@@ -1,21 +1,63 @@
 import apiClient from "@/lib/axios";
 import { handleApiError } from "@/lib/api-error";
 import { ApiResponse } from "@/types/common.types";
-import { IConversation, IMessage, SendMessagePayload } from "@/types/message.types";
+import {
+  IConversation,
+  IMessage,
+  SendMessagePayload,
+  IUploadMessageMediaResponse,
+} from "@/types/message.types";
 
 export const getConversations = async (): Promise<IConversation[]> => {
   try {
-    const response = await apiClient.get<ApiResponse<IConversation[]>>("/messages/conversations");
-    return response.data.data;
+    const response = await apiClient.get<ApiResponse<any[]>>("/messages/conversations");
+    const rawList = response.data.data || [];
+    return rawList.map((item) => {
+      const friendId = item.friendId || item.id || item._id;
+      const friendName = item.friendName || item.name || "User";
+      const friendProfilePicture = item.friendProfilePicture || item.avatar || null;
+      return {
+        id: friendId,
+        _id: friendId,
+        friendId,
+        friendName,
+        friendProfilePicture,
+        lastMessage: item.lastMessage || null,
+        lastMessageTime: item.updatedAt || item.createdAt || null,
+        unreadCount: item.unreadCount || 0,
+        createdAt: item.createdAt || item.updatedAt || new Date().toISOString(),
+        updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
+        participants: [
+          {
+            id: friendId,
+            userId: friendId,
+            unreadCount: item.unreadCount || 0,
+            user: {
+              id: friendId,
+              fullName: friendName,
+              profilePicUrl: friendProfilePicture,
+            },
+            name: friendName,
+            avatar: friendProfilePicture,
+          },
+        ],
+      };
+    });
   } catch (error) {
     return handleApiError(error);
   }
 };
 
-export const getMessages = async (receiverId: string): Promise<IMessage[]> => {
+export const getMessages = async (friendId: string): Promise<IMessage[]> => {
   try {
-    const response = await apiClient.get<ApiResponse<IMessage[]>>(`/messages/${receiverId}`);
-    return response.data.data;
+    const response = await apiClient.get<ApiResponse<IMessage[]>>(`/messages/messages/${friendId}`);
+    const rawList = response.data.data || [];
+    return rawList.map((m) => ({
+      ...m,
+      id: m.id || m._id || "",
+      text: m.message || m.text || "",
+      message: m.message || m.text || "",
+    }));
   } catch (error) {
     return handleApiError(error);
   }
@@ -23,10 +65,65 @@ export const getMessages = async (receiverId: string): Promise<IMessage[]> => {
 
 export const sendMessage = async (payload: SendMessagePayload): Promise<IMessage> => {
   try {
-    const response = await apiClient.post<ApiResponse<IMessage>>("/messages", payload);
-    return response.data.data;
+    const textContent = payload.message || payload.text || "";
+    const body = {
+      message: textContent,
+      messageType: payload.messageType || "text",
+      mediaUrl: payload.mediaUrl || null,
+      fileName: payload.fileName || null,
+      fileSize: payload.fileSize || null,
+      tempId: payload.tempId || null,
+    };
+    const response = await apiClient.post<ApiResponse<IMessage>>(
+      `/messages/send-message/${payload.receiverId}`,
+      body
+    );
+    const m = response.data.data;
+    return {
+      ...m,
+      id: m.id || m._id || "",
+      text: m.message || m.text || "",
+      message: m.message || m.text || "",
+    };
   } catch (error) {
     return handleApiError(error);
   }
 };
 
+export const markAsRead = async (senderId: string): Promise<void> => {
+  try {
+    await apiClient.patch<ApiResponse<null>>(`/messages/messages/read/${senderId}`);
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const markMessageAsRead = markAsRead;
+
+export const getUnreadCount = async (): Promise<number> => {
+  try {
+    const response = await apiClient.get<ApiResponse<{ count: number }>>("/messages/unread-messages/count");
+    return response.data.data?.count || 0;
+  } catch (error) {
+    return 0;
+  }
+};
+
+export const uploadMessageMedia = async (file: File): Promise<IUploadMessageMediaResponse> => {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await apiClient.post<ApiResponse<IUploadMessageMediaResponse>>(
+      "/messages/upload-message-media",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};

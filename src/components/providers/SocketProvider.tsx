@@ -1,15 +1,21 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "./AuthProvider";
+import Cookies from "js-cookie";
 
 interface SocketContextType {
   socket: Socket | null;
   onlineUsers: string[];
+  isUserOnline: (userId?: string | null) => boolean;
 }
 
-const SocketContext = createContext<SocketContextType>({ socket: null, onlineUsers: [] });
+const SocketContext = createContext<SocketContextType>({
+  socket: null,
+  onlineUsers: [],
+  isUserOnline: () => false,
+});
 
 export function SocketProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -17,7 +23,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!user) {
+    const userId = user?.id || (user as any)?._id;
+    if (!userId) {
       if (socket) {
         socket.disconnect();
         setSocket(null);
@@ -25,27 +32,76 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000";
+    const rawUrl =
+      process.env.NEXT_PUBLIC_SOCKET_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      "http://localhost:6969";
+
+    const socketUrl = rawUrl
+      .replace(/\/v1\/api.*$/, "")
+      .replace(/\/api\/v1.*$/, "")
+      .replace(/\/api.*$/, "")
+      .replace(/\/+$/, "");
+
+    const token =
+      Cookies.get("token") ||
+      Cookies.get("accessToken") ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("token") || localStorage.getItem("accessToken") || ""
+        : "");
+
     const newSocket = io(socketUrl, {
-      query: { userId: user.id || user._id },
+      auth: { token },
+      query: { userId },
       withCredentials: true,
+      transports: ["websocket", "polling"],
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
     });
 
-    newSocket.on("getOnlineUsers", (users: string[]) => {
-      setOnlineUsers(users);
-    });
+    const handleUserOnline = (data: string[] | string) => {
+      if (Array.isArray(data)) {
+        setOnlineUsers(data);
+      } else if (typeof data === "string") {
+        setOnlineUsers((prev) => (prev.includes(data) ? prev : [...prev, data]));
+      }
+    };
+
+    const handleUserOffline = (offlineUserId: string) => {
+      if (typeof offlineUserId === "string") {
+        setOnlineUsers((prev) => prev.filter((id) => id !== offlineUserId));
+      }
+    };
+
+    newSocket.on("user_online", handleUserOnline);
+    newSocket.on("getOnlineUsers", handleUserOnline);
+    newSocket.on("user_offline", handleUserOffline);
 
     setSocket(newSocket);
 
     return () => {
+      newSocket.off("user_online", handleUserOnline);
+      newSocket.off("getOnlineUsers", handleUserOnline);
+      newSocket.off("user_offline", handleUserOffline);
       newSocket.disconnect();
     };
-  }, [user?.id, user?._id]);
+  }, [user?.id, (user as any)?._id]);
 
-  return <SocketContext.Provider value={{ socket, onlineUsers }}>{children}</SocketContext.Provider>;
+  const isUserOnline = useCallback(
+    (targetUserId?: string | null) => {
+      if (!targetUserId) return false;
+      return onlineUsers.includes(targetUserId);
+    },
+    [onlineUsers]
+  );
+
+  return (
+    <SocketContext.Provider value={{ socket, onlineUsers, isUserOnline }}>
+      {children}
+    </SocketContext.Provider>
+  );
 }
 
 export function useSocket() {
   return useContext(SocketContext);
 }
-

@@ -482,7 +482,11 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
   }, [isSaved, isOwner, user?.role, handleSavePost, handleHidePost, handleCopyPostLink, handleDeletePost]);
 
   const authorName = post.userName || post.user?.fullName || post.user?.name || "Anonymous";
-  const authorUsername = post.user?.username || post.userId || post.user?._id || "user";
+  const authorUsername =
+    post.user?.username ||
+    (post as any).username ||
+    (post as any).userUsername ||
+    (authorName !== "Anonymous" ? authorName.toLowerCase().replace(/\s+/g, "") : post.userId || "user");
   const authorPic =
     post.userProfilePicture ||
     (typeof post.user?.profilePicture === "object"
@@ -490,7 +494,6 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
       : post.user?.profilePicture || post.user?.avatar);
   const mediaUrl = post.mediaUrl || post.media?.url;
   const mediaType = post.mediaType || post.media?.resourceType || "image";
-  const communityTag = `s/${authorUsername}`;
 
   if (isHidden) {
     return (
@@ -523,7 +526,7 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
                 onClick={() => router.push(`/s/${authorUsername}`)}
                 className="font-semibold text-[14px] text-foreground hover:underline transition-colors truncate cursor-pointer"
               >
-                {communityTag}
+                {authorName}
               </button>
               {isSharedPost && (
                 <span className="text-[11px] text-muted font-normal">
