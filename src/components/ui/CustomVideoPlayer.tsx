@@ -1,9 +1,14 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { PauseIcon, PlayIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowsPointingInIcon,
+  ArrowsPointingOutIcon,
+  PauseIcon,
+  PlayIcon,
+} from "@heroicons/react/24/outline";
 import React, { memo, useCallback, useEffect, useId, useRef, useState } from "react";
-import { BsVolumeMute, BsVolumeUp } from "react-icons/bs";
+import { BsVolumeDown, BsVolumeMute, BsVolumeUp } from "react-icons/bs";
 
 export interface CustomVideoPlayerProps {
   src: string;
@@ -19,6 +24,8 @@ export interface CustomVideoPlayerProps {
   showFullscreen?: boolean;
   objectFit?: "cover" | "contain" | "fill";
   playsInline?: boolean;
+  ambientBlur?: boolean;
+  allowFitToggle?: boolean;
   onPlay?: () => void;
   onPause?: () => void;
   onEnded?: () => void;
@@ -36,7 +43,7 @@ export const CustomVideoPlayer = memo(({
   poster,
   className = "",
   style = {},
-  maxHeight = 500,
+  maxHeight = 560,
   aspectRatio,
   compact = false,
   autoPlay = false,
@@ -45,6 +52,8 @@ export const CustomVideoPlayer = memo(({
   showFullscreen = true,
   objectFit = "contain",
   playsInline = true,
+  ambientBlur = true,
+  allowFitToggle = true,
   onPlay,
   onPause,
   onEnded,
@@ -57,9 +66,15 @@ export const CustomVideoPlayer = memo(({
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(defaultMuted);
+  const prevVolumeRef = useRef(1);
   const [showControls, setShowControls] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [currentFit, setCurrentFit] = useState<"cover" | "contain">(
+    objectFit === "cover" ? "cover" : "contain"
+  );
+  const [isPortrait, setIsPortrait] = useState(false);
 
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -83,7 +98,6 @@ export const CustomVideoPlayer = memo(({
     if (!videoRef.current) return;
 
     if (videoRef.current.paused) {
-      // Broadcast that this video has started playing
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("app:video-play", { detail: { id: playerId } }));
       }
@@ -106,10 +120,47 @@ export const CustomVideoPlayer = memo(({
   const toggleMute = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!videoRef.current) return;
-    const nextMuted = !isMuted;
-    videoRef.current.muted = nextMuted;
-    setIsMuted(nextMuted);
+    if (isMuted || volume === 0) {
+      const restored = prevVolumeRef.current > 0 ? prevVolumeRef.current : 0.8;
+      videoRef.current.muted = false;
+      videoRef.current.volume = restored;
+      setIsMuted(false);
+      setVolume(restored);
+    } else {
+      prevVolumeRef.current = volume > 0 ? volume : 0.8;
+      videoRef.current.muted = true;
+      setIsMuted(true);
+    }
+  }, [isMuted, volume]);
+
+  const handleVolumeChange = useCallback((newVol: number) => {
+    if (!videoRef.current) return;
+    const clamped = Math.max(0, Math.min(1, newVol));
+    videoRef.current.volume = clamped;
+    setVolume(clamped);
+    if (clamped === 0) {
+      videoRef.current.muted = true;
+      setIsMuted(true);
+    } else if (isMuted) {
+      videoRef.current.muted = false;
+      setIsMuted(false);
+    }
+    if (clamped > 0) {
+      prevVolumeRef.current = clamped;
+    }
   }, [isMuted]);
+
+  const handleVolumeBarClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    handleVolumeChange(pct);
+  }, [handleVolumeChange]);
+
+  const toggleFit = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentFit((prev) => (prev === "contain" ? "cover" : "contain"));
+  }, []);
 
   const toggleFullscreen = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -133,9 +184,12 @@ export const CustomVideoPlayer = memo(({
     }
   }, []);
 
-  const handleLoadedMetadata = useCallback(() => {
-    if (!videoRef.current) return;
-    setDuration(videoRef.current.duration || 0);
+  const handleLoadedMetadata = useCallback((e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const el = e.currentTarget;
+    setDuration(el.duration || 0);
+    if (el.videoWidth && el.videoHeight) {
+      setIsPortrait(el.videoHeight > el.videoWidth);
+    }
   }, []);
 
   const handleVideoEnded = useCallback(() => {
@@ -202,8 +256,10 @@ export const CustomVideoPlayer = memo(({
     WebkitBackdropFilter: "blur(10px)",
   };
 
+  const calculatedMaxHeight = isPortrait ? Math.max(Number(maxHeight) || 560, 580) : maxHeight;
+
   const dynamicStyle: React.CSSProperties = {
-    maxHeight: maxHeight ?? undefined,
+    maxHeight: calculatedMaxHeight ?? undefined,
     aspectRatio: aspectRatio ?? undefined,
     ...style,
   };
@@ -212,7 +268,7 @@ export const CustomVideoPlayer = memo(({
     <div
       ref={containerRef}
       className={cn(
-        "relative w-full rounded-xl overflow-hidden bg-black group cursor-pointer select-none",
+        "relative w-full rounded-xl overflow-hidden bg-black group cursor-pointer select-none flex items-center justify-center",
         className
       )}
       style={dynamicStyle}
@@ -221,17 +277,41 @@ export const CustomVideoPlayer = memo(({
       onMouseMove={handleMouseMove}
       onClick={togglePlay}
     >
+      {/* Ambient Blurred Background to eliminate stark black side letterboxes */}
+      {ambientBlur && (
+        <div
+          className="absolute inset-0 overflow-hidden pointer-events-none select-none z-0"
+          aria-hidden="true"
+        >
+          {poster ? (
+            <img
+              src={poster}
+              alt=""
+              className="w-full h-full object-cover blur-2xl scale-125 opacity-40 brightness-75 transition-opacity duration-500"
+            />
+          ) : (
+            <video
+              src={src}
+              className="w-full h-full object-cover blur-2xl scale-125 opacity-40 brightness-75"
+              muted
+              tabIndex={-1}
+              playsInline
+            />
+          )}
+          <div className="absolute inset-0 bg-black/35 backdrop-blur-[2px]" />
+        </div>
+      )}
+
+      {/* Main Crisp Video */}
       <video
         ref={videoRef}
         src={src}
         poster={poster}
         className={cn(
-          "w-full h-full",
-          objectFit === "cover" && "object-cover",
-          objectFit === "contain" && "object-contain",
-          objectFit === "fill" && "object-fill"
+          "w-full h-full relative z-10 transition-all duration-200",
+          currentFit === "cover" ? "object-cover" : "object-contain"
         )}
-        style={{ maxHeight: maxHeight ?? undefined }}
+        style={{ maxHeight: calculatedMaxHeight ?? undefined }}
         autoPlay={autoPlay}
         loop={loop}
         muted={defaultMuted}
@@ -249,7 +329,7 @@ export const CustomVideoPlayer = memo(({
       {/* Central Play Overlay Button when Paused */}
       {!isPlaying && (
         <div
-          className="absolute inset-0 flex items-center justify-center bg-black/30 transition-opacity duration-200"
+          className="absolute inset-0 flex items-center justify-center bg-black/30 z-20 transition-opacity duration-200"
           onClick={(e) => {
             e.stopPropagation();
             togglePlay();
@@ -269,7 +349,7 @@ export const CustomVideoPlayer = memo(({
       {/* Bottom Glass Controls Bar */}
       <div
         className={cn(
-          "absolute bottom-0 left-0 right-0 transition-opacity duration-300 z-10",
+          "absolute bottom-0 left-0 right-0 transition-opacity duration-300 z-30",
           compact ? "px-3 pb-2 pt-6" : "px-4 pb-3 pt-8",
           showControls || !isPlaying ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
@@ -289,9 +369,9 @@ export const CustomVideoPlayer = memo(({
           </div>
         </div>
 
-        {/* Control Buttons & Timestamp */}
+        {/* Control Buttons & Volume */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             {/* Play/Pause Button */}
             <button
               type="button"
@@ -309,55 +389,119 @@ export const CustomVideoPlayer = memo(({
               )}
             </button>
 
-            {/* Mute/Unmute Button */}
-            <button
-              type="button"
-              onClick={toggleMute}
-              className={cn(
-                "rounded-full flex items-center justify-center hover:bg-white/20 text-white transition-colors cursor-pointer",
-                compact ? "w-7 h-7" : "w-8 h-8"
-              )}
-              aria-label={isMuted ? "Unmute" : "Mute"}
+            {/* YouTube-Style Expanding Volume Control */}
+            <div
+              className="group/volume flex items-center"
+              onClick={(e) => e.stopPropagation()}
             >
-              {isMuted ? (
-                <BsVolumeMute className="h-4.5 w-4.5 opacity-60" />
-              ) : (
-                <BsVolumeUp className="h-4.5 w-4.5" />
-              )}
-            </button>
+              <button
+                type="button"
+                onClick={toggleMute}
+                className={cn(
+                  "rounded-full flex items-center justify-center hover:bg-white/20 text-white transition-colors cursor-pointer shrink-0",
+                  compact ? "w-7 h-7" : "w-8 h-8"
+                )}
+                aria-label={isMuted || volume === 0 ? "Unmute" : "Mute"}
+                title={isMuted ? "Unmute" : "Mute"}
+              >
+                {isMuted || volume === 0 ? (
+                  <BsVolumeMute className="h-4.5 w-4.5 opacity-70" />
+                ) : volume < 0.5 ? (
+                  <BsVolumeDown className="h-4.5 w-4.5" />
+                ) : (
+                  <BsVolumeUp className="h-4.5 w-4.5" />
+                )}
+              </button>
+
+              {/* Smooth Expanding Horizontal Slider Track */}
+              <div
+                className={cn(
+                  "w-0 opacity-0 group-hover/volume:w-16 group-hover/volume:opacity-100 group-focus-within/volume:w-16 group-focus-within/volume:opacity-100 transition-all duration-200 ease-out flex items-center h-6 cursor-pointer pl-1.5 pr-1",
+                  compact && "group-hover/volume:w-14"
+                )}
+                onClick={handleVolumeBarClick}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  const bar = e.currentTarget;
+                  const onMove = (ev: MouseEvent) => {
+                    const rect = bar.getBoundingClientRect();
+                    const pct = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
+                    handleVolumeChange(pct);
+                  };
+                  const onUp = () => {
+                    window.removeEventListener("mousemove", onMove);
+                    window.removeEventListener("mouseup", onUp);
+                  };
+                  window.addEventListener("mousemove", onMove);
+                  window.addEventListener("mouseup", onUp);
+                }}
+              >
+                <div className="w-full h-1 bg-white/35 rounded-full relative group-hover/volume:h-1.5 transition-all">
+                  <div
+                    className="h-full bg-white rounded-full relative"
+                    style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
+                  >
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-white rounded-full opacity-0 group-hover/volume:opacity-100 transition-opacity shadow" />
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* Current Time / Duration */}
-            <span className="text-[11px] sm:text-xs text-white/90 font-medium tabular-nums">
+            <span className="text-[11px] sm:text-xs text-white/90 font-medium tabular-nums ml-1">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           </div>
 
-          {/* Right Action: Fullscreen */}
-          {showFullscreen && (
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              className={cn(
-                "rounded-full flex items-center justify-center hover:bg-white/20 text-white transition-colors cursor-pointer",
-                compact ? "w-7 h-7" : "w-8 h-8"
-              )}
-              aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-            >
-              <svg
-                className={compact ? "h-4 w-4" : "h-4.5 w-4.5"}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                {isFullscreen ? (
-                  <path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3" />
-                ) : (
-                  <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" />
+          {/* Right Action Buttons */}
+          <div className="flex items-center gap-1.5">
+            {/* Fit / Fill (Zoom) Toggle Button */}
+            {allowFitToggle && isPortrait && (
+              <button
+                type="button"
+                onClick={toggleFit}
+                className={cn(
+                  "rounded-full flex items-center justify-center hover:bg-white/20 text-white transition-colors cursor-pointer",
+                  compact ? "w-7 h-7" : "w-8 h-8"
                 )}
-              </svg>
-            </button>
-          )}
+                aria-label={currentFit === "contain" ? "Zoom to fill" : "Fit to frame"}
+                title={currentFit === "contain" ? "Zoom to fill frame" : "Fit whole video"}
+              >
+                {currentFit === "contain" ? (
+                  <ArrowsPointingOutIcon className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                ) : (
+                  <ArrowsPointingInIcon className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                )}
+              </button>
+            )}
+
+            {/* Fullscreen Button */}
+            {showFullscreen && (
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                className={cn(
+                  "rounded-full flex items-center justify-center hover:bg-white/20 text-white transition-colors cursor-pointer",
+                  compact ? "w-7 h-7" : "w-8 h-8"
+                )}
+                aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+              >
+                <svg
+                  className={compact ? "h-4 w-4" : "h-4.5 w-4.5"}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  {isFullscreen ? (
+                    <path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3" />
+                  ) : (
+                    <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" />
+                  )}
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -366,4 +510,3 @@ export const CustomVideoPlayer = memo(({
 
 CustomVideoPlayer.displayName = "CustomVideoPlayer";
 export default CustomVideoPlayer;
-

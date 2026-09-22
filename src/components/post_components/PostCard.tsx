@@ -613,6 +613,9 @@ export const PostCard = memo(({ post, onPostUpdate, hideMenu = false }: PostCard
             <CustomVideoPlayer
               src={mediaUrl}
               poster={post.mediaThumbnail || post.media?.thumbnailUrl || post.media?.thumbnail}
+              maxHeight={580}
+              ambientBlur={true}
+              allowFitToggle={true}
               className="rounded-none w-full"
             />
           ) : (

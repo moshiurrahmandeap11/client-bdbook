@@ -4,10 +4,13 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import axiosInstance from "@/lib/axios";
 import { postService } from "@/services/post.service";
 import { IPost } from "@/types/post.types";
+import { cn } from "@/lib/utils";
 import {
   ArrowPathIcon,
   BookmarkIcon,
   ChatBubbleLeftIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
   EllipsisHorizontalIcon,
   HeartIcon,
   PaperAirplaneIcon,
@@ -79,10 +82,12 @@ const VideoAction = ({ icon, count, onClick, onLongPress }: VideoActionProps) =>
       onMouseDown={handleStart}
       onMouseUp={handleEnd}
       onMouseLeave={handleEnd}
-      className="flex flex-col items-center gap-1 group select-none transition-colors"
+      className="flex flex-col items-center gap-1 group select-none transition-colors cursor-pointer"
     >
-      <div>{icon}</div>
-      <span className="text-white text-xs font-normal">{count || 0}</span>
+      <div className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center text-white transition-all transform hover:scale-105 active:scale-95 shadow-lg">
+        {icon}
+      </div>
+      <span className="text-white text-[11px] font-semibold drop-shadow">{count || 0}</span>
     </button>
   );
 };
@@ -145,16 +150,16 @@ const ThreeDotMenu = ({ video, index, onSave, onInterested, onNotInterested, onD
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setShowMenu(!showMenu)}
-        className="flex flex-col items-center gap-1 group select-none transition-colors"
+        className="flex flex-col items-center gap-1 group select-none transition-colors cursor-pointer"
       >
-        <div>
-          <EllipsisHorizontalIcon className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
+        <div className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center text-white transition-all transform hover:scale-105 active:scale-95 shadow-lg">
+          <EllipsisHorizontalIcon className="h-6 w-6 text-white" />
         </div>
-        <span className="text-white text-xs font-normal">Menu</span>
+        <span className="text-white text-[11px] font-semibold drop-shadow">More</span>
       </button>
 
       {showMenu && (
-        <div className="absolute right-0 bottom-full mb-2 w-48 bg-[#101A2F] rounded-xl overflow-hidden z-50 border border-white/20">
+        <div className="absolute right-0 bottom-full mb-2 w-48 bg-[#101A2F] rounded-xl overflow-hidden z-50 border border-white/20 shadow-2xl">
           {menuItems.map((item, idx) => (
             <button
               key={idx}
@@ -162,7 +167,7 @@ const ThreeDotMenu = ({ video, index, onSave, onInterested, onNotInterested, onD
                 item.action();
                 setShowMenu(false);
               }}
-              className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-all duration-150 text-left ${
+              className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-all duration-150 text-left cursor-pointer ${
                 (item as any).danger ? 'text-red-400 hover:text-red-300' : 'text-white/80 hover:text-white'
               } hover:bg-white/10`}
             >
@@ -180,16 +185,17 @@ const RepostButton = ({ count, onClick, isReposted }: { count?: number; onClick?
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-1 group select-none transition-colors"
+      className="flex flex-col items-center gap-1 group select-none transition-colors cursor-pointer"
     >
-      <div>
-        {isReposted ? (
-          <ArrowPathIcon className="h-7 w-7 sm:h-8 sm:w-8 text-green-500" />
-        ) : (
-          <ArrowPathIcon className="h-7 w-7 sm:h-8 sm:w-8 text-white group-hover:text-green-400 transition-colors" />
-        )}
+      <div className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center text-white transition-all transform hover:scale-105 active:scale-95 shadow-lg">
+        <ArrowPathIcon
+          className={cn(
+            "h-6 w-6 transition-colors",
+            isReposted ? "text-emerald-400" : "text-white group-hover:text-emerald-400"
+          )}
+        />
       </div>
-      <span className="text-white text-xs font-normal">{count || 0}</span>
+      <span className="text-white text-[11px] font-semibold drop-shadow">{count || 0}</span>
     </button>
   );
 };
@@ -407,31 +413,73 @@ const VideoPlayer = ({ video, isMuted, isActive, onDoubleTap, onVideoRef }: Vide
   const mediaUrl = video.mediaUrl || video.media?.url;
 
   return (
-    <div className="absolute inset-0 w-full h-full group" onMouseMove={handleMouseMove} onTouchStart={handleMouseMove}>
-      <video ref={videoRef} src={mediaUrl} className="w-full h-full object-contain" poster={video.mediaThumbnail || video.media?.thumbnail || ""} muted={isMuted} playsInline preload="metadata" onClick={handleTap} />
-      {!isPlaying && (<div className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer transition-opacity duration-300" onClick={handleTap}><PlayIcon className="h-20 w-20 text-white animate-scaleIn" /></div>)}
-      {(showControls || !isPlaying) && (
-        <div className="absolute bottom-16 md:bottom-0 left-0 right-0 bg-black/75 p-4 pb-3 transition-opacity duration-300">
-          <div className="w-full mb-3">
-            <div className="w-full h-1.5 bg-white/30 rounded-full cursor-pointer relative overflow-hidden" onClick={handleSeek}>
-              <div className="absolute left-0 top-0 h-full bg-primary rounded-full" style={{ width: `${progress}%` }}>
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full -translate-x-1/2" />
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button onClick={togglePlay} className="text-white hover:text-primary transition-colors p-1">
-                {isPlaying ? <PauseIcon className="h-6 w-6" /> : <PlayIcon className="h-6 w-6" />}
-              </button>
-              <span className="text-white text-xs font-mono">{formatTime(videoRef.current?.currentTime || 0)} / {formatTime(duration)}</span>
-            </div>
-            <button onClick={() => { if (videoRef.current) videoRef.current.muted = !videoRef.current.muted; }} className="text-white hover:text-primary transition-colors p-1">
-              {isMuted ? <SpeakerXMarkIcon className="h-5 w-5" /> : <SpeakerWaveIcon className="h-5 w-5" />}
-            </button>
+    <div
+      className="relative w-full h-full group overflow-hidden bg-black select-none"
+      onMouseMove={handleMouseMove}
+      onTouchStart={handleMouseMove}
+    >
+      {/* Ambient Blurred Backdrop inside Reel Card */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none select-none z-0" aria-hidden="true">
+        <video
+          src={mediaUrl}
+          poster={video.mediaThumbnail || video.media?.thumbnail || ""}
+          className="w-full h-full object-cover blur-2xl scale-125 opacity-40 brightness-75"
+          muted
+          tabIndex={-1}
+          playsInline
+        />
+        <div className="absolute inset-0 bg-black/30" />
+      </div>
+
+      {/* Main Crisp Reel Video */}
+      <video
+        ref={videoRef}
+        src={mediaUrl}
+        className="w-full h-full object-contain relative z-10 cursor-pointer"
+        poster={video.mediaThumbnail || video.media?.thumbnail || ""}
+        muted={isMuted}
+        playsInline
+        preload="metadata"
+        onClick={handleTap}
+      />
+
+      {/* Central Play Indicator Overlay */}
+      {!isPlaying && (
+        <div
+          className="absolute inset-0 z-20 flex items-center justify-center bg-black/25 cursor-pointer transition-opacity duration-200"
+          onClick={handleTap}
+        >
+          <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 text-white shadow-xl animate-scaleIn">
+            <PlayIcon className="h-8 w-8 ml-1" />
           </div>
         </div>
       )}
+
+      {/* Sound Toggle Button at Top Right of Reel Card */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (videoRef.current) {
+            videoRef.current.muted = !videoRef.current.muted;
+          }
+        }}
+        className="absolute top-4 right-4 z-30 w-9 h-9 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-md flex items-center justify-center text-white transition cursor-pointer"
+        title={isMuted ? "Unmute" : "Mute"}
+      >
+        {isMuted ? <SpeakerXMarkIcon className="h-5 w-5" /> : <SpeakerWaveIcon className="h-5 w-5" />}
+      </button>
+
+      {/* Sleek Instagram/Reels Style Bottom Progress Track */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-1.5 hover:h-2.5 bg-white/20 z-30 cursor-pointer transition-all"
+        onClick={handleSeek}
+      >
+        <div
+          className="h-full bg-primary rounded-r-full relative transition-all duration-100"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
     </div>
   );
 };
@@ -515,6 +563,25 @@ export const VideosPage = () => {
     const wrapper = document.getElementById("video-wrapper");
     if (wrapper) { wrapper.addEventListener("wheel", handleWheel, { passive: false }); return () => wrapper.removeEventListener("wheel", handleWheel); }
   }, [handleWheel]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea") return;
+      if (e.key === "ArrowDown" || e.key === "PageDown") {
+        e.preventDefault();
+        snapToIndex(activeIndexRef.current + 1);
+      } else if (e.key === "ArrowUp" || e.key === "PageUp") {
+        e.preventDefault();
+        snapToIndex(activeIndexRef.current - 1);
+      } else if (e.key === "m" || e.key === "M") {
+        e.preventDefault();
+        setIsMuted((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [snapToIndex]);
 
   const currentUserId = user?._id || user?.id;
 
@@ -774,12 +841,23 @@ export const VideosPage = () => {
 
   return (
     <>
-      <div id="video-wrapper" className="fixed inset-0 bg-black overflow-hidden touch-none select-none">
-        <button onClick={() => setIsMuted(p => !p)} className="fixed top-20 right-4 z-50 bg-black/50 rounded-full p-2.5 backdrop-blur-sm active:bg-black/70 transition">
-          {isMuted ? <SpeakerXMarkIcon className="h-5 w-5 text-white" /> : <SpeakerWaveIcon className="h-5 w-5 text-white" />}
-        </button>
+      <div id="video-wrapper" className="fixed inset-0 bg-[#0B0D14] overflow-hidden select-none">
+        {/* Desktop Ambient Backdrop from Active Reel */}
+        {allVideos[activeIndex] && (
+          <div className="hidden sm:block absolute inset-0 overflow-hidden pointer-events-none opacity-25 z-0" aria-hidden="true">
+            <video
+              src={allVideos[activeIndex].mediaUrl || allVideos[activeIndex].media?.url}
+              poster={allVideos[activeIndex].mediaThumbnail || allVideos[activeIndex].media?.thumbnail || ""}
+              className="w-full h-full object-cover blur-3xl scale-125"
+              muted
+              playsInline
+              tabIndex={-1}
+            />
+            <div className="absolute inset-0 bg-[#0B0D14]/80 backdrop-blur-2xl" />
+          </div>
+        )}
         
-        <div ref={containerRef} className="w-full" style={{ transform: "translateY(0px)", willChange: "transform" }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+        <div ref={containerRef} className="w-full h-full relative z-10" style={{ transform: "translateY(0px)", willChange: "transform" }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
           {allVideos.map((video: any, index: number) => {
             const vId = video._id || video.id;
             const isLiked = video.likes?.includes(currentUserId) || false;
@@ -799,37 +877,108 @@ export const VideosPage = () => {
               videoOwnerId;
             
             return (
-              <div key={vId} className="relative bg-black" style={{ height: "100vh", width: "100vw" }}>
-                <VideoPlayer video={video} isMuted={isMuted} isActive={isActive} onDoubleTap={() => handleDoubleTap(video, index)} onVideoRef={(ref) => videoRefsMap.current.set(vId, ref)} />
-                {floatingHearts[vId] && <FloatingHeart onDone={() => setFloatingHearts(p => { const n = { ...p }; delete n[vId]; return n; })} />}
-                <div className="absolute inset-0 pointer-events-none" />
-                
-                {/* Action Buttons */}
-                <div className="absolute right-3 bottom-28 sm:bottom-32 flex flex-col items-center gap-5 z-10">
+              <div key={vId} className="relative w-full h-screen flex items-center justify-center select-none" style={{ height: "100vh", width: "100vw" }}>
+                {/* Authentic 9:16 Reel Card Container */}
+                <div className="relative w-full h-full sm:w-[420px] sm:h-[calc(100vh-80px)] sm:max-h-[820px] sm:rounded-2xl overflow-hidden shadow-2xl bg-black sm:border sm:border-white/15 flex items-center justify-center">
+                  <VideoPlayer video={video} isMuted={isMuted} isActive={isActive} onDoubleTap={() => handleDoubleTap(video, index)} onVideoRef={(ref) => videoRefsMap.current.set(vId, ref)} />
+                  {floatingHearts[vId] && <FloatingHeart onDone={() => setFloatingHearts(p => { const n = { ...p }; delete n[vId]; return n; })} />}
+
+                  {/* Video Info Overlay (Bottom Left inside card) */}
+                  <div className="absolute bottom-4 left-3 right-16 sm:right-3 z-20 pointer-events-auto">
+                    <Link href={`/s/${videoOwnerUsername}`} className="flex items-center gap-2.5 mb-2 group/author w-fit">
+                      <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center overflow-hidden ring-2 ring-white/30 shrink-0 shadow">
+                        {videoUserPic ? (
+                          <Image src={videoUserPic} alt={videoUserName} width={40} height={40} className="object-cover w-full h-full" loading="lazy" />
+                        ) : (<UserIcon className="h-5 w-5 text-white" />)}
+                      </div>
+                      <div className="flex flex-col drop-shadow">
+                        <span className="font-semibold text-white text-sm group-hover/author:underline">{videoUserName}</span>
+                        <span className="text-white/70 text-xs">@{videoOwnerUsername} • {getTimeAgo(video.createdAt)}</span>
+                      </div>
+                    </Link>
+
+                    {video.description && (
+                      <p onClick={() => window.location.href = `/post/details/${vId}`} className="text-white text-xs sm:text-sm mb-2 line-clamp-2 cursor-pointer leading-relaxed drop-shadow">
+                        {video.description}
+                      </p>
+                    )}
+
+                    <div className="flex items-center gap-1.5 text-white/80 text-xs drop-shadow">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="truncate">Original audio • Stalk Reels</span>
+                    </div>
+                  </div>
+
+                  {/* Mobile Action Buttons (Right side inside card) */}
+                  <div className="sm:hidden absolute right-3 bottom-20 flex flex-col items-center gap-4 z-20">
+                    <VideoAction
+                      icon={isLiked ? <HeartSolidIcon className="h-6 w-6 text-rose-500 scale-110" /> : <HeartIcon className="h-6 w-6 text-white" />}
+                      count={video.likesCount || video.likes?.length || 0}
+                      onClick={() => handleLike(video, index)}
+                      onLongPress={() => setLikesModal({ isOpen: true, video })}
+                    />
+                    <VideoAction
+                      icon={<ChatBubbleLeftIcon className="h-6 w-6 text-white" />}
+                      count={video.commentsCount || video.comments?.length || 0}
+                      onClick={() => setCommentModal({ isOpen: true, video, index })}
+                    />
+                    <RepostButton
+                      count={video.repostsCount || 0}
+                      isReposted={isVideoReposted}
+                      onClick={() => handleRepost(video, index)}
+                    />
+                    <VideoAction
+                      icon={<ShareIcon className="h-6 w-6 text-white" />}
+                      count={video.sharesCount || 0}
+                      onClick={() => handleShareClick(video, index)}
+                    />
+                    <ThreeDotMenu
+                      video={video}
+                      index={index}
+                      isOwner={videoOwnerId === currentUserId}
+                      isSaved={isVideoSaved}
+                      isInterested={isVideoInterested}
+                      isNotInterested={isVideoNotInterested}
+                      onSave={() => saveMutation.mutate({ postId: vId, index })}
+                      onInterested={() => interestedMutation.mutate({ postId: vId })}
+                      onNotInterested={() => notInterestedMutation.mutate({ postId: vId })}
+                      onDelete={() => deleteVideoMutation.mutate({ postId: vId, index })}
+                    />
+                  </div>
+                </div>
+
+                {/* Desktop Action Buttons & Chevrons docked beside the Reel Card */}
+                <div className="hidden sm:flex flex-col items-center gap-3.5 ml-4 z-20">
+                  <button
+                    onClick={() => snapToIndex(activeIndex - 1)}
+                    disabled={activeIndex === 0}
+                    className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center backdrop-blur-md transition disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer mb-1 shadow-lg"
+                    title="Previous Reel (Up Arrow)"
+                  >
+                    <ChevronUpIcon className="h-5 w-5" />
+                  </button>
+
                   <VideoAction
-                    icon={isLiked ? <HeartSolidIcon className="h-7 w-7 sm:h-8 sm:w-8 text-red-500" /> : <HeartIcon className="h-7 w-7 sm:h-8 sm:w-8 text-white" />}
+                    icon={isLiked ? <HeartSolidIcon className="h-6 w-6 text-rose-500 scale-110" /> : <HeartIcon className="h-6 w-6 text-white" />}
                     count={video.likesCount || video.likes?.length || 0}
                     onClick={() => handleLike(video, index)}
                     onLongPress={() => setLikesModal({ isOpen: true, video })}
                   />
                   <VideoAction
-                    icon={<ChatBubbleLeftIcon className="h-7 w-7 sm:h-8 sm:w-8 text-white" />}
+                    icon={<ChatBubbleLeftIcon className="h-6 w-6 text-white" />}
                     count={video.commentsCount || video.comments?.length || 0}
                     onClick={() => setCommentModal({ isOpen: true, video, index })}
                   />
-                  
                   <RepostButton
                     count={video.repostsCount || 0}
                     isReposted={isVideoReposted}
                     onClick={() => handleRepost(video, index)}
                   />
-                  
                   <VideoAction
-                    icon={<ShareIcon className="h-7 w-7 sm:h-8 sm:w-8 text-white" />}
+                    icon={<ShareIcon className="h-6 w-6 text-white" />}
                     count={video.sharesCount || 0}
                     onClick={() => handleShareClick(video, index)}
                   />
-                  
                   <ThreeDotMenu
                     video={video}
                     index={index}
@@ -840,30 +989,17 @@ export const VideosPage = () => {
                     onSave={() => saveMutation.mutate({ postId: vId, index })}
                     onInterested={() => interestedMutation.mutate({ postId: vId })}
                     onNotInterested={() => notInterestedMutation.mutate({ postId: vId })}
-                    onDelete={() => {
-                      deleteVideoMutation.mutate({ postId: vId, index });
-                    }}
+                    onDelete={() => deleteVideoMutation.mutate({ postId: vId, index })}
                   />
-                </div>
-                
-                {/* Video Info */}
-                <div className="absolute bottom-36 sm:bottom-20 left-3 right-16 z-10">
-                  <Link href={`/s/${videoOwnerUsername}`}>
-                    <div className="flex items-center gap-2.5 mb-2">
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary flex items-center justify-center overflow-hidden ring-2 ring-white/20 flex-shrink-0">
-                        {videoUserPic ? (
-                          <Image src={videoUserPic} alt={videoUserName} width={40} height={40} className="object-cover" loading="lazy" />
-                        ) : (<UserIcon className="h-5 w-5 text-white" />)}
-                      </div>
-                      <span className="font-normal text-white text-sm sm:text-base">{videoUserName}</span>
-                    </div>
-                  </Link>
-                  {video.description && (
-                    <p onClick={() => window.location.href = `/post/details/${vId}`} className="text-white/90 text-xs sm:text-sm mb-1 line-clamp-2 cursor-pointer leading-relaxed">
-                      {video.description}
-                    </p>
-                  )}
-                  <p className="text-white/50 text-xs">{getTimeAgo(video.createdAt)}</p>
+
+                  <button
+                    onClick={() => snapToIndex(activeIndex + 1)}
+                    disabled={activeIndex >= allVideos.length - 1}
+                    className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center backdrop-blur-md transition disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer mt-1 shadow-lg"
+                    title="Next Reel (Down Arrow)"
+                  >
+                    <ChevronDownIcon className="h-5 w-5" />
+                  </button>
                 </div>
               </div>
             );
