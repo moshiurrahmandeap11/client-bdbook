@@ -10,6 +10,8 @@ export {
   markAsRead as markMessageAsRead,
   getUnreadCount as getUnreadMessagesCount,
   uploadMessageMedia,
+  acceptMessageRequest,
+  declineMessageRequest,
 } from "./message.service";
 export * from "./search.service";
 

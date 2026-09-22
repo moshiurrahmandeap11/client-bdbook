@@ -44,6 +44,7 @@ export const Sidebar: React.FC = () => {
     { name: "Mod Mail", href: "/message", icon: EnvelopeIcon },
     { name: "Mod Queue", href: "/room", icon: QueueListIcon },
     { name: "s/Mod", href: "/community", icon: ShieldCheckIcon },
+    { name: "s/Mod", href: "/", icon: ShieldCheckIcon },
   ];
 
   const recentCommunities = [
@@ -51,6 +52,7 @@ export const Sidebar: React.FC = () => {
     { name: "s/technology", href: "/", icon: CpuChipIcon },
     { name: "s/singularity", href: "/", icon: SparklesIcon },
     { name: "s/community", href: "/community", icon: UserGroupIcon },
+    { name: "s/community", href: "/", icon: UserGroupIcon },
   ];
 
   return (

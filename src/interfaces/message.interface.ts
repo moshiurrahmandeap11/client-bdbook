@@ -50,6 +50,7 @@ export interface IConversation {
   updatedAt?: string;
   participants?: IConversationParticipant[];
   messages?: IMessage[];
+  isRequest?: boolean;
 }
 
 export interface SendMessagePayload {

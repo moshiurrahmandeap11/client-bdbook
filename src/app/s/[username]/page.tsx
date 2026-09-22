@@ -11,15 +11,13 @@ import {
 } from "@/services/user.service";
 import { getUserPosts } from "@/services/post.service";
 import {
-  getFriendsCount,
+  followUser,
+  unfollowUser,
+  getFollowStatus,
   getFollowersCount,
   getFollowingCount,
-  getFriendStatus,
-  sendFriendRequest,
-  acceptFriendRequest,
-  unfriend,
-  getFriendRequests,
-} from "@/services/friend.service";
+} from "@/services/follow.service";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/providers/AuthProvider";
 import PostCard from "@/components/post_components/PostCard";
 import EditProfileModal from "@/components/profile_components/EditProfileModal";
@@ -162,19 +160,6 @@ export default function UserProfilePage({
   });
 
   // 3. TanStack Query: Stats (Instant Cache Hydration)
-  const { data: friendsCount = 0 } = useQuery<number>({
-    queryKey: ["friends-count", userId],
-    queryFn: async () => {
-      if (!userId) return 0;
-      const count = await getFriendsCount(userId);
-      setCachedData(`friends-count-${userId}`, count);
-      return count;
-    },
-    initialData: () => (userId ? getCachedData<number>(`friends-count-${userId}`) : 0),
-    enabled: !!userId,
-    staleTime: 2 * 60 * 1000,
-  });
-
   const { data: followersCount = 0 } = useQuery<number>({
     queryKey: ["followers-count", userId],
     queryFn: async () => {
@@ -201,80 +186,50 @@ export default function UserProfilePage({
     staleTime: 2 * 60 * 1000,
   });
 
-  // 4. TanStack Query: Friend/Follow Status for visitor
-  const { data: friendStatus = "none" } = useQuery<string>({
-    queryKey: ["friend-status", userId],
-    queryFn: () => (userId ? getFriendStatus(userId) : "none"),
+  // TanStack Query: Follow Status for visitor
+  const { data: isFollowing = false } = useQuery<boolean>({
+    queryKey: ["follow-status", userId],
+    queryFn: () => (userId ? getFollowStatus(userId) : false),
     enabled: Boolean(currentUser && userId && !isOwner),
-    staleTime: 2 * 60 * 1000,
+    staleTime: 60 * 1000,
   });
 
-  // Optimistic Friend Action handler
-  const handleFriendAction = async () => {
-    if (!user || !currentUser) {
+  // Optimistic Follow Action handler
+  const handleFollowAction = async () => {
+    if (!currentUser) {
       router.push("/auth/login");
       return;
     }
+    if (!userId) return;
 
-    const prevStatus = friendStatus;
-    const prevFriendsCount = friendsCount;
+    const prevFollowing = isFollowing;
+    const nextFollowing = !prevFollowing;
 
-    if (friendStatus === "not_friends" || friendStatus === "none") {
-      // 1. Instant Optimistic UI Update (0ms)
-      queryClient.setQueryData(["friend-status", user.id], "request_sent");
-      toast.success("Friend request sent!");
+    // Instant Optimistic UI Update (0ms)
+    queryClient.setQueryData(["follow-status", userId], nextFollowing);
+    queryClient.setQueryData<number>(
+      ["followers-count", userId],
+      (prev = 0) => Math.max(0, nextFollowing ? prev + 1 : prev - 1)
+    );
+    toast.success(nextFollowing ? "Following!" : "Unfollowed");
 
-      // 2. Background server call
-      try {
-        await sendFriendRequest(user.id);
-      } catch (err: any) {
-        // 3. Rollback on failure
-        queryClient.setQueryData(["friend-status", user.id], prevStatus);
-        toast.error(
-          err?.response?.data?.message || err?.message || "Failed to send request"
-        );
+    try {
+      if (nextFollowing) {
+        await followUser(userId);
+      } else {
+        await unfollowUser(userId);
       }
-    } else if (friendStatus === "request_received") {
-      // 1. Instant Optimistic UI Update (0ms)
-      queryClient.setQueryData(["friend-status", user.id], "friends");
-      queryClient.setQueryData(["friends-count", user.id], prevFriendsCount + 1);
-      toast.success("Friend request accepted!");
-
-      try {
-        const pending = await getFriendRequests();
-        const request = pending.find(
-          (r: any) => r.senderId === user.id || r.sender?.id === user.id
-        );
-        if (request?.id) {
-          await acceptFriendRequest(request.id);
-        } else {
-          throw new Error("Pending request not found");
-        }
-      } catch (err: any) {
-        queryClient.setQueryData(["friend-status", user.id], prevStatus);
-        queryClient.setQueryData(["friends-count", user.id], prevFriendsCount);
-        toast.error(
-          err?.response?.data?.message || err?.message || "Action failed"
-        );
-      }
-    } else if (friendStatus === "friends") {
-      // 1. Instant Optimistic UI Update (0ms)
-      queryClient.setQueryData(["friend-status", user.id], "not_friends");
-      queryClient.setQueryData(
-        ["friends-count", user.id],
-        Math.max(0, prevFriendsCount - 1)
+      queryClient.invalidateQueries({ queryKey: ["follow-status", userId] });
+      queryClient.invalidateQueries({ queryKey: ["followers-count", userId] });
+    } catch (err: any) {
+      queryClient.setQueryData(["follow-status", userId], prevFollowing);
+      queryClient.setQueryData<number>(
+        ["followers-count", userId],
+        (prev = 0) => Math.max(0, prevFollowing ? prev + 1 : prev - 1)
       );
-      toast.success("Friend removed");
-
-      try {
-        await unfriend(user.id);
-      } catch (err: any) {
-        queryClient.setQueryData(["friend-status", user.id], prevStatus);
-        queryClient.setQueryData(["friends-count", user.id], prevFriendsCount);
-        toast.error(
-          err?.response?.data?.message || err?.message || "Action failed"
-        );
-      }
+      toast.error(
+        err?.response?.data?.message || err?.message || "Failed to update follow status"
+      );
     }
   };
 
@@ -497,60 +452,38 @@ export default function UserProfilePage({
                 </Button>
               ) : (
                 <div className="flex items-center gap-2">
-                  {/* Friend / Follow button */}
-                  {friendStatus === "friends" ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleFriendAction}
-                      className="flex items-center gap-1.5 text-xs sm:text-sm text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors group"
-                    >
-                      <Check className="h-4 w-4 group-hover:hidden" />
-                      <UserX className="h-4 w-4 hidden group-hover:inline" />
-                      <span className="group-hover:hidden">Friends</span>
-                      <span className="hidden group-hover:inline">Unfriend</span>
-                    </Button>
-                  ) : friendStatus === "request_sent" ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleFriendAction}
-                      className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-600 border-slate-200 bg-slate-50 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors group"
-                      title="Click to cancel request"
-                    >
-                      <UserCheck className="h-4 w-4 text-slate-400 group-hover:hidden" />
-                      <UserX className="h-4 w-4 hidden group-hover:inline" />
-                      <span className="group-hover:hidden">Request Sent</span>
-                      <span className="hidden group-hover:inline">Cancel Request</span>
-                    </Button>
-                  ) : friendStatus === "request_received" ? (
-                    <Button
-                      type="button"
-                      onClick={handleFriendAction}
-                      className="flex items-center gap-1.5 text-xs sm:text-sm"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      <span>Accept Request</span>
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      onClick={handleFriendAction}
-                      className="flex items-center gap-1.5 text-xs sm:text-sm"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      <span>Add Friend</span>
-                    </Button>
-                  )}
+                  {/* Follow / Following button */}
+                  <Button
+                    type="button"
+                    onClick={handleFollowAction}
+                    className={cn(
+                      "flex items-center gap-1.5 text-xs sm:text-sm font-semibold rounded-md transition-colors cursor-pointer",
+                      isFollowing
+                        ? "bg-fb-btn text-foreground hover:bg-fb-btn-hover"
+                        : "bg-primary hover:bg-primary-hover text-white"
+                    )}
+                  >
+                    {isFollowing ? (
+                      <>
+                        <Check className="h-4 w-4 text-emerald-600" />
+                        <span>Following</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="h-4 w-4" />
+                        <span>Follow +</span>
+                      </>
+                    )}
+                  </Button>
 
                   {/* Direct Message Button */}
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => router.push(`/message?userId=${user.id}`)}
-                    className="flex items-center gap-1.5 text-xs sm:text-sm border-slate-300 hover:bg-slate-50"
+                    className="flex items-center gap-1.5 text-xs sm:text-sm border-border hover:bg-fb-btn text-foreground"
                   >
-                    <MessageCircle className="h-4 w-4 text-slate-500" />
+                    <MessageCircle className="h-4 w-4 text-muted" />
                     <span>Message</span>
                   </Button>
                 </div>
@@ -650,7 +583,7 @@ export default function UserProfilePage({
               )}
             </div>
 
-            {/* Stats Row: Followers, Following, Friends, Posts */}
+            {/* Stats Row: Followers, Following, Posts */}
             <div className="flex items-center gap-6 pt-4 border-t border-slate-100 text-sm">
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-slate-900">
@@ -665,14 +598,6 @@ export default function UserProfilePage({
                   {followingCount}
                 </span>
                 <span className="text-slate-500 text-xs">Following</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-slate-900">
-                  {friendsCount}
-                </span>
-                <span className="text-slate-500 text-xs">
-                  {friendsCount === 1 ? "Friend" : "Friends"}
-                </span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-slate-900">

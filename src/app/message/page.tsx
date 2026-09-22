@@ -28,6 +28,8 @@ import {
   sendMessage,
   markAsRead,
   uploadMessageMedia,
+  acceptMessageRequest,
+  declineMessageRequest,
 } from "@/services/message.service";
 import { getUserById } from "@/services/user.service";
 import apiClient from "@/lib/axios";
@@ -228,7 +230,8 @@ function MessageContainer() {
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"all" | "unread">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "requests" | "unread">("all");
+  const [processingRequest, setProcessingRequest] = useState(false);
 
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
@@ -323,6 +326,7 @@ function MessageContainer() {
               unreadCount: 0,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
+              isRequest: false,
             };
             return [newConv, ...prev];
           });
@@ -367,20 +371,22 @@ function MessageContainer() {
         setLoadingMessages(false);
       });
 
-    // Mark conversation as read on HTTP & Socket
-    markAsRead(selectedUserId).catch(() => {});
-    if (socket) {
-      socket.emit("mark_as_read", { senderId: selectedUserId });
-    }
+    // Mark conversation as read on HTTP & Socket ONLY if not a message request
+    if (!currentConv?.isRequest) {
+      markAsRead(selectedUserId).catch(() => {});
+      if (socket) {
+        socket.emit("mark_as_read", { senderId: selectedUserId });
+      }
 
-    // Reset unread count locally for this conversation
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.friendId === selectedUserId || c.id === selectedUserId
-          ? { ...c, unreadCount: 0 }
-          : c
-      )
-    );
+      // Reset unread count locally for this conversation
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.friendId === selectedUserId || c.id === selectedUserId
+            ? { ...c, unreadCount: 0 }
+            : c
+        )
+      );
+    }
   }, [selectedUserId, socket, scrollToBottom]);
 
   // Listen to incoming socket messages & events
@@ -405,10 +411,18 @@ function MessageContainer() {
           return [...prev, msg];
         });
 
-        // If message is from partner, mark as read
+        // If message is from partner, mark as read ONLY if not a message request
         if (msg.senderId === selectedUserId) {
-          markAsRead(selectedUserId).catch(() => {});
-          socket.emit("mark_as_read", { senderId: selectedUserId });
+          setConversations((prev) => {
+            const partnerConv = prev.find(
+              (c) => c.friendId === selectedUserId || c.id === selectedUserId
+            );
+            if (!partnerConv?.isRequest) {
+              markAsRead(selectedUserId).catch(() => {});
+              socket.emit("mark_as_read", { senderId: selectedUserId });
+            }
+            return prev;
+          });
         }
 
         setTimeout(() => scrollToBottom(true), 100);
@@ -436,21 +450,15 @@ function MessageContainer() {
             ...conv,
             lastMessage: previewText,
             updatedAt: msg.createdAt || new Date().toISOString(),
-            unreadCount: isCurrentlyActive ? 0 : (conv.unreadCount || 0) + 1,
+            unreadCount: isCurrentlyActive && !conv.isRequest ? 0 : (conv.unreadCount || 0) + 1,
           });
           return updated;
         } else {
-          // If a new partner sends a message, insert conversation
-          const newConv: IConversation = {
-            id: partnerId,
-            friendId: partnerId,
-            friendName: msg.senderName || "User",
-            friendProfilePicture: msg.senderProfilePicture || null,
-            lastMessage: previewText,
-            updatedAt: msg.createdAt || new Date().toISOString(),
-            unreadCount: isCurrentlyActive ? 0 : 1,
-          };
-          return [newConv, ...prev];
+          // If a new partner sends a message, fetch updated conversations to get correct follow/request flags
+          getConversations().then((data) => {
+            if (data) setConversations(data);
+          });
+          return prev;
         }
       });
     };
@@ -695,6 +703,73 @@ function MessageContainer() {
     return () => clearTimeout(timer);
   }, [searchQuery, currentUserId]);
 
+  // Accept message request handler
+  const handleAcceptRequest = async () => {
+    if (!selectedUserId || processingRequest) return;
+    try {
+      setProcessingRequest(true);
+      await acceptMessageRequest(selectedUserId);
+
+      // 1. Mark request as regular conversation locally
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.friendId === selectedUserId || c.id === selectedUserId
+            ? { ...c, isRequest: false, unreadCount: 0 }
+            : c
+        )
+      );
+
+      // 2. Mark as read on HTTP & Socket now that request is accepted
+      markAsRead(selectedUserId).catch(() => {});
+      if (socket) {
+        socket.emit("mark_as_read", { senderId: selectedUserId });
+      }
+
+      toast.success("Message request accepted! You can now chat.");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to accept request");
+    } finally {
+      setProcessingRequest(false);
+    }
+  };
+
+  // Decline message request handler
+  const handleDeclineRequest = async () => {
+    if (!selectedUserId || processingRequest) return;
+    try {
+      setProcessingRequest(true);
+      await declineMessageRequest(selectedUserId);
+
+      // Remove conversation from state
+      setConversations((prev) =>
+        prev.filter(
+          (c) => c.friendId !== selectedUserId && c.id !== selectedUserId
+        )
+      );
+      setMessages([]);
+      setSelectedUserId(null);
+      setSelectedUser(null);
+
+      toast.success("Message request declined and deleted");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to decline request");
+    } finally {
+      setProcessingRequest(false);
+    }
+  };
+
+  // Current active conversation helper
+  const selectedConversation = useMemo(() => {
+    if (!selectedUserId) return null;
+    return (
+      conversations.find(
+        (c) => c.friendId === selectedUserId || c.id === selectedUserId
+      ) || null
+    );
+  }, [conversations, selectedUserId]);
+
+  const isSelectedUserRequest = Boolean(selectedConversation?.isRequest);
+
   // Filter conversations
   const filteredConversations = useMemo(() => {
     return conversations.filter((c) => {
@@ -703,14 +778,28 @@ function MessageContainer() {
         c.friendName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         c.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchTab = activeTab === "all" || (c.unreadCount && c.unreadCount > 0);
+      let matchTab = false;
+      if (activeTab === "requests") {
+        matchTab = Boolean(c.isRequest);
+      } else if (activeTab === "unread") {
+        matchTab = !c.isRequest && Boolean(c.unreadCount && c.unreadCount > 0);
+      } else {
+        // "all" = main chats
+        matchTab = !c.isRequest;
+      }
 
       return matchSearch && matchTab;
     });
   }, [conversations, searchQuery, activeTab]);
 
+  const requestsCount = useMemo(() => {
+    return conversations.filter((c) => c.isRequest).length;
+  }, [conversations]);
+
   const totalUnreadCount = useMemo(() => {
-    return conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
+    return conversations
+      .filter((c) => !c.isRequest)
+      .reduce((acc, c) => acc + (c.unreadCount || 0), 0);
   }, [conversations]);
 
   // Group messages by day
@@ -785,7 +874,7 @@ function MessageContainer() {
               </div>
             </div>
 
-            {/* Tabs (All / Unread) */}
+            {/* Tabs (Chats / Requests / Unread) */}
             <div className="flex items-center gap-1.5 pt-0.5">
               <button
                 onClick={() => setActiveTab("all")}
@@ -795,7 +884,28 @@ function MessageContainer() {
                     : "bg-fb-btn hover:bg-fb-btn-hover text-foreground"
                 }`}
               >
-                All
+                Chats
+              </button>
+              <button
+                onClick={() => setActiveTab("requests")}
+                className={`px-3 py-1 text-xs rounded-full transition font-medium flex items-center gap-1.5 ${
+                  activeTab === "requests"
+                    ? "bg-primary text-white"
+                    : "bg-fb-btn hover:bg-fb-btn-hover text-foreground"
+                }`}
+              >
+                <span>Requests</span>
+                {requestsCount > 0 && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      activeTab === "requests"
+                        ? "bg-white text-primary"
+                        : "bg-primary text-white"
+                    }`}
+                  >
+                    {requestsCount}
+                  </span>
+                )}
               </button>
               <button
                 onClick={() => setActiveTab("unread")}
@@ -836,8 +946,20 @@ function MessageContainer() {
             ) : filteredConversations.length === 0 && searchResults.length === 0 ? (
               <div className="p-8 text-center flex flex-col items-center justify-center text-muted gap-2">
                 <MessageSquare className="w-8 h-8 opacity-40" />
-                <p className="text-sm font-medium">No conversations found</p>
-                <p className="text-xs text-muted/80">Search a friend&apos;s name to start a chat</p>
+                <p className="text-sm font-medium">
+                  {activeTab === "requests"
+                    ? "No message requests"
+                    : activeTab === "unread"
+                    ? "No unread messages"
+                    : "No conversations found"}
+                </p>
+                <p className="text-xs text-muted/80">
+                  {activeTab === "requests"
+                    ? "Messages from people you don't follow will appear here"
+                    : activeTab === "unread"
+                    ? "You're all caught up!"
+                    : "Search a user's name to start a chat"}
+                </p>
               </div>
             ) : (
               <>
@@ -914,10 +1036,16 @@ function MessageContainer() {
                           >
                             {conv.lastMessage || "Started a conversation"}
                           </p>
-                          {hasUnread && (
-                            <span className="bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shrink-0">
-                              {conv.unreadCount}
+                          {conv.isRequest ? (
+                            <span className="bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0">
+                              Request
                             </span>
+                          ) : (
+                            hasUnread && (
+                              <span className="bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shrink-0">
+                                {conv.unreadCount}
+                              </span>
+                            )
                           )}
                         </div>
                       </div>
@@ -925,7 +1053,7 @@ function MessageContainer() {
                   );
                 })}
 
-                {/* Search Results (When searching for new friends) */}
+                {/* Search Results (When searching for new users) */}
                 {searchQuery.trim().length >= 2 && searchResults.length > 0 && (
                   <div className="pt-3">
                     <p className="px-3 py-1 text-[11px] font-semibold text-muted uppercase tracking-wider">
@@ -1061,22 +1189,26 @@ function MessageContainer() {
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    title="Audio call"
-                    onClick={() => toast("Calling feature coming soon!")}
-                    className="fb-btn-circle w-9 h-9 text-muted hover:text-primary transition"
-                  >
-                    <Phone className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    title="Video call"
-                    onClick={() => toast("Video call coming soon!")}
-                    className="fb-btn-circle w-9 h-9 text-muted hover:text-primary transition"
-                  >
-                    <VideoIcon className="w-4 h-4" />
-                  </button>
+                  {!isSelectedUserRequest && (
+                    <>
+                      <button
+                        type="button"
+                        title="Audio call"
+                        onClick={() => toast("Calling feature coming soon!")}
+                        className="fb-btn-circle w-9 h-9 text-muted hover:text-primary transition"
+                      >
+                        <Phone className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        title="Video call"
+                        onClick={() => toast("Video call coming soon!")}
+                        className="fb-btn-circle w-9 h-9 text-muted hover:text-primary transition"
+                      >
+                        <VideoIcon className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
                   <Link
                     href={`/s/${selectedUserId}`}
                     title="View Profile"
@@ -1104,18 +1236,22 @@ function MessageContainer() {
                         {selectedUser?.name}
                       </h3>
                       <p className="text-xs text-muted mt-0.5">
-                        You&apos;re connected on Stalk. Say hi to start the conversation!
+                        {isSelectedUserRequest
+                          ? "This user sent you a message request."
+                          : "You're connected on Stalk. Say hi to start the conversation!"}
                       </p>
                     </div>
-                    <button
-                      onClick={() => {
-                        setText("👋 Hello!");
-                        setTimeout(() => handleSendMessage(), 10);
-                      }}
-                      className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold rounded-full transition"
-                    >
-                      👋 Wave Hello
-                    </button>
+                    {!isSelectedUserRequest && (
+                      <button
+                        onClick={() => {
+                          setText("👋 Hello!");
+                          setTimeout(() => handleSendMessage(), 10);
+                        }}
+                        className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold rounded-full transition"
+                      >
+                        👋 Wave Hello
+                      </button>
+                    )}
                   </div>
                 ) : (
                   groupedMessages.map((group) => (
@@ -1273,95 +1409,137 @@ function MessageContainer() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Media File Attachment Preview Bar */}
-              {mediaFile && (
-                <div className="px-4 py-2 border-t border-border bg-card flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    {mediaPreview ? (
-                      <img
-                        src={mediaPreview}
-                        alt="Preview"
-                        className="w-10 h-10 rounded-lg object-cover border border-border shrink-0"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-lg bg-fb-btn flex items-center justify-center text-muted shrink-0">
-                        <FileText className="w-5 h-5" />
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-foreground truncate">
-                        {mediaFile.name}
-                      </p>
-                      <p className="text-[10px] text-muted">
-                        {(mediaFile.size / 1024).toFixed(1)} KB
-                      </p>
-                    </div>
+              {/* Bottom Bar: Message Request Action Banner vs Message Input */}
+              {isSelectedUserRequest ? (
+                <div className="p-4 border-t border-border bg-card flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0 shadow-sm">
+                  <div className="text-center sm:text-left min-w-0">
+                    <p className="text-sm font-semibold text-foreground">
+                      Accept message request from {selectedUser?.name || "this user"}?
+                    </p>
+                    <p className="text-xs text-muted mt-0.5">
+                      If you accept, they will know you&apos;ve seen their messages and can continue messaging you.
+                    </p>
                   </div>
-                  <button
-                    onClick={handleRemoveMedia}
-                    className="p-1 rounded-full hover:bg-fb-btn text-muted hover:text-foreground transition"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2.5 shrink-0 w-full sm:w-auto justify-center">
+                    <button
+                      type="button"
+                      disabled={processingRequest}
+                      onClick={handleDeclineRequest}
+                      className="px-5 py-2 text-xs font-semibold rounded-full border border-border bg-fb-btn hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive text-foreground transition disabled:opacity-50 min-w-[90px] flex items-center justify-center cursor-pointer"
+                    >
+                      {processingRequest ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        "Decline"
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={processingRequest}
+                      onClick={handleAcceptRequest}
+                      className="px-5 py-2 text-xs font-semibold rounded-full bg-primary hover:bg-primary-hover text-white transition shadow-sm disabled:opacity-50 min-w-[90px] flex items-center justify-center cursor-pointer"
+                    >
+                      {processingRequest ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        "Accept"
+                      )}
+                    </button>
+                  </div>
                 </div>
-              )}
+              ) : (
+                <>
+                  {/* Media File Attachment Preview Bar */}
+                  {mediaFile && (
+                    <div className="px-4 py-2 border-t border-border bg-card flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {mediaPreview ? (
+                          <img
+                            src={mediaPreview}
+                            alt="Preview"
+                            className="w-10 h-10 rounded-lg object-cover border border-border shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-fb-btn flex items-center justify-center text-muted shrink-0">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-foreground truncate">
+                            {mediaFile.name}
+                          </p>
+                          <p className="text-[10px] text-muted">
+                            {(mediaFile.size / 1024).toFixed(1)} KB
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleRemoveMedia}
+                        className="p-1 rounded-full hover:bg-fb-btn text-muted hover:text-foreground transition"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
 
-              {/* Bottom Message Input Bar */}
-              <form
-                onSubmit={handleSendMessage}
-                className="p-3 border-t border-border bg-card flex items-center gap-2 shrink-0"
-              >
-                {/* File Attachment Input Button */}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileSelect}
-                  accept="image/*,video/*,.pdf,.doc,.docx"
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Attach photo or file"
-                  className="fb-btn-circle w-9 h-9 text-muted hover:text-primary transition shrink-0"
-                >
-                  <ImageIcon className="w-4 h-4" />
-                </button>
-
-                {/* Text Input */}
-                <input
-                  type="text"
-                  placeholder="Type a message..."
-                  value={text}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  className="flex-1 px-4 py-2 text-sm bg-fb-input hover:bg-fb-input-hover focus:bg-card text-foreground rounded-full border border-transparent focus:border-primary/40 focus:outline-none transition"
-                />
-
-                {/* Send Button or Thumbs Up */}
-                {text.trim() || mediaFile ? (
-                  <button
-                    type="submit"
-                    disabled={sending || uploadingMedia}
-                    className="w-9 h-9 rounded-full bg-primary hover:bg-primary-hover text-white flex items-center justify-center shrink-0 transition disabled:opacity-50"
+                  {/* Bottom Message Input Bar */}
+                  <form
+                    onSubmit={handleSendMessage}
+                    className="p-3 border-t border-border bg-card flex items-center gap-2 shrink-0"
                   >
-                    {uploadingMedia || sending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                    {/* File Attachment Input Button */}
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileSelect}
+                      accept="image/*,video/*,.pdf,.doc,.docx"
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      title="Attach photo or file"
+                      className="fb-btn-circle w-9 h-9 text-muted hover:text-primary transition shrink-0"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                    </button>
+
+                    {/* Text Input */}
+                    <input
+                      type="text"
+                      placeholder="Type a message..."
+                      value={text}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      className="flex-1 px-4 py-2 text-sm bg-fb-input hover:bg-fb-input-hover focus:bg-card text-foreground rounded-full border border-transparent focus:border-primary/40 focus:outline-none transition"
+                    />
+
+                    {/* Send Button or Thumbs Up */}
+                    {text.trim() || mediaFile ? (
+                      <button
+                        type="submit"
+                        disabled={sending || uploadingMedia}
+                        className="w-9 h-9 rounded-full bg-primary hover:bg-primary-hover text-white flex items-center justify-center shrink-0 transition disabled:opacity-50"
+                      >
+                        {uploadingMedia || sending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4 ml-0.5" />
+                        )}
+                      </button>
                     ) : (
-                      <Send className="w-4 h-4 ml-0.5" />
+                      <button
+                        type="button"
+                        onClick={handleSendLike}
+                        title="Send a Like"
+                        className="fb-btn-circle w-9 h-9 text-primary hover:bg-primary/10 transition shrink-0"
+                      >
+                        <ThumbsUp className="w-4 h-4" />
+                      </button>
                     )}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleSendLike}
-                    title="Send a Like"
-                    className="fb-btn-circle w-9 h-9 text-primary hover:bg-primary/10 transition shrink-0"
-                  >
-                    <ThumbsUp className="w-4 h-4" />
-                  </button>
-                )}
-              </form>
+                  </form>
+                </>
+              )}
             </>
           ) : (
             /* Empty State (When no conversation is selected on desktop) */

@@ -27,6 +27,7 @@ export const getConversations = async (): Promise<IConversation[]> => {
         unreadCount: item.unreadCount || 0,
         createdAt: item.createdAt || item.updatedAt || new Date().toISOString(),
         updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
+        isRequest: Boolean(item.isRequest),
         participants: [
           {
             id: friendId,
@@ -123,6 +124,22 @@ export const uploadMessageMedia = async (file: File): Promise<IUploadMessageMedi
       }
     );
     return response.data.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const acceptMessageRequest = async (partnerId: string): Promise<void> => {
+  try {
+    await apiClient.post<ApiResponse<null>>(`/messages/requests/accept/${partnerId}`);
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
+export const declineMessageRequest = async (partnerId: string): Promise<void> => {
+  try {
+    await apiClient.delete<ApiResponse<null>>(`/messages/requests/decline/${partnerId}`);
   } catch (error) {
     return handleApiError(error);
   }
